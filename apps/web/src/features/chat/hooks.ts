@@ -17,9 +17,16 @@ export const useChatMessages = (sessionId: string) => {
   return { messages, displayMessages, qualityStats, ...query }
 }
 
+type PendingUserMessage = {
+  content: string
+  imageId?: string
+}
+
 export const useSendMessage = (sessionId: string) => {
   const [streamingText, setStreamingText] = useState("")
   const [isStreaming, setIsStreaming] = useState(false)
+  const [pendingUserMessage, setPendingUserMessage] =
+    useState<PendingUserMessage | null>(null)
   const [error, setError] = useState<Error | null>(null)
   const queryClient = useQueryClient()
 
@@ -28,6 +35,8 @@ export const useSendMessage = (sessionId: string) => {
       setStreamingText("")
       setIsStreaming(true)
       setError(null)
+      // ユーザーメッセージを即時表示
+      setPendingUserMessage({ content, imageId })
 
       try {
         let userMessageId: string | undefined
@@ -45,6 +54,10 @@ export const useSendMessage = (sessionId: string) => {
             // メッセージ一覧を再取得
             queryClient.invalidateQueries({
               queryKey: ["chat", sessionId, "messages"],
+            })
+            // セッション一覧のメッセージ数を更新
+            queryClient.invalidateQueries({
+              queryKey: ["chat", "sessions"],
             })
           } else if (chunk.type === "error") {
             setError(new Error(chunk.error))
@@ -67,19 +80,20 @@ export const useSendMessage = (sessionId: string) => {
       } finally {
         setIsStreaming(false)
         setStreamingText("")
+        setPendingUserMessage(null)
       }
     },
     [sessionId, queryClient]
   )
 
-  return { streamingText, isStreaming, error, sendMessage }
+  return { streamingText, isStreaming, pendingUserMessage, error, sendMessage }
 }
 
 export const useChatInput = (sessionId: string) => {
   const [content, setContent] = useState("")
   const [imageId, setImageId] = useState<string | null>(null)
   const [ocrText, setOcrText] = useState<string | null>(null)
-  const { sendMessage, isStreaming, error, streamingText } =
+  const { sendMessage, isStreaming, pendingUserMessage, error, streamingText } =
     useSendMessage(sessionId)
 
   const handleContentChange = useCallback((value: string) => {
@@ -119,6 +133,7 @@ export const useChatInput = (sessionId: string) => {
     ocrText,
     isStreaming,
     streamingText,
+    pendingUserMessage,
     error,
     handleContentChange,
     handleImageSelect,

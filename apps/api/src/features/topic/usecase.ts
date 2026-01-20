@@ -26,6 +26,8 @@ type CategoryNode = {
   displayOrder: number
   createdAt: string
   updatedAt: string
+  topicCount: number
+  understoodCount: number
   children: CategoryNode[]
 }
 
@@ -105,10 +107,25 @@ export const getSubject = async (
 // カテゴリ一覧（階層構造）取得
 export const listCategoriesHierarchy = async (
   deps: TopicDeps,
-  subjectId: string
+  subjectId: string,
+  userId?: string
 ): Promise<CategoryNode[]> => {
   const { repo } = deps
-  const categories = await repo.findCategoriesBySubjectId(subjectId)
+  const [categories, topicCounts, progressCounts] = await Promise.all([
+    repo.findCategoriesBySubjectId(subjectId),
+    repo.getCategoryTopicCounts(subjectId),
+    userId ? repo.getProgressCountsByCategory(userId, subjectId) : [],
+  ])
+
+  // カテゴリIDごとの論点数マップ
+  const topicCountMap = new Map(
+    topicCounts.map((tc) => [tc.categoryId, tc.topicCount])
+  )
+
+  // カテゴリIDごとの理解済み数マップ
+  const progressCountMap = new Map(
+    progressCounts.map((pc) => [pc.categoryId, pc.understoodCount])
+  )
 
   // 階層構造に変換
   const categoryMap = new Map<string, CategoryNode>()
@@ -120,6 +137,8 @@ export const listCategoriesHierarchy = async (
       ...cat,
       createdAt: cat.createdAt.toISOString(),
       updatedAt: cat.updatedAt.toISOString(),
+      topicCount: topicCountMap.get(cat.id) ?? 0,
+      understoodCount: progressCountMap.get(cat.id) ?? 0,
       children: [],
     })
   }
@@ -233,5 +252,48 @@ export const listUserProgress = async (
     lastAccessedAt: p.lastAccessedAt?.toISOString() ?? null,
     createdAt: p.createdAt.toISOString(),
     updatedAt: p.updatedAt.toISOString(),
+  }))
+}
+
+// 科目別進捗取得
+type SubjectProgressStats = {
+  subjectId: string
+  subjectName: string
+  totalTopics: number
+  understoodTopics: number
+}
+
+export const getSubjectProgressStats = async (
+  deps: TopicDeps,
+  userId: string
+): Promise<SubjectProgressStats[]> => {
+  const { repo } = deps
+
+  const [subjects, progressCounts] = await Promise.all([
+    repo.findAllSubjects(),
+    repo.getProgressCountsBySubject(userId),
+  ])
+
+  // 科目ごとのトピック数を取得
+  const subjectStats = await Promise.all(
+    subjects.map(async (subject) => {
+      const stats = await repo.getSubjectStats(subject.id)
+      return { subjectId: subject.id, topicCount: stats.topicCount }
+    })
+  )
+
+  const topicCountMap = new Map(
+    subjectStats.map((s) => [s.subjectId, s.topicCount])
+  )
+
+  const progressMap = new Map(
+    progressCounts.map((p) => [p.subjectId, p.understoodCount])
+  )
+
+  return subjects.map((subject) => ({
+    subjectId: subject.id,
+    subjectName: subject.name,
+    totalTopics: topicCountMap.get(subject.id) ?? 0,
+    understoodTopics: progressMap.get(subject.id) ?? 0,
   }))
 }

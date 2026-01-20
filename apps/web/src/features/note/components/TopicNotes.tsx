@@ -1,5 +1,15 @@
+import { useState } from "react"
 import { Link } from "@tanstack/react-router"
 import { useNotesByTopic } from "../hooks"
+
+type Note = {
+  id: string
+  aiSummary: string
+  userMemo: string | null
+  keyPoints: string[]
+  stumbledPoints: string[]
+  createdAt: string
+}
 
 type Props = {
   topicId: string
@@ -7,6 +17,7 @@ type Props = {
 
 export const TopicNotes = ({ topicId }: Props) => {
   const { data, isLoading, error } = useNotesByTopic(topicId)
+  const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null)
 
   if (isLoading) {
     return (
@@ -28,7 +39,7 @@ export const TopicNotes = ({ topicId }: Props) => {
     )
   }
 
-  const notes = data?.notes || []
+  const notes: Note[] = data?.notes || []
 
   if (notes.length === 0) {
     return (
@@ -41,28 +52,113 @@ export const TopicNotes = ({ topicId }: Props) => {
     )
   }
 
+  const toggleNote = (noteId: string) => {
+    setExpandedNoteId(expandedNoteId === noteId ? null : noteId)
+  }
+
   return (
     <div className="p-4 space-y-3">
-      {notes.map((note) => (
-        <Link
-          key={note.id}
-          to="/notes/$noteId"
-          params={{ noteId: note.id }}
-          className="block p-3 bg-white border rounded-lg hover:shadow-md transition-shadow"
-        >
-          <p className="text-gray-900 text-sm line-clamp-2">
-            {note.aiSummary}
-          </p>
-          <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
-            <span>
-              {new Date(note.createdAt).toLocaleDateString("ja-JP")}
-            </span>
-            {note.keyPoints.length > 0 && (
-              <span>{note.keyPoints.length} ポイント</span>
+      {notes.map((note) => {
+        const isExpanded = expandedNoteId === note.id
+
+        return (
+          <div
+            key={note.id}
+            className="bg-white border rounded-lg overflow-hidden"
+          >
+            {/* ヘッダー（クリックで展開） */}
+            <button
+              onClick={() => toggleNote(note.id)}
+              className="w-full p-3 text-left hover:bg-gray-50 transition-colors"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <p className={`text-gray-900 text-sm ${isExpanded ? "" : "line-clamp-2"}`}>
+                  {note.aiSummary}
+                </p>
+                <span className="text-gray-400 flex-shrink-0">
+                  {isExpanded ? "▲" : "▼"}
+                </span>
+              </div>
+              <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+                <span>
+                  {new Date(note.createdAt).toLocaleDateString("ja-JP")}
+                </span>
+                {note.keyPoints.length > 0 && (
+                  <span>{note.keyPoints.length} ポイント</span>
+                )}
+              </div>
+            </button>
+
+            {/* 展開コンテンツ */}
+            {isExpanded && (
+              <div className="px-3 pb-3 border-t bg-gray-50">
+                {/* キーポイント */}
+                {note.keyPoints.length > 0 && (
+                  <div className="mt-3">
+                    <h4 className="text-xs font-medium text-gray-700 mb-1">
+                      キーポイント
+                    </h4>
+                    <ul className="space-y-1">
+                      {note.keyPoints.map((point, i) => (
+                        <li
+                          key={i}
+                          className="text-sm text-gray-600 flex items-start gap-1"
+                        >
+                          <span className="text-green-500">✓</span>
+                          {point}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* つまずきポイント */}
+                {note.stumbledPoints.length > 0 && (
+                  <div className="mt-3">
+                    <h4 className="text-xs font-medium text-gray-700 mb-1">
+                      つまずきポイント
+                    </h4>
+                    <ul className="space-y-1">
+                      {note.stumbledPoints.map((point, i) => (
+                        <li
+                          key={i}
+                          className="text-sm text-gray-600 flex items-start gap-1"
+                        >
+                          <span className="text-amber-500">!</span>
+                          {point}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* ユーザーメモ */}
+                {note.userMemo && (
+                  <div className="mt-3">
+                    <h4 className="text-xs font-medium text-gray-700 mb-1">
+                      メモ
+                    </h4>
+                    <p className="text-sm text-gray-600 whitespace-pre-wrap">
+                      {note.userMemo}
+                    </p>
+                  </div>
+                )}
+
+                {/* 編集リンク */}
+                <div className="mt-3 pt-2 border-t border-gray-200">
+                  <Link
+                    to="/notes/$noteId"
+                    params={{ noteId: note.id }}
+                    className="text-sm text-blue-600 hover:text-blue-800"
+                  >
+                    編集・詳細を見る →
+                  </Link>
+                </div>
+              </div>
             )}
           </div>
-        </Link>
-      ))}
+        )
+      })}
     </div>
   )
 }

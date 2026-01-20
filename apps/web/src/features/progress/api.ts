@@ -11,3 +11,9 @@ export const getSubjects = async () => {
   if (!res.ok) throw new Error("Failed to fetch subjects")
   return res.json()
 }
+
+export const getSubjectProgressStats = async () => {
+  const res = await api.api.subjects.progress.subjects.$get()
+  if (!res.ok) throw new Error("Failed to fetch subject progress")
+  return res.json()
+}

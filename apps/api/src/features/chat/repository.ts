@@ -1,4 +1,4 @@
-import { eq, desc } from "drizzle-orm"
+import { eq, and, desc, sql } from "drizzle-orm"
 import type { Db } from "@cpa-study/db"
 import { chatSessions, chatMessages } from "@cpa-study/db/schema"
 
@@ -25,6 +25,7 @@ export type ChatRepository = {
   createSession: (data: { userId: string; topicId: string }) => Promise<ChatSession>
   findSessionById: (id: string) => Promise<ChatSession | null>
   findSessionsByTopic: (userId: string, topicId: string) => Promise<ChatSession[]>
+  getSessionMessageCount: (sessionId: string) => Promise<number>
   createMessage: (data: Omit<ChatMessage, "id" | "createdAt">) => Promise<ChatMessage>
   findMessageById: (id: string) => Promise<ChatMessage | null>
   findMessagesBySession: (sessionId: string) => Promise<ChatMessage[]>
@@ -60,8 +61,18 @@ export const createChatRepository = (db: Db): ChatRepository => ({
     return db
       .select()
       .from(chatSessions)
-      .where(eq(chatSessions.userId, userId))
+      .where(
+        and(eq(chatSessions.userId, userId), eq(chatSessions.topicId, topicId))
+      )
       .orderBy(desc(chatSessions.createdAt))
+  },
+
+  getSessionMessageCount: async (sessionId) => {
+    const result = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(chatMessages)
+      .where(eq(chatMessages.sessionId, sessionId))
+    return result[0]?.count ?? 0
   },
 
   createMessage: async (data) => {

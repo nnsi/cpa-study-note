@@ -18,7 +18,7 @@ export const ChatContainer = ({ sessionId, topicId }: Props) => {
   // 新しいメッセージが追加されたら自動スクロール
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages.displayMessages, input.streamingText])
+  }, [messages.displayMessages, input.pendingUserMessage, input.streamingText])
 
   return (
     <div className="flex flex-col h-full">
@@ -36,7 +36,25 @@ export const ChatContainer = ({ sessionId, topicId }: Props) => {
           <ChatMessageView key={msg.id} message={msg} />
         ))}
 
-        {/* ストリーミング中のメッセージ */}
+        {/* 送信中のユーザーメッセージ */}
+        {input.pendingUserMessage && (
+          <ChatMessageView
+            message={{
+              id: "pending-user",
+              sessionId,
+              role: "user",
+              content: input.pendingUserMessage.content,
+              imageId: input.pendingUserMessage.imageId ?? null,
+              ocrResult: null,
+              questionQuality: null,
+              createdAt: new Date().toISOString(),
+              formattedTime: "",
+              isUser: true,
+            }}
+          />
+        )}
+
+        {/* ストリーミング中のAI応答 */}
         {input.streamingText && (
           <ChatMessageView
             message={{

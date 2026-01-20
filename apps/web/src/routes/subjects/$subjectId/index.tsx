@@ -12,6 +12,8 @@ type CategoryNode = {
   id: string
   name: string
   depth: number
+  topicCount: number
+  understoodCount: number
   children: CategoryNode[]
 }
 
@@ -76,6 +78,23 @@ function SubjectDetailPage() {
   )
 }
 
+// カテゴリと子カテゴリの合計を計算
+function getTotalCounts(category: CategoryNode): {
+  topicCount: number
+  understoodCount: number
+} {
+  let topicCount = category.topicCount
+  let understoodCount = category.understoodCount
+
+  for (const child of category.children) {
+    const childCounts = getTotalCounts(child)
+    topicCount += childCounts.topicCount
+    understoodCount += childCounts.understoodCount
+  }
+
+  return { topicCount, understoodCount }
+}
+
 function CategoryItem({
   category,
   subjectId,
@@ -85,6 +104,7 @@ function CategoryItem({
 }) {
   const hasChildren = category.children.length > 0
   const paddingLeft = category.depth * 16
+  const totals = getTotalCounts(category)
 
   return (
     <div>
@@ -94,11 +114,24 @@ function CategoryItem({
         className="block py-3 px-4 rounded-lg hover:bg-gray-100 transition-colors"
         style={{ paddingLeft: paddingLeft + 16 }}
       >
-        <div className="flex items-center gap-2">
-          <span className="text-gray-400">
-            {hasChildren ? "📂" : "📄"}
-          </span>
-          <span className="text-gray-900">{category.name}</span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-gray-400">
+              {hasChildren ? "📂" : "📄"}
+            </span>
+            <span className="text-gray-900">{category.name}</span>
+          </div>
+          {totals.topicCount > 0 && (
+            <span
+              className={`text-sm ${
+                totals.understoodCount === totals.topicCount
+                  ? "text-green-600"
+                  : "text-gray-500"
+              }`}
+            >
+              {totals.understoodCount}/{totals.topicCount}
+            </span>
+          )}
         </div>
       </Link>
       {hasChildren && (

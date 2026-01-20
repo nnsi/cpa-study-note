@@ -1,23 +1,38 @@
 import { useQuery } from "@tanstack/react-query"
 import * as api from "./api"
 
+type ProgressItem = {
+  understood: boolean
+  lastAccessedAt: string | null
+}
+
+type SubjectProgressStat = {
+  subjectId: string
+  subjectName: string
+  totalTopics: number
+  understoodTopics: number
+}
+
 export const useProgress = () => {
   const { data: progressData, isLoading: progressLoading } = useQuery({
     queryKey: ["progress", "me"],
     queryFn: api.getMyProgress,
   })
 
-  const { data: subjectsData, isLoading: subjectsLoading } = useQuery({
-    queryKey: ["subjects"],
-    queryFn: api.getSubjects,
+  const { data: subjectStatsData, isLoading: subjectStatsLoading } = useQuery({
+    queryKey: ["progress", "subjects"],
+    queryFn: api.getSubjectProgressStats,
   })
 
-  const progress = progressData?.progress || []
-  const subjects = subjectsData?.subjects || []
+  const progress: ProgressItem[] = progressData?.progress || []
+  const subjectStats: SubjectProgressStat[] = subjectStatsData?.stats || []
 
   // 統計計算
-  const totalTopics = subjects.reduce((acc, s) => acc + s.topicCount, 0)
-  const understoodTopics = progress.filter((p) => p.understood).length
+  const totalTopics = subjectStats.reduce((acc, s) => acc + s.totalTopics, 0)
+  const understoodTopics = subjectStats.reduce(
+    (acc, s) => acc + s.understoodTopics,
+    0
+  )
   const recentlyAccessedTopics = progress.filter((p) => {
     if (!p.lastAccessedAt) return false
     const lastAccess = new Date(p.lastAccessedAt)
@@ -27,25 +42,15 @@ export const useProgress = () => {
   }).length
 
   // 科目別の進捗
-  const subjectProgress = subjects.map((subject) => {
-    const subjectTopicProgress = progress.filter(
-      (p) =>
-        // topicIdから科目を推定する方法が必要
-        // 一旦、全体の進捗から計算
-        true
-    )
-    return {
-      id: subject.id,
-      name: subject.name,
-      totalTopics: subject.topicCount,
-      understoodTopics: Math.floor(
-        (understoodTopics / Math.max(totalTopics, 1)) * subject.topicCount
-      ),
-    }
-  })
+  const subjectProgress = subjectStats.map((stat) => ({
+    id: stat.subjectId,
+    name: stat.subjectName,
+    totalTopics: stat.totalTopics,
+    understoodTopics: stat.understoodTopics,
+  }))
 
   return {
-    isLoading: progressLoading || subjectsLoading,
+    isLoading: progressLoading || subjectStatsLoading,
     stats: {
       totalTopics,
       understoodTopics,

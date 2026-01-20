@@ -10,6 +10,7 @@ import { createTopicRepository } from "../topic/repository"
 import {
   createSession,
   getSession,
+  listSessionsByTopic,
   listMessages,
   getMessageForEvaluation,
   sendMessage,
@@ -46,6 +47,20 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         }
 
         return c.json({ session: result.session }, 201)
+      }
+    )
+
+    // 論点ごとのセッション一覧
+    .get(
+      "/topics/:topicId/sessions",
+      authMiddleware,
+      async (c) => {
+        const topicId = c.req.param("topicId")
+        const user = c.get("user")
+
+        const sessions = await listSessionsByTopic({ chatRepo }, user.id, topicId)
+
+        return c.json({ sessions })
       }
     )
 

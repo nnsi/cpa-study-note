@@ -21,6 +21,13 @@ type NoteResponse = {
   updatedAt: string
 }
 
+type NoteDetailResponse = NoteResponse & {
+  topicName: string
+  categoryId: string
+  subjectId: string
+  subjectName: string
+}
+
 type CreateNoteInput = {
   userId: string
   sessionId: string
@@ -146,9 +153,9 @@ export const getNote = async (
   userId: string,
   noteId: string
 ): Promise<
-  { ok: true; note: NoteResponse } | { ok: false; error: string; status: number }
+  { ok: true; note: NoteDetailResponse } | { ok: false; error: string; status: number }
 > => {
-  const note = await deps.noteRepo.findById(noteId)
+  const note = await deps.noteRepo.findByIdWithTopic(noteId)
 
   if (!note) {
     return { ok: false, error: "Note not found", status: 404 }
@@ -158,7 +165,16 @@ export const getNote = async (
     return { ok: false, error: "Unauthorized", status: 403 }
   }
 
-  return { ok: true, note: toNoteResponse(note) }
+  return {
+    ok: true,
+    note: {
+      ...toNoteResponse(note),
+      topicName: note.topicName,
+      categoryId: note.categoryId,
+      subjectId: note.subjectId,
+      subjectName: note.subjectName,
+    },
+  }
 }
 
 // ノート更新

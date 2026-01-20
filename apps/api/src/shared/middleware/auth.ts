@@ -50,3 +50,39 @@ const getDevUser = (c: { req: { header: (name: string) => string | undefined }; 
     avatarUrl: null,
   }
 }
+
+// オプショナル認証: 認証があればユーザー情報をセット、なくても続行
+export const optionalAuthMiddleware = createMiddleware<AuthContext>(
+  async (c, next) => {
+    // 開発モード: 認証スキップ
+    if (c.env.AUTH_MODE === "dev") {
+      const devUser = getDevUser(c)
+      c.set("user", devUser)
+      return next()
+    }
+
+    // 本番モード: JWT検証（失敗しても続行）
+    const token = c.req.header("Authorization")?.replace("Bearer ", "")
+    if (!token) {
+      return next()
+    }
+
+    try {
+      const secret = new TextEncoder().encode(c.env.JWT_SECRET)
+      const { payload } = await jwtVerify(token, secret)
+
+      const user: User = {
+        id: payload.sub as string,
+        email: payload.email as string,
+        name: payload.name as string,
+        avatarUrl: (payload.avatarUrl as string) || null,
+      }
+
+      c.set("user", user)
+    } catch {
+      // 無効なトークンでも続行
+    }
+
+    return next()
+  }
+)

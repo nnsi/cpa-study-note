@@ -3,7 +3,10 @@ import { zValidator } from "@hono/zod-validator"
 import { z } from "zod"
 import type { Db } from "@cpa-study/db"
 import type { Env, Variables } from "@/shared/types/env"
-import { authMiddleware } from "@/shared/middleware/auth"
+import {
+  authMiddleware,
+  optionalAuthMiddleware,
+} from "@/shared/middleware/auth"
 import { createTopicRepository } from "./repository"
 import {
   listSubjects,
@@ -13,6 +16,7 @@ import {
   getTopicWithProgress,
   updateProgress,
   listUserProgress,
+  getSubjectProgressStats,
 } from "./usecase"
 
 type TopicDeps = {
@@ -44,9 +48,10 @@ export const topicRoutes = ({ db }: TopicDeps) => {
     })
 
     // カテゴリ一覧（階層構造）
-    .get("/:subjectId/categories", async (c) => {
+    .get("/:subjectId/categories", optionalAuthMiddleware, async (c) => {
       const subjectId = c.req.param("subjectId")
-      const categories = await listCategoriesHierarchy(deps, subjectId)
+      const user = c.get("user")
+      const categories = await listCategoriesHierarchy(deps, subjectId, user?.id)
       return c.json({ categories })
     })
 
@@ -102,6 +107,13 @@ export const topicRoutes = ({ db }: TopicDeps) => {
       const user = c.get("user")
       const progress = await listUserProgress(deps, user.id)
       return c.json({ progress })
+    })
+
+    // 科目別進捗統計
+    .get("/progress/subjects", authMiddleware, async (c) => {
+      const user = c.get("user")
+      const stats = await getSubjectProgressStats(deps, user.id)
+      return c.json({ stats })
     })
 
   return app

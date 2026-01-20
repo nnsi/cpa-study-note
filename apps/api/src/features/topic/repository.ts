@@ -16,6 +16,7 @@ export type TopicRepository = {
   // Categories
   findCategoriesBySubjectId: (subjectId: string) => Promise<Category[]>
   findCategoryById: (id: string) => Promise<Category | null>
+  getCategoryTopicCounts: (subjectId: string) => Promise<CategoryTopicCount[]>
 
   // Topics
   findTopicsByCategoryId: (categoryId: string) => Promise<Topic[]>
@@ -25,6 +26,26 @@ export type TopicRepository = {
   findProgress: (userId: string, topicId: string) => Promise<TopicProgress | null>
   upsertProgress: (progress: UpsertProgress) => Promise<TopicProgress>
   findProgressByUser: (userId: string) => Promise<TopicProgress[]>
+  getProgressCountsByCategory: (
+    userId: string,
+    subjectId: string
+  ) => Promise<CategoryProgressCount[]>
+  getProgressCountsBySubject: (userId: string) => Promise<SubjectProgressCount[]>
+}
+
+type SubjectProgressCount = {
+  subjectId: string
+  understoodCount: number
+}
+
+type CategoryTopicCount = {
+  categoryId: string
+  topicCount: number
+}
+
+type CategoryProgressCount = {
+  categoryId: string
+  understoodCount: number
 }
 
 type Subject = {
@@ -231,5 +252,54 @@ export const createTopicRepository = (db: Db): TopicRepository => ({
       .select()
       .from(userTopicProgress)
       .where(eq(userTopicProgress.userId, userId))
+  },
+
+  getCategoryTopicCounts: async (subjectId) => {
+    const result = await db
+      .select({
+        categoryId: topics.categoryId,
+        topicCount: sql<number>`count(*)`,
+      })
+      .from(topics)
+      .innerJoin(categories, eq(topics.categoryId, categories.id))
+      .where(eq(categories.subjectId, subjectId))
+      .groupBy(topics.categoryId)
+
+    return result
+  },
+
+  getProgressCountsByCategory: async (userId, subjectId) => {
+    const result = await db
+      .select({
+        categoryId: topics.categoryId,
+        understoodCount: sql<number>`sum(case when ${userTopicProgress.understood} = 1 then 1 else 0 end)`,
+      })
+      .from(userTopicProgress)
+      .innerJoin(topics, eq(userTopicProgress.topicId, topics.id))
+      .innerJoin(categories, eq(topics.categoryId, categories.id))
+      .where(
+        and(
+          eq(userTopicProgress.userId, userId),
+          eq(categories.subjectId, subjectId)
+        )
+      )
+      .groupBy(topics.categoryId)
+
+    return result
+  },
+
+  getProgressCountsBySubject: async (userId) => {
+    const result = await db
+      .select({
+        subjectId: categories.subjectId,
+        understoodCount: sql<number>`sum(case when ${userTopicProgress.understood} = 1 then 1 else 0 end)`,
+      })
+      .from(userTopicProgress)
+      .innerJoin(topics, eq(userTopicProgress.topicId, topics.id))
+      .innerJoin(categories, eq(topics.categoryId, categories.id))
+      .where(eq(userTopicProgress.userId, userId))
+      .groupBy(categories.subjectId)
+
+    return result
   },
 })

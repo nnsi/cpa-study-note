@@ -55,6 +55,33 @@ export const createSession = async (
   }
 }
 
+type SessionWithStats = SessionResponse & {
+  messageCount: number
+}
+
+// セッション一覧取得
+export const listSessionsByTopic = async (
+  deps: Pick<ChatDeps, "chatRepo">,
+  userId: string,
+  topicId: string
+): Promise<SessionWithStats[]> => {
+  const sessions = await deps.chatRepo.findSessionsByTopic(userId, topicId)
+
+  const sessionsWithStats = await Promise.all(
+    sessions.map(async (session) => {
+      const messageCount = await deps.chatRepo.getSessionMessageCount(session.id)
+      return {
+        ...session,
+        createdAt: session.createdAt.toISOString(),
+        updatedAt: session.updatedAt.toISOString(),
+        messageCount,
+      }
+    })
+  )
+
+  return sessionsWithStats
+}
+
 // セッション取得
 export const getSession = async (
   deps: Pick<ChatDeps, "chatRepo">,

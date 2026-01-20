@@ -67,9 +67,27 @@ function NoteDetailPage() {
 
   return (
     <div className="p-4 lg:p-6 max-w-3xl mx-auto">
-      <Link to="/notes" className="text-blue-600 hover:underline text-sm">
-        ← ノート一覧
-      </Link>
+      <div className="flex items-center gap-4 text-sm">
+        <Link to="/notes" className="text-blue-600 hover:underline">
+          ← ノート一覧
+        </Link>
+        {note.subjectId && note.categoryId && note.topicId && (
+          <>
+            <span className="text-gray-300">|</span>
+            <Link
+              to="/subjects/$subjectId/$categoryId/$topicId"
+              params={{
+                subjectId: note.subjectId,
+                categoryId: note.categoryId,
+                topicId: note.topicId,
+              }}
+              className="text-blue-600 hover:underline"
+            >
+              ← {note.topicName || "論点"}に戻る
+            </Link>
+          </>
+        )}
+      </div>
 
       <div className="mt-4 space-y-6">
         <section>

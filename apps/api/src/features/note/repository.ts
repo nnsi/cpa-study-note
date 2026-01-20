@@ -20,9 +20,17 @@ export type NoteWithTopic = Note & {
   subjectName: string
 }
 
+export type NoteWithTopicDetail = Note & {
+  topicName: string
+  categoryId: string
+  subjectId: string
+  subjectName: string
+}
+
 export type NoteRepository = {
   create: (data: Omit<Note, "id" | "createdAt" | "updatedAt">) => Promise<Note>
   findById: (id: string) => Promise<Note | null>
+  findByIdWithTopic: (id: string) => Promise<NoteWithTopicDetail | null>
   findByTopic: (userId: string, topicId: string) => Promise<Note[]>
   findByUser: (userId: string) => Promise<NoteWithTopic[]>
   update: (
@@ -54,6 +62,40 @@ export const createNoteRepository = (db: Db): NoteRepository => ({
 
   findById: async (id) => {
     const result = await db.select().from(notes).where(eq(notes.id, id)).limit(1)
+    if (!result[0]) return null
+
+    return {
+      ...result[0],
+      keyPoints: (result[0].keyPoints as string[]) ?? [],
+      stumbledPoints: (result[0].stumbledPoints as string[]) ?? [],
+    }
+  },
+
+  findByIdWithTopic: async (id) => {
+    const result = await db
+      .select({
+        id: notes.id,
+        userId: notes.userId,
+        topicId: notes.topicId,
+        sessionId: notes.sessionId,
+        aiSummary: notes.aiSummary,
+        userMemo: notes.userMemo,
+        keyPoints: notes.keyPoints,
+        stumbledPoints: notes.stumbledPoints,
+        createdAt: notes.createdAt,
+        updatedAt: notes.updatedAt,
+        topicName: topics.name,
+        categoryId: categories.id,
+        subjectId: subjects.id,
+        subjectName: subjects.name,
+      })
+      .from(notes)
+      .innerJoin(topics, eq(notes.topicId, topics.id))
+      .innerJoin(categories, eq(topics.categoryId, categories.id))
+      .innerJoin(subjects, eq(categories.subjectId, subjects.id))
+      .where(eq(notes.id, id))
+      .limit(1)
+
     if (!result[0]) return null
 
     return {

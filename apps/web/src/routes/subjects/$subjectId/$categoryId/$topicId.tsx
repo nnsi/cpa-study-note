@@ -14,9 +14,19 @@ export const Route = createFileRoute(
   component: TopicDetailPage,
 })
 
+type Session = {
+  id: string
+  createdAt: string
+  messageCount: number
+}
+
 function TopicDetailPage() {
   const { subjectId, categoryId, topicId } = Route.useParams()
   const [activeTab, setActiveTab] = useState<"info" | "chat" | "notes">("chat")
+  const [sidebarTab, setSidebarTab] = useState<"info" | "notes" | "sessions">(
+    "info"
+  )
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
   const { data: topic, isLoading } = useQuery({
@@ -30,19 +40,37 @@ function TopicDetailPage() {
     },
   })
 
-  // セッション取得または作成
-  const { data: session, isLoading: sessionLoading } = useQuery({
-    queryKey: ["chat", "session", topicId],
+  // セッション一覧を取得
+  const { data: sessionsData } = useQuery({
+    queryKey: ["chat", "sessions", topicId],
     queryFn: async () => {
-      // 新しいセッションを作成
+      const res = await api.api.chat.topics[":topicId"].sessions.$get({
+        param: { topicId },
+      })
+      if (!res.ok) throw new Error("Failed to fetch sessions")
+      return res.json()
+    },
+  })
+
+  const sessions: Session[] = sessionsData?.sessions ?? []
+
+  // 新しいセッションを作成
+  const createSessionMutation = useMutation({
+    mutationFn: async () => {
       const res = await api.api.chat.sessions.$post({
         json: { topicId },
       })
       if (!res.ok) throw new Error("Failed to create session")
       return res.json()
     },
-    staleTime: Infinity,
+    onSuccess: (data) => {
+      setSelectedSessionId(data.session.id)
+      queryClient.invalidateQueries({ queryKey: ["chat", "sessions", topicId] })
+    },
   })
+
+  // 選択中のセッションID（なければ最新のセッション、それもなければnull）
+  const currentSessionId = selectedSessionId ?? sessions[0]?.id ?? null
 
   if (isLoading) {
     return (
@@ -80,9 +108,9 @@ function TopicDetailPage() {
 
       {/* PC: 2カラムレイアウト */}
       <div className="hidden lg:flex flex-1">
-        {/* 左: 論点情報 */}
-        <aside className="w-80 border-r bg-white overflow-y-auto">
-          <div className="p-4">
+        {/* 左: 論点情報 / ノート */}
+        <aside className="w-80 border-r bg-white flex flex-col">
+          <div className="p-4 border-b">
             <Link
               to="/subjects/$subjectId/$categoryId"
               params={{ subjectId, categoryId }}
@@ -91,16 +119,66 @@ function TopicDetailPage() {
               ← 論点一覧
             </Link>
           </div>
-          {topic && <TopicInfo topic={topic.topic} subjectId={subjectId} />}
+          {/* サイドバータブ */}
+          <div className="flex border-b">
+            {(["info", "sessions", "notes"] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setSidebarTab(tab)}
+                className={`flex-1 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  sidebarTab === tab
+                    ? "border-blue-600 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                {tab === "info" && "情報"}
+                {tab === "sessions" && "履歴"}
+                {tab === "notes" && "ノート"}
+              </button>
+            ))}
+          </div>
+          {/* サイドバーコンテンツ */}
+          <div className="flex-1 overflow-y-auto">
+            {sidebarTab === "info" && topic && (
+              <TopicInfo topic={topic.topic} subjectId={subjectId} />
+            )}
+            {sidebarTab === "sessions" && (
+              <SessionList
+                sessions={sessions}
+                currentSessionId={currentSessionId}
+                onSelect={setSelectedSessionId}
+                onCreateNew={() => createSessionMutation.mutate()}
+                isCreating={createSessionMutation.isPending}
+              />
+            )}
+            {sidebarTab === "notes" && <TopicNotes topicId={topicId} />}
+          </div>
         </aside>
 
         {/* 右: チャット */}
         <main className="flex-1 flex flex-col">
-          {session && !sessionLoading ? (
-            <ChatContainer sessionId={session.session.id} topicId={topicId} />
+          {currentSessionId ? (
+            <ChatContainer
+              key={currentSessionId}
+              sessionId={currentSessionId}
+              topicId={topicId}
+            />
           ) : (
             <div className="flex-1 flex items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+              <div className="text-center">
+                <p className="text-gray-500 mb-4">
+                  チャットセッションがありません
+                </p>
+                <button
+                  onClick={() => createSessionMutation.mutate()}
+                  disabled={createSessionMutation.isPending}
+                  className="btn-primary"
+                >
+                  {createSessionMutation.isPending
+                    ? "作成中..."
+                    : "新しいチャットを開始"}
+                </button>
+              </div>
             </div>
           )}
         </main>
@@ -113,8 +191,48 @@ function TopicDetailPage() {
             <TopicInfo topic={topic.topic} subjectId={subjectId} />
           </div>
         )}
-        {activeTab === "chat" && session && (
-          <ChatContainer sessionId={session.session.id} topicId={topicId} />
+        {activeTab === "chat" && (
+          <div className="h-full flex flex-col">
+            {/* セッション選択バー */}
+            <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 border-b">
+              <select
+                value={currentSessionId ?? ""}
+                onChange={(e) => setSelectedSessionId(e.target.value || null)}
+                className="flex-1 text-sm border rounded px-2 py-1"
+              >
+                {sessions.map((s, i) => (
+                  <option key={s.id} value={s.id}>
+                    {new Date(s.createdAt).toLocaleDateString("ja-JP")} (
+                    {s.messageCount}件)
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={() => createSessionMutation.mutate()}
+                disabled={createSessionMutation.isPending}
+                className="text-sm text-blue-600 hover:text-blue-800 whitespace-nowrap"
+              >
+                + 新規
+              </button>
+            </div>
+            {currentSessionId ? (
+              <ChatContainer
+                key={currentSessionId}
+                sessionId={currentSessionId}
+                topicId={topicId}
+              />
+            ) : (
+              <div className="flex-1 flex items-center justify-center">
+                <button
+                  onClick={() => createSessionMutation.mutate()}
+                  disabled={createSessionMutation.isPending}
+                  className="btn-primary"
+                >
+                  新しいチャットを開始
+                </button>
+              </div>
+            )}
+          </div>
         )}
         {activeTab === "notes" && (
           <div className="h-full overflow-y-auto">
@@ -122,6 +240,67 @@ function TopicDetailPage() {
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+// セッション一覧コンポーネント
+function SessionList({
+  sessions,
+  currentSessionId,
+  onSelect,
+  onCreateNew,
+  isCreating,
+}: {
+  sessions: Session[]
+  currentSessionId: string | null
+  onSelect: (id: string) => void
+  onCreateNew: () => void
+  isCreating: boolean
+}) {
+  return (
+    <div className="p-4">
+      <button
+        onClick={onCreateNew}
+        disabled={isCreating}
+        className="w-full mb-4 py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
+      >
+        {isCreating ? "作成中..." : "+ 新しいチャットを開始"}
+      </button>
+
+      {sessions.length === 0 ? (
+        <p className="text-gray-500 text-center text-sm">
+          まだチャット履歴がありません
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {sessions.map((session) => (
+            <button
+              key={session.id}
+              onClick={() => onSelect(session.id)}
+              className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                session.id === currentSessionId
+                  ? "border-blue-500 bg-blue-50"
+                  : "border-gray-200 hover:bg-gray-50"
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-900">
+                  {new Date(session.createdAt).toLocaleDateString("ja-JP", {
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+                <span className="text-xs text-gray-500">
+                  {session.messageCount}件
+                </span>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
