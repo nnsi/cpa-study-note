@@ -1,0 +1,116 @@
+import { eq, and, desc } from "drizzle-orm"
+import type { Db } from "@cpa-study/db"
+import { notes } from "@cpa-study/db/schema"
+
+export type Note = {
+  id: string
+  userId: string
+  topicId: string
+  sessionId: string | null
+  aiSummary: string | null
+  userMemo: string | null
+  keyPoints: string[]
+  stumbledPoints: string[]
+  createdAt: Date
+  updatedAt: Date
+}
+
+export type NoteRepository = {
+  create: (data: Omit<Note, "id" | "createdAt" | "updatedAt">) => Promise<Note>
+  findById: (id: string) => Promise<Note | null>
+  findByTopic: (userId: string, topicId: string) => Promise<Note[]>
+  findByUser: (userId: string) => Promise<Note[]>
+  update: (
+    id: string,
+    data: Partial<Pick<Note, "userMemo" | "keyPoints" | "stumbledPoints">>
+  ) => Promise<Note | null>
+}
+
+export const createNoteRepository = (db: Db): NoteRepository => ({
+  create: async (data) => {
+    const id = crypto.randomUUID()
+    const now = new Date()
+
+    await db.insert(notes).values({
+      id,
+      userId: data.userId,
+      topicId: data.topicId,
+      sessionId: data.sessionId,
+      aiSummary: data.aiSummary,
+      userMemo: data.userMemo,
+      keyPoints: data.keyPoints,
+      stumbledPoints: data.stumbledPoints,
+      createdAt: now,
+      updatedAt: now,
+    })
+
+    return { id, ...data, createdAt: now, updatedAt: now }
+  },
+
+  findById: async (id) => {
+    const result = await db.select().from(notes).where(eq(notes.id, id)).limit(1)
+    if (!result[0]) return null
+
+    return {
+      ...result[0],
+      keyPoints: (result[0].keyPoints as string[]) ?? [],
+      stumbledPoints: (result[0].stumbledPoints as string[]) ?? [],
+    }
+  },
+
+  findByTopic: async (userId, topicId) => {
+    const result = await db
+      .select()
+      .from(notes)
+      .where(and(eq(notes.userId, userId), eq(notes.topicId, topicId)))
+      .orderBy(desc(notes.createdAt))
+
+    return result.map((n) => ({
+      ...n,
+      keyPoints: (n.keyPoints as string[]) ?? [],
+      stumbledPoints: (n.stumbledPoints as string[]) ?? [],
+    }))
+  },
+
+  findByUser: async (userId) => {
+    const result = await db
+      .select()
+      .from(notes)
+      .where(eq(notes.userId, userId))
+      .orderBy(desc(notes.createdAt))
+
+    return result.map((n) => ({
+      ...n,
+      keyPoints: (n.keyPoints as string[]) ?? [],
+      stumbledPoints: (n.stumbledPoints as string[]) ?? [],
+    }))
+  },
+
+  update: async (id, data) => {
+    const existing = await db
+      .select()
+      .from(notes)
+      .where(eq(notes.id, id))
+      .limit(1)
+
+    if (!existing[0]) return null
+
+    const now = new Date()
+    await db
+      .update(notes)
+      .set({
+        ...data,
+        updatedAt: now,
+      })
+      .where(eq(notes.id, id))
+
+    return {
+      ...existing[0],
+      ...data,
+      keyPoints: data.keyPoints ?? (existing[0].keyPoints as string[]) ?? [],
+      stumbledPoints:
+        data.stumbledPoints ?? (existing[0].stumbledPoints as string[]) ?? [],
+      updatedAt: now,
+    }
+  },
+})

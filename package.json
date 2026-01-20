@@ -1,0 +1,23 @@
+{
+  "name": "cpa-study-note",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "dev:api": "pnpm --filter @cpa-study/api dev",
+    "dev:web": "pnpm --filter @cpa-study/web dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "db:generate": "pnpm --filter @cpa-study/db generate",
+    "db:migrate": "pnpm --filter @cpa-study/db migrate",
+    "db:seed": "pnpm --filter @cpa-study/db seed"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@9.15.4"
+}
