@@ -6,11 +6,14 @@ compatibility_date = "2024-12-01"
 AUTH_MODE = "dev"
 DEV_USER_ID = "test-user-1"
 AI_PROVIDER = "mock"
+API_BASE_URL = "http://127.0.0.1:8787"
+WEB_BASE_URL = "http://localhost:5174"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "cpa-study-db"
 database_id = "local"
+migrations_dir = "../../packages/db/migrations"
 
 [[r2_buckets]]
 binding = "R2"

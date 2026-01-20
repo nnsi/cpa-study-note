@@ -12,7 +12,7 @@ description: /docs/diary/に日記を書く。
 1. 現在の日付を取得する
 
 ```bash
-node ./scripts/get-date.js
+pnpm get-time
 ```
 
 出力例: `2025-01-13 14:30 JST`

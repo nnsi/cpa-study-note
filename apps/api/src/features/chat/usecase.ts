@@ -210,8 +210,9 @@ export async function* sendMessage(
   })) {
     if (chunk.type === "text" && chunk.content) {
       fullResponse += chunk.content
+      yield chunk
     }
-    yield chunk
+    // "done"チャンクはメッセージ保存後に送信するためここではyieldしない
   }
 
   // アシスタントメッセージを保存
@@ -232,6 +233,9 @@ export async function* sendMessage(
     topicId: session.topicId,
     incrementQuestionCount: true,
   })
+
+  // メッセージ保存後に"done"を送信（ユーザーメッセージIDを含める）
+  yield { type: "done" as const, messageId: userMessage.id }
 }
 
 export const evaluateQuestion = async (

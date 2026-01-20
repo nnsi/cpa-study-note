@@ -1,7 +1,8 @@
-import { useRef, useEffect } from "react"
+import { useRef, useEffect, useState } from "react"
 import { useChat } from "../hooks"
 import { ChatMessageView } from "./ChatMessage"
 import { ChatInputView } from "./ChatInput"
+import { useCreateNote } from "@/features/note"
 
 type Props = {
   sessionId: string
@@ -11,6 +12,8 @@ type Props = {
 export const ChatContainer = ({ sessionId, topicId }: Props) => {
   const { messages, input } = useChat(sessionId)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const { mutate: createNote, isPending: isCreatingNote } = useCreateNote(topicId)
+  const [noteCreated, setNoteCreated] = useState(false)
 
   // 新しいメッセージが追加されたら自動スクロール
   useEffect(() => {
@@ -54,6 +57,27 @@ export const ChatContainer = ({ sessionId, topicId }: Props) => {
 
         <div ref={messagesEndRef} />
       </div>
+
+      {/* ノート作成ボタン（メッセージがある場合のみ表示） */}
+      {messages.displayMessages.length > 0 && (
+        <div className="px-4 py-2 border-t bg-gray-50">
+          <button
+            onClick={() => {
+              createNote(sessionId, {
+                onSuccess: () => setNoteCreated(true),
+              })
+            }}
+            disabled={isCreatingNote || noteCreated}
+            className="w-full py-2 text-sm text-blue-600 hover:text-blue-800 disabled:text-gray-400 disabled:cursor-not-allowed"
+          >
+            {isCreatingNote
+              ? "ノートを作成中..."
+              : noteCreated
+                ? "✓ ノートを作成しました"
+                : "📝 この会話からノートを作成"}
+          </button>
+        </div>
+      )}
 
       <ChatInputView
         content={input.content}

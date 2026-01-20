@@ -30,6 +30,8 @@ export const useSendMessage = (sessionId: string) => {
       setError(null)
 
       try {
+        let userMessageId: string | undefined
+
         for await (const chunk of api.streamMessage(
           sessionId,
           content,
@@ -39,6 +41,7 @@ export const useSendMessage = (sessionId: string) => {
           if (chunk.type === "text") {
             setStreamingText((prev) => prev + chunk.content)
           } else if (chunk.type === "done") {
+            userMessageId = chunk.messageId
             // メッセージ一覧を再取得
             queryClient.invalidateQueries({
               queryKey: ["chat", sessionId, "messages"],
@@ -46,6 +49,18 @@ export const useSendMessage = (sessionId: string) => {
           } else if (chunk.type === "error") {
             setError(new Error(chunk.error))
           }
+        }
+
+        // ユーザーメッセージの質問評価を実行（バックグラウンド）
+        if (userMessageId) {
+          api.evaluateMessage(userMessageId).then(() => {
+            // 評価完了後にメッセージ一覧を再取得してバッジを更新
+            queryClient.invalidateQueries({
+              queryKey: ["chat", sessionId, "messages"],
+            })
+          }).catch(() => {
+            // 評価エラーは無視（UXに影響しない）
+          })
         }
       } catch (err) {
         setError(err instanceof Error ? err : new Error("Unknown error"))

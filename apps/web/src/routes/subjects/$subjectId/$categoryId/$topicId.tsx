@@ -4,10 +4,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { api } from "@/lib/api-client"
 import { ChatContainer } from "@/features/chat"
 import { TopicInfo } from "@/features/topic"
+import { TopicNotes } from "@/features/note"
+import { requireAuth } from "@/lib/auth"
 
 export const Route = createFileRoute(
   "/subjects/$subjectId/$categoryId/$topicId"
 )({
+  beforeLoad: requireAuth,
   component: TopicDetailPage,
 })
 
@@ -88,7 +91,7 @@ function TopicDetailPage() {
               ← 論点一覧
             </Link>
           </div>
-          {topic && <TopicInfo topic={topic.topic} />}
+          {topic && <TopicInfo topic={topic.topic} subjectId={subjectId} />}
         </aside>
 
         {/* 右: チャット */}
@@ -107,17 +110,15 @@ function TopicDetailPage() {
       <div className="lg:hidden flex-1 overflow-hidden">
         {activeTab === "info" && topic && (
           <div className="h-full overflow-y-auto">
-            <TopicInfo topic={topic.topic} />
+            <TopicInfo topic={topic.topic} subjectId={subjectId} />
           </div>
         )}
         {activeTab === "chat" && session && (
           <ChatContainer sessionId={session.session.id} topicId={topicId} />
         )}
         {activeTab === "notes" && (
-          <div className="p-4">
-            <p className="text-gray-500 text-center">
-              ノート機能は準備中です
-            </p>
+          <div className="h-full overflow-y-auto">
+            <TopicNotes topicId={topicId} />
           </div>
         )}
       </div>

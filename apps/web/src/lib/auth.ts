@@ -1,5 +1,17 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
+import { redirect } from "@tanstack/react-router"
+
+export const isDevMode = import.meta.env.VITE_AUTH_MODE === "dev"
+const devUserId = import.meta.env.VITE_DEV_USER_ID || "test-user-1"
+
+// 開発用テストユーザー
+const devUser: User = {
+  id: devUserId,
+  email: `${devUserId}@example.com`,
+  displayName: "テストユーザー",
+  avatarUrl: null,
+}
 
 type User = {
   id: string
@@ -12,8 +24,10 @@ type AuthState = {
   user: User | null
   token: string | null
   setAuth: (user: User, token: string) => void
+  setDevAuth: () => void
   clearAuth: () => void
   isAuthenticated: () => boolean
+  isDevUser: () => boolean
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -25,11 +39,15 @@ export const useAuthStore = create<AuthState>()(
         localStorage.setItem("auth_token", token)
         set({ user, token })
       },
+      setDevAuth: () => {
+        set({ user: devUser, token: "dev-token" })
+      },
       clearAuth: () => {
         localStorage.removeItem("auth_token")
         set({ user: null, token: null })
       },
       isAuthenticated: () => !!get().token,
+      isDevUser: () => get().token === "dev-token",
     }),
     {
       name: "auth-storage",
@@ -37,3 +55,11 @@ export const useAuthStore = create<AuthState>()(
     }
   )
 )
+
+// 認証ガード: beforeLoadで使用
+export const requireAuth = () => {
+  const { token } = useAuthStore.getState()
+  if (!token) {
+    throw redirect({ to: "/login" })
+  }
+}

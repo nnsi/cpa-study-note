@@ -10,7 +10,8 @@
     "lint": "pnpm -r lint",
     "db:generate": "pnpm --filter @cpa-study/db generate",
     "db:migrate": "pnpm --filter @cpa-study/db migrate",
-    "db:seed": "pnpm --filter @cpa-study/db seed"
+    "db:seed": "pnpm --filter @cpa-study/db seed",
+    "get-time": "node ./scripts/get-date.js"
   },
   "devDependencies": {
     "typescript": "^5.7.3"

@@ -1,8 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
 import { api } from "@/lib/api-client"
+import { requireAuth } from "@/lib/auth"
 
 export const Route = createFileRoute("/subjects/$subjectId/")({
+  beforeLoad: requireAuth,
   component: SubjectDetailPage,
 })
 

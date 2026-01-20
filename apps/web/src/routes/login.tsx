@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useEffect } from "react"
-import { useAuthStore } from "@/lib/auth"
+import { useAuthStore, isDevMode } from "@/lib/auth"
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -34,7 +34,7 @@ const providers = [
 ]
 
 function LoginPage() {
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, setDevAuth } = useAuthStore()
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -45,6 +45,11 @@ function LoginPage() {
 
   const handleLogin = (providerId: string) => {
     window.location.href = `/api/auth/${providerId}`
+  }
+
+  const handleDevLogin = () => {
+    setDevAuth()
+    navigate({ to: "/" })
   }
 
   return (
@@ -68,6 +73,26 @@ function LoginPage() {
               <span>{provider.label}</span>
             </button>
           ))}
+
+          {isDevMode && (
+            <>
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-200" />
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-white text-gray-500">開発用</span>
+                </div>
+              </div>
+              <button
+                onClick={handleDevLogin}
+                className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-amber-100 border border-amber-300 text-amber-800 rounded-lg hover:bg-amber-200 transition-colors"
+              >
+                <span>🧪</span>
+                <span>テストユーザーでログイン</span>
+              </button>
+            </>
+          )}
         </div>
 
         <p className="mt-6 text-center text-xs text-gray-500">

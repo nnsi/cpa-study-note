@@ -21,18 +21,18 @@ type Topic = {
 
 type Props = {
   topic: Topic
+  subjectId: string
 }
 
-export const TopicInfo = ({ topic }: Props) => {
+export const TopicInfo = ({ topic, subjectId }: Props) => {
   const queryClient = useQueryClient()
 
   const { mutate: updateProgress, isPending } = useMutation({
     mutationFn: async (understood: boolean) => {
-      // URLのsubjectIdを取得する必要がある
       const res = await api.api.subjects[":subjectId"].topics[
         ":topicId"
       ].progress.$put({
-        param: { subjectId: "dummy", topicId: topic.id },
+        param: { subjectId, topicId: topic.id },
         json: { understood },
       })
       if (!res.ok) throw new Error("Failed to update progress")
@@ -40,6 +40,7 @@ export const TopicInfo = ({ topic }: Props) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["topics", topic.id] })
+      queryClient.invalidateQueries({ queryKey: ["progress", "me"] })
     },
   })
 

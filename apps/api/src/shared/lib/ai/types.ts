@@ -22,6 +22,7 @@ export type StreamChunk = {
   type: "text" | "error" | "done"
   content?: string
   error?: string
+  messageId?: string
 }
 
 export type AIAdapter = {

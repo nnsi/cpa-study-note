@@ -1,8 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
 import { api } from "@/lib/api-client"
+import { requireAuth } from "@/lib/auth"
 
 export const Route = createFileRoute("/notes/")({
+  beforeLoad: requireAuth,
   component: NotesPage,
 })
 
@@ -57,6 +59,12 @@ function NotesPage() {
               className="card block hover:shadow-md transition-shadow"
             >
               <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded">
+                    {note.subjectName}
+                  </span>
+                  <span className="text-gray-600">{note.topicName}</span>
+                </div>
                 <p className="text-gray-900 line-clamp-2">{note.aiSummary}</p>
                 <div className="flex items-center gap-4 text-sm text-gray-500">
                   <span>

@@ -10,38 +10,32 @@ export const Header = () => {
         <span className="text-xl font-bold text-blue-600">CPA Study</span>
       </Link>
 
-      <div className="flex items-center gap-4">
-        {isAuthenticated() && user ? (
-          <div className="flex items-center gap-3">
-            <span className="hidden sm:inline text-sm text-gray-600">
-              {user.displayName || user.email}
-            </span>
-            {user.avatarUrl ? (
-              <img
-                src={user.avatarUrl}
-                alt=""
-                className="w-8 h-8 rounded-full"
-              />
-            ) : (
-              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                <span className="text-sm text-blue-600">
-                  {(user.displayName || user.email)[0].toUpperCase()}
-                </span>
-              </div>
-            )}
-            <button
-              onClick={clearAuth}
-              className="text-sm text-gray-500 hover:text-gray-700"
-            >
-              ログアウト
-            </button>
-          </div>
-        ) : (
-          <Link to="/login" className="btn-primary text-sm">
-            ログイン
-          </Link>
-        )}
-      </div>
+      {isAuthenticated() && user && (
+        <div className="flex items-center gap-3">
+          <span className="hidden sm:inline text-sm text-gray-600">
+            {user.displayName || user.email}
+          </span>
+          {user.avatarUrl ? (
+            <img
+              src={user.avatarUrl}
+              alt=""
+              className="w-8 h-8 rounded-full"
+            />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+              <span className="text-sm text-blue-600">
+                {(user.displayName || user.email)[0].toUpperCase()}
+              </span>
+            </div>
+          )}
+          <button
+            onClick={clearAuth}
+            className="text-sm text-gray-500 hover:text-gray-700"
+          >
+            ログアウト
+          </button>
+        </div>
+      )}
     </header>
   )
 }

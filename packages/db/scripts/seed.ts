@@ -35,25 +35,25 @@ const devUsers = [
     id: "test-user-1",
     email: "test1@example.com",
     name: "テストユーザー1",
-    avatarUrl: null,
-    createdAt: now,
-    updatedAt: now,
+    avatar_url: null,
+    created_at: now,
+    updated_at: now,
   },
   {
     id: "test-user-2",
     email: "test2@example.com",
     name: "テストユーザー2",
-    avatarUrl: null,
-    createdAt: now,
-    updatedAt: now,
+    avatar_url: null,
+    created_at: now,
+    updated_at: now,
   },
   {
     id: "test-admin",
     email: "admin@example.com",
     name: "管理者テスト",
-    avatarUrl: null,
-    createdAt: now,
-    updatedAt: now,
+    avatar_url: null,
+    created_at: now,
+    updated_at: now,
   },
 ]
 
@@ -72,33 +72,33 @@ type SubjectData = {
   id: string
   name: string
   description: string | null
-  displayOrder: number
-  createdAt: Date
-  updatedAt: Date
+  display_order: number
+  created_at: Date
+  updated_at: Date
 }
 
 type CategoryData = {
   id: string
-  subjectId: string
+  subject_id: string
   name: string
   depth: number
-  parentId: string | null
-  displayOrder: number
-  createdAt: Date
-  updatedAt: Date
+  parent_id: string | null
+  display_order: number
+  created_at: Date
+  updated_at: Date
 }
 
 type TopicData = {
   id: string
-  categoryId: string
+  category_id: string
   name: string
   description: string | null
   difficulty: string | null
-  topicType: string | null
-  aiSystemPrompt: string | null
-  displayOrder: number
-  createdAt: Date
-  updatedAt: Date
+  topic_type: string | null
+  ai_system_prompt: string | null
+  display_order: number
+  created_at: Date
+  updated_at: Date
 }
 
 const generateSeedData = () => {
@@ -134,9 +134,9 @@ const generateSeedData = () => {
           id: subjectId,
           name: row.subjectName,
           description: null,
-          displayOrder: subjectOrder++,
-          createdAt: now,
-          updatedAt: now,
+          display_order: subjectOrder++,
+          created_at: now,
+          updated_at: now,
         })
       }
       const subjectId = subjectMap.get(row.subjectName)!
@@ -148,13 +148,13 @@ const generateSeedData = () => {
         largeCategoryMap.set(largeCategoryKey, categoryId)
         categories.push({
           id: categoryId,
-          subjectId,
+          subject_id: subjectId,
           name: row.largeCategory,
           depth: 1,
-          parentId: null,
-          displayOrder: largeCategoryOrder++,
-          createdAt: now,
-          updatedAt: now,
+          parent_id: null,
+          display_order: largeCategoryOrder++,
+          created_at: now,
+          updated_at: now,
         })
       }
       const largeCategoryId = largeCategoryMap.get(largeCategoryKey)!
@@ -166,13 +166,13 @@ const generateSeedData = () => {
         mediumCategoryMap.set(mediumCategoryKey, categoryId)
         categories.push({
           id: categoryId,
-          subjectId,
+          subject_id: subjectId,
           name: row.mediumCategory,
           depth: 2,
-          parentId: largeCategoryId,
-          displayOrder: mediumCategoryOrder++,
-          createdAt: now,
-          updatedAt: now,
+          parent_id: largeCategoryId,
+          display_order: mediumCategoryOrder++,
+          created_at: now,
+          updated_at: now,
         })
       }
       const mediumCategoryId = mediumCategoryMap.get(mediumCategoryKey)!
@@ -181,39 +181,39 @@ const generateSeedData = () => {
       if (row.smallCategory) {
         const topicKey = `${mediumCategoryId}:${row.smallCategory}`
         const existingTopic = topics.find(
-          (t) => t.categoryId === mediumCategoryId && t.name === row.smallCategory
+          (t) => t.category_id === mediumCategoryId && t.name === row.smallCategory
         )
         if (!existingTopic) {
           topics.push({
             id: generateId(),
-            categoryId: mediumCategoryId,
+            category_id: mediumCategoryId,
             name: row.smallCategory,
             description: null,
             difficulty: null,
-            topicType: null,
-            aiSystemPrompt: null,
-            displayOrder: topicOrder++,
-            createdAt: now,
-            updatedAt: now,
+            topic_type: null,
+            ai_system_prompt: null,
+            display_order: topicOrder++,
+            created_at: now,
+            updated_at: now,
           })
         }
       } else {
         // Medium category itself is a topic
         const existingTopic = topics.find(
-          (t) => t.categoryId === mediumCategoryId && t.name === row.mediumCategory
+          (t) => t.category_id === mediumCategoryId && t.name === row.mediumCategory
         )
         if (!existingTopic) {
           topics.push({
             id: generateId(),
-            categoryId: mediumCategoryId,
+            category_id: mediumCategoryId,
             name: row.mediumCategory,
             description: null,
             difficulty: null,
-            topicType: null,
-            aiSystemPrompt: null,
-            displayOrder: topicOrder++,
-            createdAt: now,
-            updatedAt: now,
+            topic_type: null,
+            ai_system_prompt: null,
+            display_order: topicOrder++,
+            created_at: now,
+            updated_at: now,
           })
         }
       }
@@ -232,16 +232,22 @@ const formatValue = (value: unknown): string => {
   return String(value)
 }
 
-const generateInsertSQL = (table: string, data: Record<string, unknown>[]): string => {
+const generateInsertSQL = (table: string, data: Record<string, unknown>[], batchSize = 50): string => {
   if (data.length === 0) return ""
 
   const columns = Object.keys(data[0])
-  const values = data.map((row) => {
-    const rowValues = columns.map((col) => formatValue(row[col]))
-    return `(${rowValues.join(", ")})`
-  })
+  let sql = ""
 
-  return `INSERT INTO ${table} (${columns.join(", ")}) VALUES\n${values.join(",\n")};\n\n`
+  for (let i = 0; i < data.length; i += batchSize) {
+    const batch = data.slice(i, i + batchSize)
+    const values = batch.map((row) => {
+      const rowValues = columns.map((col) => formatValue(row[col]))
+      return `(${rowValues.join(", ")})`
+    })
+    sql += `INSERT INTO ${table} (${columns.join(", ")}) VALUES\n${values.join(",\n")};\n\n`
+  }
+
+  return sql
 }
 
 const main = () => {

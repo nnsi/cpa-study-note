@@ -2,7 +2,7 @@ import { api } from "@/lib/api-client"
 
 export type StreamChunk =
   | { type: "text"; content: string }
-  | { type: "done"; messageId: string }
+  | { type: "done"; messageId?: string }
   | { type: "error"; error: string }
 
 export const getMessages = async (sessionId: string) => {
@@ -19,10 +19,18 @@ export async function* streamMessage(
   imageId?: string,
   ocrResult?: string
 ): AsyncIterable<StreamChunk> {
-  const res = await api.api.chat.sessions[":sessionId"].messages.stream.$post({
-    param: { sessionId },
-    json: { content, imageId, ocrResult },
-  })
+  // Hono RPCではなくfetchを直接使用（SSEストリーミング対応）
+  const apiUrl = import.meta.env.VITE_API_URL || ""
+  const res = await fetch(
+    `${apiUrl}/api/chat/sessions/${sessionId}/messages/stream`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ content, imageId, ocrResult }),
+    }
+  )
 
   if (!res.ok || !res.body) throw new Error("Stream failed")
 

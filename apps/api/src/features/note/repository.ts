@@ -1,6 +1,6 @@
 import { eq, and, desc } from "drizzle-orm"
 import type { Db } from "@cpa-study/db"
-import { notes } from "@cpa-study/db/schema"
+import { notes, topics, categories, subjects } from "@cpa-study/db/schema"
 
 export type Note = {
   id: string
@@ -15,11 +15,16 @@ export type Note = {
   updatedAt: Date
 }
 
+export type NoteWithTopic = Note & {
+  topicName: string
+  subjectName: string
+}
+
 export type NoteRepository = {
   create: (data: Omit<Note, "id" | "createdAt" | "updatedAt">) => Promise<Note>
   findById: (id: string) => Promise<Note | null>
   findByTopic: (userId: string, topicId: string) => Promise<Note[]>
-  findByUser: (userId: string) => Promise<Note[]>
+  findByUser: (userId: string) => Promise<NoteWithTopic[]>
   update: (
     id: string,
     data: Partial<Pick<Note, "userMemo" | "keyPoints" | "stumbledPoints">>
@@ -74,8 +79,24 @@ export const createNoteRepository = (db: Db): NoteRepository => ({
 
   findByUser: async (userId) => {
     const result = await db
-      .select()
+      .select({
+        id: notes.id,
+        userId: notes.userId,
+        topicId: notes.topicId,
+        sessionId: notes.sessionId,
+        aiSummary: notes.aiSummary,
+        userMemo: notes.userMemo,
+        keyPoints: notes.keyPoints,
+        stumbledPoints: notes.stumbledPoints,
+        createdAt: notes.createdAt,
+        updatedAt: notes.updatedAt,
+        topicName: topics.name,
+        subjectName: subjects.name,
+      })
       .from(notes)
+      .innerJoin(topics, eq(notes.topicId, topics.id))
+      .innerJoin(categories, eq(topics.categoryId, categories.id))
+      .innerJoin(subjects, eq(categories.subjectId, subjects.id))
       .where(eq(notes.userId, userId))
       .orderBy(desc(notes.createdAt))
 

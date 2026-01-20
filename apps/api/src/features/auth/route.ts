@@ -23,6 +23,12 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
       return c.json({ providers: providers.list() })
     })
 
+    // ユーザー情報取得（/:providerより先に定義）
+    .get("/me", authMiddleware, (c) => {
+      const user = c.get("user")
+      return c.json({ user })
+    })
+
     // OAuth開始
     .get("/:provider", (c) => {
       const providerName = c.req.param("provider")
@@ -127,12 +133,6 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
       })
 
       return c.json({ token })
-    })
-
-    // ユーザー情報取得
-    .get("/me", authMiddleware, (c) => {
-      const user = c.get("user")
-      return c.json({ user })
     })
 
     // ログアウト
