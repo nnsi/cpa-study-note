@@ -71,8 +71,11 @@ export const useSendMessage = (sessionId: string) => {
             queryClient.invalidateQueries({
               queryKey: ["chat", sessionId, "messages"],
             })
-          }).catch(() => {
-            // 評価エラーは無視（UXに影響しない）
+          }).catch((e) => {
+            // 評価エラーはUXに影響しないが、開発時はログ出力
+            if (import.meta.env.DEV) {
+              console.warn("Message evaluation failed:", e)
+            }
           })
         }
       } catch (err) {

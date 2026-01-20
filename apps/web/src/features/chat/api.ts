@@ -53,8 +53,11 @@ export async function* streamMessage(
           const chunk: StreamChunk = JSON.parse(line.slice(6))
           yield chunk
           if (chunk.type === "done" || chunk.type === "error") return
-        } catch {
-          // パースエラーは無視
+        } catch (e) {
+          // 不正なJSONチャンクはスキップ（ネットワーク分断等で発生しうる）
+          if (import.meta.env.DEV) {
+            console.warn("SSE parse error:", line, e)
+          }
         }
       }
     }

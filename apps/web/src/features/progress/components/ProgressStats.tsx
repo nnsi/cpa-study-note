@@ -28,7 +28,6 @@ export const ProgressStats = () => {
           label="理解済み"
           value={stats.understoodTopics}
           icon="✅"
-          subtext={`${stats.completionRate}%`}
         />
         <StatCard
           label="今週学習"

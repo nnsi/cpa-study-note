@@ -13,7 +13,7 @@ function SubjectsPage() {
     queryKey: ["subjects"],
     queryFn: async () => {
       const res = await api.api.subjects.$get()
-      if (!res.ok) throw new Error("Failed to fetch subjects")
+      if (!res.ok) throw new Error(`科目の取得に失敗しました (${res.status})`)
       return res.json()
     },
   })
@@ -75,6 +75,7 @@ function SubjectsPage() {
   )
 }
 
+/** 科目名に対応する絵文字を返す（公認会計士試験科目固定） */
 function getSubjectEmoji(name: string): string {
   const emojiMap: Record<string, string> = {
     財務会計論: "📘",

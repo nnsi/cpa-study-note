@@ -73,7 +73,7 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
       )
 
       if (!result.ok) {
-        const statusMap: Record<string, number> = {
+        const statusMap: Record<string, 401 | 404 | 500> = {
           PROVIDER_NOT_FOUND: 404,
           TOKEN_EXCHANGE_FAILED: 401,
           USER_INFO_FAILED: 401,

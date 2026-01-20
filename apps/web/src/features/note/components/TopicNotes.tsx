@@ -4,7 +4,7 @@ import { useNotesByTopic } from "../hooks"
 
 type Note = {
   id: string
-  aiSummary: string
+  aiSummary: string | null
   userMemo: string | null
   keyPoints: string[]
   stumbledPoints: string[]

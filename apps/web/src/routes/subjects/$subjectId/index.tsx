@@ -26,7 +26,7 @@ function SubjectDetailPage() {
       const res = await api.api.subjects[":subjectId"].$get({
         param: { subjectId },
       })
-      if (!res.ok) throw new Error("Failed to fetch subject")
+      if (!res.ok) throw new Error(`科目の取得に失敗しました (${res.status})`)
       return res.json()
     },
   })
@@ -37,7 +37,7 @@ function SubjectDetailPage() {
       const res = await api.api.subjects[":subjectId"].categories.$get({
         param: { subjectId },
       })
-      if (!res.ok) throw new Error("Failed to fetch categories")
+      if (!res.ok) throw new Error(`カテゴリの取得に失敗しました (${res.status})`)
       return res.json()
     },
   })

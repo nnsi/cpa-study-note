@@ -20,7 +20,7 @@ function CategoryPage() {
       ].topics.$get({
         param: { subjectId, categoryId },
       })
-      if (!res.ok) throw new Error("Failed to fetch topics")
+      if (!res.ok) throw new Error(`論点の取得に失敗しました (${res.status})`)
       return res.json()
     },
   })
@@ -30,7 +30,7 @@ function CategoryPage() {
     queryKey: ["progress", "me"],
     queryFn: async () => {
       const res = await api.api.subjects.progress.me.$get()
-      if (!res.ok) throw new Error("Failed to fetch progress")
+      if (!res.ok) throw new Error(`進捗の取得に失敗しました (${res.status})`)
       return res.json()
     },
   })
@@ -59,7 +59,7 @@ function CategoryPage() {
         param: { subjectId, topicId },
         json: { understood },
       })
-      if (!res.ok) throw new Error("Failed to update progress")
+      if (!res.ok) throw new Error(`進捗の更新に失敗しました (${res.status})`)
       return res.json()
     },
     onSuccess: () => {

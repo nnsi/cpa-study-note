@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { api } from "@/lib/api-client"
 import { requireAuth } from "@/lib/auth"
@@ -21,13 +21,17 @@ function NoteDetailPage() {
       const res = await api.api.notes[":noteId"].$get({
         param: { noteId },
       })
-      if (!res.ok) throw new Error("Failed to fetch note")
+      if (!res.ok) throw new Error(`ノートの取得に失敗しました (${res.status})`)
       return res.json()
     },
-    onSuccess: (data: { note: { userMemo: string | null } }) => {
-      setUserMemo(data.note.userMemo || "")
-    },
   })
+
+  // データ取得時にメモを初期化
+  useEffect(() => {
+    if (data?.note) {
+      setUserMemo(data.note.userMemo || "")
+    }
+  }, [data])
 
   const { mutate: updateNote, isPending } = useMutation({
     mutationFn: async () => {
@@ -35,7 +39,7 @@ function NoteDetailPage() {
         param: { noteId },
         json: { userMemo },
       })
-      if (!res.ok) throw new Error("Failed to update note")
+      if (!res.ok) throw new Error(`ノートの更新に失敗しました (${res.status})`)
       return res.json()
     },
     onSuccess: () => {

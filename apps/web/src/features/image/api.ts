@@ -12,10 +12,16 @@ export const uploadImage = async (
   imageId: string,
   file: File
 ): Promise<void> => {
-  const res = await api.api.images[":imageId"].upload.$post({
-    param: { imageId },
+  // Hono RPCはArrayBuffer bodyに対応していないため直接fetchを使用
+  const apiUrl = import.meta.env.VITE_API_URL || ""
+  const res = await fetch(`${apiUrl}/api/images/${imageId}/upload`, {
+    method: "POST",
+    headers: {
+      "Content-Type": file.type,
+    },
     body: await file.arrayBuffer(),
-  } as any)
+    credentials: "include",
+  })
   if (!res.ok) throw new Error("Failed to upload image")
 }
 

@@ -8,7 +8,6 @@ type TopicDeps = {
 type SubjectWithStats = {
   id: string
   name: string
-  slug: string
   description: string | null
   displayOrder: number
   createdAt: string

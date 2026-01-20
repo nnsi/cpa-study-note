@@ -21,7 +21,10 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("ErrorBoundary caught an error:", error, errorInfo)
+    // 開発環境でのみログ出力（本番ではエラー監視サービスに送信すべき）
+    if (import.meta.env.DEV) {
+      console.error("ErrorBoundary caught an error:", error, errorInfo)
+    }
   }
 
   render() {
@@ -46,7 +49,7 @@ export class ErrorBoundary extends Component<Props, State> {
             >
               再読み込み
             </button>
-            {process.env.NODE_ENV === "development" && this.state.error && (
+            {import.meta.env.DEV && this.state.error && (
               <pre className="mt-4 p-4 bg-red-50 text-red-600 text-xs text-left rounded overflow-auto max-h-40">
                 {this.state.error.message}
                 {"\n"}

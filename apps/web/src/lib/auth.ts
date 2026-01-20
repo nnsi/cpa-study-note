@@ -2,10 +2,15 @@ import { create } from "zustand"
 import { persist } from "zustand/middleware"
 import { redirect } from "@tanstack/react-router"
 
+/**
+ * 開発モード判定
+ * VITE_AUTH_MODE=dev の場合のみ有効
+ * 本番ビルドでは環境変数が設定されないため自動的に無効化される
+ */
 export const isDevMode = import.meta.env.VITE_AUTH_MODE === "dev"
 const devUserId = import.meta.env.VITE_DEV_USER_ID || "test-user-1"
 
-// 開発用テストユーザー
+// 開発用テストユーザー（本番では isDevMode=false のため使用されない）
 const devUser: User = {
   id: devUserId,
   email: `${devUserId}@example.com`,

@@ -79,21 +79,29 @@ export const ChatContainer = ({ sessionId, topicId }: Props) => {
       {/* ノート作成ボタン（メッセージがある場合のみ表示） */}
       {messages.displayMessages.length > 0 && (
         <div className="px-4 py-2 border-t bg-gray-50">
-          <button
-            onClick={() => {
-              createNote(sessionId, {
-                onSuccess: () => setNoteCreated(true),
-              })
-            }}
-            disabled={isCreatingNote || noteCreated}
-            className="w-full py-2 text-sm text-blue-600 hover:text-blue-800 disabled:text-gray-400 disabled:cursor-not-allowed"
-          >
-            {isCreatingNote
-              ? "ノートを作成中..."
-              : noteCreated
-                ? "✓ ノートを作成しました"
-                : "📝 この会話からノートを作成"}
-          </button>
+          {noteCreated ? (
+            <div className="flex items-center justify-center gap-3">
+              <span className="text-sm text-green-600">✓ ノートを作成しました</span>
+              <button
+                onClick={() => setNoteCreated(false)}
+                className="text-sm text-blue-600 hover:text-blue-800 underline"
+              >
+                もう一度作成
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                createNote(sessionId, {
+                  onSuccess: () => setNoteCreated(true),
+                })
+              }}
+              disabled={isCreatingNote}
+              className="w-full py-2 text-sm text-blue-600 hover:text-blue-800 disabled:text-gray-400 disabled:cursor-not-allowed"
+            >
+              {isCreatingNote ? "ノートを作成中..." : "📝 この会話からノートを作成"}
+            </button>
+          )}
         </div>
       )}
 

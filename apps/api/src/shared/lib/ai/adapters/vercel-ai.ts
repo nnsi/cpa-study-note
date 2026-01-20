@@ -7,17 +7,21 @@ export const createVercelAIAdapter = (apiKey: string): AIAdapter => {
 
   return {
     generateText: async (input) => {
+      const messages = input.messages.map((m) => {
+        if (m.imageUrl) {
+          return {
+            role: m.role as "user",
+            content: [
+              { type: "text" as const, text: m.content },
+              { type: "image" as const, image: m.imageUrl },
+            ],
+          }
+        }
+        return { role: m.role, content: m.content }
+      })
       const result = await generateText({
         model: openrouter(input.model),
-        messages: input.messages.map((m) => ({
-          role: m.role,
-          content: m.imageUrl
-            ? [
-                { type: "text" as const, text: m.content },
-                { type: "image" as const, image: m.imageUrl },
-              ]
-            : m.content,
-        })),
+        messages,
         temperature: input.temperature,
         maxTokens: input.maxTokens,
       })
@@ -34,17 +38,21 @@ export const createVercelAIAdapter = (apiKey: string): AIAdapter => {
 
     streamText: async function* (input): AsyncIterable<StreamChunk> {
       try {
+        const messages = input.messages.map((m) => {
+          if (m.imageUrl) {
+            return {
+              role: m.role as "user",
+              content: [
+                { type: "text" as const, text: m.content },
+                { type: "image" as const, image: m.imageUrl },
+              ],
+            }
+          }
+          return { role: m.role, content: m.content }
+        })
         const result = streamText({
           model: openrouter(input.model),
-          messages: input.messages.map((m) => ({
-            role: m.role,
-            content: m.imageUrl
-              ? [
-                  { type: "text" as const, text: m.content },
-                  { type: "image" as const, image: m.imageUrl },
-                ]
-              : m.content,
-          })),
+          messages,
           temperature: input.temperature,
           maxTokens: input.maxTokens,
         })

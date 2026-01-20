@@ -12,8 +12,8 @@ type NoteResponse = {
   id: string
   userId: string
   topicId: string
-  sessionId: string
-  aiSummary: string
+  sessionId: string | null
+  aiSummary: string | null
   userMemo: string | null
   keyPoints: string[]
   stumbledPoints: string[]
@@ -25,6 +25,11 @@ type NoteDetailResponse = NoteResponse & {
   topicName: string
   categoryId: string
   subjectId: string
+  subjectName: string
+}
+
+type NoteListResponse = NoteResponse & {
+  topicName: string
   subjectName: string
 }
 
@@ -44,8 +49,8 @@ const toNoteResponse = (note: {
   id: string
   userId: string
   topicId: string
-  sessionId: string
-  aiSummary: string
+  sessionId: string | null
+  aiSummary: string | null
   userMemo: string | null
   keyPoints: string[]
   stumbledPoints: string[]
@@ -132,9 +137,13 @@ ${conversationText}
 export const listNotes = async (
   deps: Pick<NoteDeps, "noteRepo">,
   userId: string
-): Promise<NoteResponse[]> => {
+): Promise<NoteListResponse[]> => {
   const notes = await deps.noteRepo.findByUser(userId)
-  return notes.map(toNoteResponse)
+  return notes.map((note) => ({
+    ...toNoteResponse(note),
+    topicName: note.topicName,
+    subjectName: note.subjectName,
+  }))
 }
 
 // 論点別ノート一覧取得
