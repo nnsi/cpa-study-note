@@ -37,10 +37,10 @@ export class ErrorBoundary extends Component<Props, State> {
         <div className="flex flex-col items-center justify-center min-h-[50vh] p-4">
           <div className="text-center max-w-md">
             <span className="text-6xl mb-4 block">😢</span>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">
+            <h2 className="text-xl font-bold text-ink-900 mb-2">
               エラーが発生しました
             </h2>
-            <p className="text-gray-600 mb-4">
+            <p className="text-ink-600 mb-4">
               予期しないエラーが発生しました。ページを再読み込みしてください。
             </p>
             <button

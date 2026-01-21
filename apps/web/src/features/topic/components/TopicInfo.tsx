@@ -49,9 +49,9 @@ export const TopicInfo = ({ topic, subjectId }: Props) => {
   return (
     <div className="p-4 space-y-6">
       <div>
-        <h2 className="text-lg font-bold text-gray-900">{topic.name}</h2>
+        <h2 className="text-lg font-bold text-ink-900">{topic.name}</h2>
         {topic.description && (
-          <p className="mt-2 text-sm text-gray-600">{topic.description}</p>
+          <p className="mt-2 text-sm text-ink-600">{topic.description}</p>
         )}
       </div>
 
@@ -59,10 +59,10 @@ export const TopicInfo = ({ topic, subjectId }: Props) => {
         <button
           onClick={() => updateProgress(!isUnderstood)}
           disabled={isPending}
-          className={`w-full py-3 px-4 rounded-lg font-medium transition-colors ${
+          className={`w-full py-3 px-4 rounded-xl font-medium transition-colors ${
             isUnderstood
-              ? "bg-green-100 text-green-700 hover:bg-green-200"
-              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              ? "bg-jade-100 text-jade-700 hover:bg-jade-200"
+              : "bg-ink-100 text-ink-700 hover:bg-ink-200"
           }`}
         >
           {isUnderstood ? "✓ 理解済み" : "□ 理解済みとしてマーク"}
@@ -71,15 +71,15 @@ export const TopicInfo = ({ topic, subjectId }: Props) => {
 
       {topic.progress && (
         <div className="space-y-3">
-          <h3 className="text-sm font-medium text-gray-700">学習統計</h3>
+          <h3 className="text-sm font-semibold text-ink-700">学習統計</h3>
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-2xl font-bold text-gray-900">
+            <div className="bg-ink-50 rounded-xl p-3">
+              <p className="text-2xl font-bold text-ink-900">
                 {topic.progress.lastAccessedAt
                   ? formatRelativeTime(topic.progress.lastAccessedAt)
                   : "-"}
               </p>
-              <p className="text-xs text-gray-500">最終アクセス</p>
+              <p className="text-xs text-ink-500">最終アクセス</p>
             </div>
           </div>
         </div>

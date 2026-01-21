@@ -52,12 +52,12 @@ export const ToastContainer = () => {
       {toasts.map((t) => (
         <div
           key={t.id}
-          className={`flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg max-w-sm animate-slide-in ${
+          className={`flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg max-w-sm animate-slide-in ${
             t.type === "success"
-              ? "bg-green-600 text-white"
+              ? "bg-jade-600 text-white"
               : t.type === "error"
-                ? "bg-red-600 text-white"
-                : "bg-blue-600 text-white"
+                ? "bg-crimson-500 text-white"
+                : "bg-indigo-600 text-white"
           }`}
         >
           <span>

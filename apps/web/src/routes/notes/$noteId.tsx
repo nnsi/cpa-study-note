@@ -52,8 +52,8 @@ function NoteDetailPage() {
     return (
       <div className="p-4 lg:p-6">
         <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/3" />
-          <div className="h-32 bg-gray-200 rounded" />
+          <div className="h-8 skeleton rounded w-1/3" />
+          <div className="h-32 skeleton rounded" />
         </div>
       </div>
     )
@@ -64,7 +64,7 @@ function NoteDetailPage() {
   if (!note) {
     return (
       <div className="p-4 lg:p-6">
-        <div className="text-red-600">ノートが見つかりません</div>
+        <div className="text-crimson-500">ノートが見つかりません</div>
       </div>
     )
   }
@@ -72,12 +72,12 @@ function NoteDetailPage() {
   return (
     <div className="p-4 lg:p-6 max-w-3xl mx-auto">
       <div className="flex items-center gap-4 text-sm">
-        <Link to="/notes" className="text-blue-600 hover:underline">
+        <Link to="/notes" className="text-indigo-600 hover:underline">
           ← ノート一覧
         </Link>
         {note.subjectId && note.categoryId && note.topicId && (
           <>
-            <span className="text-gray-300">|</span>
+            <span className="text-ink-300">|</span>
             <Link
               to="/subjects/$subjectId/$categoryId/$topicId"
               params={{
@@ -85,7 +85,7 @@ function NoteDetailPage() {
                 categoryId: note.categoryId,
                 topicId: note.topicId,
               }}
-              className="text-blue-600 hover:underline"
+              className="text-indigo-600 hover:underline"
             >
               ← {note.topicName || "論点"}に戻る
             </Link>
@@ -95,22 +95,22 @@ function NoteDetailPage() {
 
       <div className="mt-4 space-y-6">
         <section>
-          <h2 className="text-sm font-medium text-gray-500 mb-2">AI要約</h2>
-          <div className="card">
-            <p className="text-gray-900 whitespace-pre-wrap">{note.aiSummary}</p>
+          <h2 className="text-sm font-semibold text-ink-600 mb-2">AI要約</h2>
+          <div className="card p-4">
+            <p className="text-ink-800 whitespace-pre-wrap">{note.aiSummary}</p>
           </div>
         </section>
 
         {note.keyPoints.length > 0 && (
           <section>
-            <h2 className="text-sm font-medium text-gray-500 mb-2">
+            <h2 className="text-sm font-semibold text-ink-600 mb-2">
               重要ポイント
             </h2>
             <ul className="space-y-2">
               {note.keyPoints.map((point, i) => (
                 <li key={i} className="flex items-start gap-2">
-                  <span className="text-blue-600">•</span>
-                  <span className="text-gray-900">{point}</span>
+                  <span className="text-indigo-600">•</span>
+                  <span className="text-ink-800">{point}</span>
                 </li>
               ))}
             </ul>
@@ -119,14 +119,14 @@ function NoteDetailPage() {
 
         {note.stumbledPoints.length > 0 && (
           <section>
-            <h2 className="text-sm font-medium text-gray-500 mb-2">
+            <h2 className="text-sm font-semibold text-ink-600 mb-2">
               つまずきポイント
             </h2>
             <ul className="space-y-2">
               {note.stumbledPoints.map((point, i) => (
                 <li key={i} className="flex items-start gap-2">
-                  <span className="text-orange-500">!</span>
-                  <span className="text-gray-900">{point}</span>
+                  <span className="text-amber-500">!</span>
+                  <span className="text-ink-800">{point}</span>
                 </li>
               ))}
             </ul>
@@ -135,11 +135,11 @@ function NoteDetailPage() {
 
         <section>
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-sm font-medium text-gray-500">自分のメモ</h2>
+            <h2 className="text-sm font-semibold text-ink-600">自分のメモ</h2>
             {!isEditing && (
               <button
                 onClick={() => setIsEditing(true)}
-                className="text-sm text-blue-600 hover:underline"
+                className="text-sm text-indigo-600 hover:underline"
               >
                 編集
               </button>
@@ -174,19 +174,19 @@ function NoteDetailPage() {
               </div>
             </div>
           ) : (
-            <div className="card">
+            <div className="card p-4">
               {note.userMemo ? (
-                <p className="text-gray-900 whitespace-pre-wrap">
+                <p className="text-ink-800 whitespace-pre-wrap">
                   {note.userMemo}
                 </p>
               ) : (
-                <p className="text-gray-500 italic">メモはありません</p>
+                <p className="text-ink-500 italic">メモはありません</p>
               )}
             </div>
           )}
         </section>
 
-        <div className="text-sm text-gray-500 pt-4 border-t">
+        <div className="text-sm text-ink-500 pt-4 border-t border-ink-100">
           作成日: {new Date(note.createdAt).toLocaleString("ja-JP")}
         </div>
       </div>

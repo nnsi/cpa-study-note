@@ -76,17 +76,17 @@ function TopicDetailPage() {
     return (
       <div className="p-4 lg:p-6">
         <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/3 mb-4" />
-          <div className="h-64 bg-gray-200 rounded" />
+          <div className="h-8 skeleton rounded w-1/3 mb-4" />
+          <div className="h-64 skeleton rounded-xl" />
         </div>
       </div>
     )
   }
 
   return (
-    <div className="h-[calc(100vh-64px)] flex flex-col lg:flex-row">
+    <div className="h-[calc(100dvh-64px)] flex flex-col lg:flex-row">
       {/* モバイル: タブ切り替え */}
-      <div className="lg:hidden border-b bg-white">
+      <div className="lg:hidden border-b border-ink-100 bg-white">
         <div className="flex">
           {(["info", "chat", "notes"] as const).map((tab) => (
             <button
@@ -94,8 +94,8 @@ function TopicDetailPage() {
               onClick={() => setActiveTab(tab)}
               className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === tab
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-gray-500"
+                  ? "border-indigo-600 text-indigo-600"
+                  : "border-transparent text-ink-500"
               }`}
             >
               {tab === "info" && "情報"}
@@ -109,26 +109,26 @@ function TopicDetailPage() {
       {/* PC: 2カラムレイアウト */}
       <div className="hidden lg:flex flex-1">
         {/* 左: 論点情報 / ノート */}
-        <aside className="w-80 border-r bg-white flex flex-col">
-          <div className="p-4 border-b">
+        <aside className="w-80 border-r border-ink-100 bg-white flex flex-col">
+          <div className="p-4 border-b border-ink-100">
             <Link
               to="/subjects/$subjectId/$categoryId"
               params={{ subjectId, categoryId }}
-              className="text-blue-600 hover:underline text-sm"
+              className="text-indigo-600 hover:underline text-sm"
             >
               ← 論点一覧
             </Link>
           </div>
           {/* サイドバータブ */}
-          <div className="flex border-b">
+          <div className="flex border-b border-ink-100">
             {(["info", "sessions", "notes"] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setSidebarTab(tab)}
-                className={`flex-1 py-2 text-sm font-medium border-b-2 transition-colors ${
+                className={`flex-1 py-2.5 text-sm font-medium border-b-2 transition-colors ${
                   sidebarTab === tab
-                    ? "border-blue-600 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
+                    ? "border-indigo-600 text-indigo-600"
+                    : "border-transparent text-ink-500 hover:text-ink-700"
                 }`}
               >
                 {tab === "info" && "情報"}
@@ -166,7 +166,7 @@ function TopicDetailPage() {
           ) : (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center">
-                <p className="text-gray-500 mb-4">
+                <p className="text-ink-500 mb-4">
                   チャットセッションがありません
                 </p>
                 <button
@@ -194,11 +194,11 @@ function TopicDetailPage() {
         {activeTab === "chat" && (
           <div className="h-full flex flex-col">
             {/* セッション選択バー */}
-            <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 border-b">
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-ink-50 border-b border-ink-100">
               <select
                 value={currentSessionId ?? ""}
                 onChange={(e) => setSelectedSessionId(e.target.value || null)}
-                className="flex-1 text-sm border rounded px-2 py-1"
+                className="flex-1 text-sm border border-ink-200 rounded-lg px-3 py-1.5 bg-white"
               >
                 {sessions.map((s, i) => (
                   <option key={s.id} value={s.id}>
@@ -210,7 +210,7 @@ function TopicDetailPage() {
               <button
                 onClick={() => createSessionMutation.mutate()}
                 disabled={createSessionMutation.isPending}
-                className="text-sm text-blue-600 hover:text-blue-800 whitespace-nowrap"
+                className="text-sm text-indigo-600 hover:text-indigo-700 whitespace-nowrap font-medium"
               >
                 + 新規
               </button>
@@ -263,13 +263,13 @@ function SessionList({
       <button
         onClick={onCreateNew}
         disabled={isCreating}
-        className="w-full mb-4 py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
+        className="w-full mb-4 py-2.5 px-4 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:bg-ink-400 transition-colors font-medium"
       >
         {isCreating ? "作成中..." : "+ 新しいチャットを開始"}
       </button>
 
       {sessions.length === 0 ? (
-        <p className="text-gray-500 text-center text-sm">
+        <p className="text-ink-500 text-center text-sm">
           まだチャット履歴がありません
         </p>
       ) : (
@@ -278,14 +278,14 @@ function SessionList({
             <button
               key={session.id}
               onClick={() => onSelect(session.id)}
-              className={`w-full text-left p-3 rounded-lg border transition-colors ${
+              className={`w-full text-left p-3.5 rounded-xl border transition-colors ${
                 session.id === currentSessionId
-                  ? "border-blue-500 bg-blue-50"
-                  : "border-gray-200 hover:bg-gray-50"
+                  ? "border-indigo-500 bg-indigo-50"
+                  : "border-ink-200 hover:bg-ink-50"
               }`}
             >
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-900">
+                <span className="text-sm text-ink-800">
                   {new Date(session.createdAt).toLocaleDateString("ja-JP", {
                     month: "short",
                     day: "numeric",
@@ -293,7 +293,7 @@ function SessionList({
                     minute: "2-digit",
                   })}
                 </span>
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-ink-500">
                   {session.messageCount}件
                 </span>
               </div>

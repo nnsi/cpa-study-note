@@ -24,7 +24,7 @@ export const TopicNotes = ({ topicId }: Props) => {
       <div className="p-4">
         <div className="animate-pulse space-y-3">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-20 bg-gray-200 rounded-lg" />
+            <div key={i} className="h-20 skeleton rounded-xl" />
           ))}
         </div>
       </div>
@@ -33,7 +33,7 @@ export const TopicNotes = ({ topicId }: Props) => {
 
   if (error) {
     return (
-      <div className="p-4 text-red-600">
+      <div className="p-4 text-crimson-500">
         ノートの取得に失敗しました
       </div>
     )
@@ -43,7 +43,7 @@ export const TopicNotes = ({ topicId }: Props) => {
 
   if (notes.length === 0) {
     return (
-      <div className="p-4 text-center text-gray-500">
+      <div className="p-4 text-center text-ink-500">
         <p className="mb-2">この論点のノートはまだありません</p>
         <p className="text-sm">
           チャットで学習した後、ノートを作成できます
@@ -64,22 +64,22 @@ export const TopicNotes = ({ topicId }: Props) => {
         return (
           <div
             key={note.id}
-            className="bg-white border rounded-lg overflow-hidden"
+            className="bg-white border border-ink-100 rounded-xl overflow-hidden"
           >
             {/* ヘッダー（クリックで展開） */}
             <button
               onClick={() => toggleNote(note.id)}
-              className="w-full p-3 text-left hover:bg-gray-50 transition-colors"
+              className="w-full p-4 text-left hover:bg-ink-50 transition-colors"
             >
               <div className="flex items-start justify-between gap-2">
-                <p className={`text-gray-900 text-sm ${isExpanded ? "" : "line-clamp-2"}`}>
+                <p className={`text-ink-800 text-sm ${isExpanded ? "" : "line-clamp-2"}`}>
                   {note.aiSummary}
                 </p>
-                <span className="text-gray-400 flex-shrink-0">
+                <span className="text-ink-400 flex-shrink-0">
                   {isExpanded ? "▲" : "▼"}
                 </span>
               </div>
-              <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+              <div className="flex items-center gap-3 mt-2 text-xs text-ink-500">
                 <span>
                   {new Date(note.createdAt).toLocaleDateString("ja-JP")}
                 </span>
@@ -91,20 +91,20 @@ export const TopicNotes = ({ topicId }: Props) => {
 
             {/* 展開コンテンツ */}
             {isExpanded && (
-              <div className="px-3 pb-3 border-t bg-gray-50">
+              <div className="px-4 pb-4 border-t border-ink-100 bg-ink-50">
                 {/* キーポイント */}
                 {note.keyPoints.length > 0 && (
                   <div className="mt-3">
-                    <h4 className="text-xs font-medium text-gray-700 mb-1">
+                    <h4 className="text-xs font-semibold text-ink-600 mb-1">
                       キーポイント
                     </h4>
                     <ul className="space-y-1">
                       {note.keyPoints.map((point, i) => (
                         <li
                           key={i}
-                          className="text-sm text-gray-600 flex items-start gap-1"
+                          className="text-sm text-ink-700 flex items-start gap-1"
                         >
-                          <span className="text-green-500">✓</span>
+                          <span className="text-jade-500">✓</span>
                           {point}
                         </li>
                       ))}
@@ -115,14 +115,14 @@ export const TopicNotes = ({ topicId }: Props) => {
                 {/* つまずきポイント */}
                 {note.stumbledPoints.length > 0 && (
                   <div className="mt-3">
-                    <h4 className="text-xs font-medium text-gray-700 mb-1">
+                    <h4 className="text-xs font-semibold text-ink-600 mb-1">
                       つまずきポイント
                     </h4>
                     <ul className="space-y-1">
                       {note.stumbledPoints.map((point, i) => (
                         <li
                           key={i}
-                          className="text-sm text-gray-600 flex items-start gap-1"
+                          className="text-sm text-ink-700 flex items-start gap-1"
                         >
                           <span className="text-amber-500">!</span>
                           {point}
@@ -135,21 +135,21 @@ export const TopicNotes = ({ topicId }: Props) => {
                 {/* ユーザーメモ */}
                 {note.userMemo && (
                   <div className="mt-3">
-                    <h4 className="text-xs font-medium text-gray-700 mb-1">
+                    <h4 className="text-xs font-semibold text-ink-600 mb-1">
                       メモ
                     </h4>
-                    <p className="text-sm text-gray-600 whitespace-pre-wrap">
+                    <p className="text-sm text-ink-700 whitespace-pre-wrap">
                       {note.userMemo}
                     </p>
                   </div>
                 )}
 
                 {/* 編集リンク */}
-                <div className="mt-3 pt-2 border-t border-gray-200">
+                <div className="mt-3 pt-2 border-t border-ink-200">
                   <Link
                     to="/notes/$noteId"
                     params={{ noteId: note.id }}
-                    className="text-sm text-blue-600 hover:text-blue-800"
+                    className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
                   >
                     編集・詳細を見る →
                   </Link>

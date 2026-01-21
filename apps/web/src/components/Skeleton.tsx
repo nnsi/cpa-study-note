@@ -3,7 +3,7 @@ type SkeletonProps = {
 }
 
 export const Skeleton = ({ className = "" }: SkeletonProps) => (
-  <div className={`animate-pulse bg-gray-200 rounded ${className}`} />
+  <div className={`animate-pulse bg-ink-200 rounded ${className}`} />
 )
 
 export const CardSkeleton = () => (

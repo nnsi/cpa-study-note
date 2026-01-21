@@ -86,7 +86,7 @@ function CategoryPage() {
       <div className="p-4 lg:p-6">
         <div className="animate-pulse space-y-3">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-16 bg-gray-200 rounded-lg" />
+            <div key={i} className="h-16 skeleton rounded-xl" />
           ))}
         </div>
       </div>
@@ -99,11 +99,11 @@ function CategoryPage() {
         <Link
           to="/subjects/$subjectId"
           params={{ subjectId }}
-          className="text-blue-600 hover:underline text-sm"
+          className="text-indigo-600 hover:underline text-sm"
         >
           ← カテゴリ一覧
         </Link>
-        <h1 className="text-xl font-bold text-gray-900 mt-2">論点一覧</h1>
+        <h1 className="text-xl font-bold text-ink-900 mt-2">論点一覧</h1>
       </div>
 
       <div className="space-y-3">
@@ -114,19 +114,19 @@ function CategoryPage() {
           return (
             <div
               key={topic.id}
-              className={`card hover:shadow-md transition-shadow ${
+              className={`card p-4 hover:shadow-md transition-shadow ${
                 isUnderstood
-                  ? "border-green-200 bg-green-50"
+                  ? "border-jade-200 bg-jade-100/50"
                   : ""
               }`}
             >
-              <div className="flex items-start gap-3">
+              <div className="flex items-center gap-3">
                 <button
                   onClick={(e) => handleToggleUnderstood(e, topic.id, isUnderstood)}
-                  className={`flex-shrink-0 mt-0.5 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+                  className={`flex-shrink-0 w-7 h-7 rounded-full border-2 flex items-center justify-center transition-colors ${
                     isUnderstood
-                      ? "bg-green-500 border-green-500 text-white"
-                      : "border-gray-300 hover:border-green-400"
+                      ? "bg-jade-500 border-jade-500 text-white"
+                      : "border-ink-300 hover:border-jade-400"
                   }`}
                   title={isUnderstood ? "理解済みを解除" : "理解済みにする"}
                 >
@@ -153,7 +153,7 @@ function CategoryPage() {
                 >
                   <h2
                     className={`font-medium ${
-                      isUnderstood ? "text-green-800" : "text-gray-900"
+                      isUnderstood ? "text-jade-700" : "text-ink-800"
                     }`}
                   >
                     {topic.name}
@@ -161,7 +161,7 @@ function CategoryPage() {
                   {topic.description && (
                     <p
                       className={`text-sm mt-1 line-clamp-2 ${
-                        isUnderstood ? "text-green-600" : "text-gray-600"
+                        isUnderstood ? "text-jade-600" : "text-ink-600"
                       }`}
                     >
                       {topic.description}
@@ -174,7 +174,7 @@ function CategoryPage() {
         })}
 
         {topics?.topics.length === 0 && (
-          <p className="text-gray-500 text-center py-8">
+          <p className="text-ink-500 text-center py-8">
             このカテゴリには論点がありません
           </p>
         )}

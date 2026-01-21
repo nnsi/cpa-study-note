@@ -22,16 +22,33 @@ export const ChatContainer = ({ sessionId, topicId }: Props) => {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      {/* メッセージエリア */}
+      <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-4">
+        {/* 空の状態 */}
         {messages.displayMessages.length === 0 && !input.streamingText && (
-          <div className="text-center text-gray-500 py-8">
-            <p className="mb-2">この論点について質問してみましょう</p>
-            <p className="text-sm">
-              良質な質問をすると ✔︎ マークがつきます
+          <div className="flex flex-col items-center justify-center h-full py-12 animate-fade-in">
+            <div className="size-16 rounded-2xl bg-gradient-to-br from-indigo-100 to-indigo-50 flex items-center justify-center mb-6">
+              <svg className="size-8 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z" />
+              </svg>
+            </div>
+            <h3 className="heading-serif text-lg text-ink-700 mb-2">
+              この論点について質問してみましょう
+            </h3>
+            <p className="text-sm text-ink-500 text-center max-w-xs">
+              良質な質問をすると
+              <span className="inline-flex items-center mx-1 px-1.5 py-0.5 bg-jade-100 text-jade-600 rounded text-xs font-medium">
+                <svg className="w-3 h-3 mr-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                </svg>
+                良質
+              </span>
+              マークがつきます
             </p>
           </div>
         )}
 
+        {/* メッセージリスト */}
         {messages.displayMessages.map((msg) => (
           <ChatMessageView key={msg.id} message={msg} />
         ))}
@@ -76,15 +93,20 @@ export const ChatContainer = ({ sessionId, topicId }: Props) => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* ノート作成ボタン（メッセージがある場合のみ表示） */}
+      {/* ノート作成バー */}
       {messages.displayMessages.length > 0 && (
-        <div className="px-4 py-2 border-t bg-gray-50">
+        <div className="px-4 py-3 border-t border-ink-100 bg-ink-50/50">
           {noteCreated ? (
-            <div className="flex items-center justify-center gap-3">
-              <span className="text-sm text-green-600">✓ ノートを作成しました</span>
+            <div className="flex items-center justify-center gap-3 animate-scale-in">
+              <div className="flex items-center gap-2 text-jade-600">
+                <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                </svg>
+                <span className="text-sm font-medium">ノートを作成しました</span>
+              </div>
               <button
                 onClick={() => setNoteCreated(false)}
-                className="text-sm text-blue-600 hover:text-blue-800 underline"
+                className="text-sm text-indigo-500 hover:text-indigo-600 hover:underline"
               >
                 もう一度作成
               </button>
@@ -97,9 +119,24 @@ export const ChatContainer = ({ sessionId, topicId }: Props) => {
                 })
               }}
               disabled={isCreatingNote}
-              className="w-full py-2 text-sm text-blue-600 hover:text-blue-800 disabled:text-gray-400 disabled:cursor-not-allowed"
+              className="w-full py-2.5 flex items-center justify-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-xl transition-colors disabled:text-ink-400 disabled:cursor-not-allowed"
             >
-              {isCreatingNote ? "ノートを作成中..." : "📝 この会話からノートを作成"}
+              {isCreatingNote ? (
+                <>
+                  <svg className="animate-spin size-4" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  ノートを作成中...
+                </>
+              ) : (
+                <>
+                  <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                  </svg>
+                  この会話からノートを作成
+                </>
+              )}
             </button>
           )}
         </div>

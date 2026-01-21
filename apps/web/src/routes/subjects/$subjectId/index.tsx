@@ -45,9 +45,9 @@ function SubjectDetailPage() {
   if (isLoading) {
     return (
       <div className="p-4 lg:p-6">
-        <div className="animate-pulse space-y-4">
+        <div className="animate-pulse space-y-3">
           {[...Array(8)].map((_, i) => (
-            <div key={i} className="h-12 bg-gray-200 rounded" />
+            <div key={i} className="h-14 skeleton rounded-xl" />
           ))}
         </div>
       </div>
@@ -57,10 +57,10 @@ function SubjectDetailPage() {
   return (
     <div className="p-4 lg:p-6">
       <div className="mb-6">
-        <Link to="/subjects" className="text-blue-600 hover:underline text-sm">
+        <Link to="/subjects" className="text-indigo-600 hover:underline text-sm">
           ← 科目一覧
         </Link>
-        <h1 className="text-2xl font-bold text-gray-900 mt-2">
+        <h1 className="text-2xl font-bold text-ink-900 mt-2">
           {subject?.subject.name}
         </h1>
       </div>
@@ -111,22 +111,22 @@ function CategoryItem({
       <Link
         to="/subjects/$subjectId/$categoryId"
         params={{ subjectId, categoryId: category.id }}
-        className="block py-3 px-4 rounded-lg hover:bg-gray-100 transition-colors"
+        className="block py-3.5 px-4 rounded-xl hover:bg-ink-50 transition-colors"
         style={{ paddingLeft: paddingLeft + 16 }}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-gray-400">
+            <span className="text-ink-400">
               {hasChildren ? "📂" : "📄"}
             </span>
-            <span className="text-gray-900">{category.name}</span>
+            <span className="text-ink-800">{category.name}</span>
           </div>
           {totals.topicCount > 0 && (
             <span
               className={`text-sm ${
                 totals.understoodCount === totals.topicCount
-                  ? "text-green-600"
-                  : "text-gray-500"
+                  ? "text-jade-600 font-medium"
+                  : "text-ink-500"
               }`}
             >
               {totals.understoodCount}/{totals.topicCount}
