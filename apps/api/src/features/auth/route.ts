@@ -209,6 +209,50 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
       })
     })
 
+    // 開発用ログイン（ローカル環境のみ）
+    .post("/dev-login", async (c) => {
+      // ローカル環境以外では無効
+      if (env.ENVIRONMENT !== "local") {
+        return c.json({ error: "Not available" }, 404)
+      }
+
+      const devUserId = env.DEV_USER_ID || "test-user-1"
+      const devUser: User = {
+        id: devUserId,
+        email: `${devUserId}@example.com`,
+        name: "テストユーザー",
+        avatarUrl: null,
+      }
+
+      // Generate tokens (本番と同じフロー)
+      const accessToken = await generateAccessToken(devUser, jwtSecret)
+      const refreshToken = generateRefreshToken()
+      const refreshTokenHash = await hashToken(refreshToken)
+
+      // Save refresh token to DB
+      const expiresAt = new Date()
+      expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_EXPIRES_DAYS)
+      await repo.saveRefreshToken({
+        userId: devUser.id,
+        tokenHash: refreshTokenHash,
+        expiresAt,
+      })
+
+      // Set refresh token in HttpOnly cookie
+      setCookie(c, "refresh_token", refreshToken, {
+        httpOnly: true,
+        secure: false, // ローカル環境なのでHTTPでもOK
+        sameSite: "Strict",
+        maxAge: REFRESH_TOKEN_EXPIRES_DAYS * 24 * 60 * 60,
+        path: "/api/auth",
+      })
+
+      return c.json({
+        accessToken,
+        user: devUser,
+      })
+    })
+
     // ログアウト
     .post("/logout", async (c) => {
       const refreshToken = getCookie(c, "refresh_token")

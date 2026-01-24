@@ -1,20 +1,10 @@
 import { hc } from "hono/client"
 import type { AppType } from "@cpa-study/api"
-import { useAuthStore, refreshTokenOnUnauthorized, isDevMode } from "./auth"
-
-const devUserId = import.meta.env.VITE_DEV_USER_ID || "test-user-1"
+import { useAuthStore, refreshTokenOnUnauthorized } from "./auth"
 
 const getHeaders = (): Record<string, string> => {
   const { token } = useAuthStore.getState()
-
   if (!token) return {}
-
-  // 開発モードかつ開発用トークンの場合: X-Dev-User-Id ヘッダーを使用
-  if (isDevMode && token === "dev-token") {
-    return { "X-Dev-User-Id": devUserId }
-  }
-
-  // 通常のJWTトークンを使用
   return { Authorization: `Bearer ${token}` }
 }
 
@@ -37,15 +27,10 @@ const fetchWithRetry: typeof fetch = async (input, init) => {
 
     if (newToken) {
       // Retry with new token
-      const retryHeaders: Record<string, string> =
-        isDevMode && newToken === "dev-token"
-          ? { "X-Dev-User-Id": devUserId }
-          : { Authorization: `Bearer ${newToken}` }
-
       return fetch(input, {
         ...init,
         headers: {
-          ...retryHeaders,
+          Authorization: `Bearer ${newToken}`,
           ...Object.fromEntries(
             new Headers(init?.headers as HeadersInit | undefined).entries()
           ),

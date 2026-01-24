@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { useEffect } from "react"
-import { useAuthStore, isDevMode } from "@/lib/auth"
+import { useEffect, useState } from "react"
+import { useAuthStore, isDevMode, devLogin } from "@/lib/auth"
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -34,8 +34,9 @@ const providers = [
 ]
 
 function LoginPage() {
-  const { isAuthenticated, setDevAuth } = useAuthStore()
+  const { isAuthenticated } = useAuthStore()
   const navigate = useNavigate()
+  const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
     if (isAuthenticated()) {
@@ -47,9 +48,16 @@ function LoginPage() {
     window.location.href = `/api/auth/${providerId}`
   }
 
-  const handleDevLogin = () => {
-    setDevAuth()
-    navigate({ to: "/" })
+  const handleDevLogin = async () => {
+    setIsLoading(true)
+    try {
+      const success = await devLogin()
+      if (success) {
+        navigate({ to: "/" })
+      }
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (

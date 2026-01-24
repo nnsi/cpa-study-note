@@ -11,14 +11,29 @@ import type { Env, Variables } from "./shared/types/env"
 const createApp = (env: Env) => {
   const db = createDb(env.DB)
 
-  // CORS設定: localは全許可、staging/productionはWEB_BASE_URLのみ許可
-  const corsMiddleware =
-    env.ENVIRONMENT === "local"
-      ? cors()
-      : cors({
-          origin: env.WEB_BASE_URL,
-          credentials: true,
-        })
+  // CORS設定
+  const corsMiddleware = cors({
+    origin: (origin) => {
+      // ローカル環境: localhost, 127.0.0.1, プライベートIP を許可
+      if (env.ENVIRONMENT === "local") {
+        if (!origin) return origin // 同一オリジンリクエスト
+        const url = new URL(origin)
+        const host = url.hostname
+        if (
+          host === "localhost" ||
+          host === "127.0.0.1" ||
+          host.startsWith("192.168.") ||
+          host.startsWith("10.") ||
+          /^172\.(1[6-9]|2\d|3[01])\./.test(host)
+        ) {
+          return origin // リクエスト元をそのまま許可
+        }
+      }
+      // staging/production: WEB_BASE_URL のみ許可
+      return env.WEB_BASE_URL
+    },
+    credentials: true,
+  })
 
   const app = new Hono<{ Bindings: Env; Variables: Variables }>()
     .use("*", corsMiddleware)

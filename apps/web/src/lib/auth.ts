@@ -7,15 +7,6 @@ import { redirect } from "@tanstack/react-router"
  * staging/productionビルドでは環境変数が異なるため自動的に無効化される
  */
 export const isDevMode = import.meta.env.VITE_ENVIRONMENT === "local"
-const devUserId = import.meta.env.VITE_DEV_USER_ID || "test-user-1"
-
-// 開発用テストユーザー（本番では isDevMode=false のため使用されない）
-const devUser: User = {
-  id: devUserId,
-  email: `${devUserId}@example.com`,
-  displayName: "テストユーザー",
-  avatarUrl: null,
-}
 
 type User = {
   id: string
@@ -29,10 +20,8 @@ type AuthState = {
   token: string | null
   isInitializing: boolean
   setAuth: (user: User, token: string) => void
-  setDevAuth: () => void
   clearAuth: () => void
   isAuthenticated: () => boolean
-  isDevUser: () => boolean
   setInitializing: (value: boolean) => void
 }
 
@@ -44,14 +33,10 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   setAuth: (user, token) => {
     set({ user, token, isInitializing: false })
   },
-  setDevAuth: () => {
-    set({ user: devUser, token: "dev-token", isInitializing: false })
-  },
   clearAuth: () => {
     set({ user: null, token: null, isInitializing: false })
   },
   isAuthenticated: () => !!get().token,
-  isDevUser: () => get().token === "dev-token",
   setInitializing: (value) => set({ isInitializing: value }),
 }))
 
@@ -59,12 +44,6 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 let initPromise: Promise<boolean> | null = null
 
 export const initializeAuth = async (): Promise<boolean> => {
-  // Dev mode: skip refresh
-  if (isDevMode) {
-    useAuthStore.getState().setDevAuth()
-    return true
-  }
-
   // Prevent multiple concurrent initializations
   if (initPromise) return initPromise
 
@@ -111,9 +90,6 @@ let isRefreshing = false
 let refreshPromise: Promise<string | null> | null = null
 
 export const refreshTokenOnUnauthorized = async (): Promise<string | null> => {
-  // Dev mode: no refresh needed
-  if (isDevMode) return "dev-token"
-
   // Prevent multiple concurrent refreshes
   if (isRefreshing && refreshPromise) {
     return refreshPromise
@@ -157,6 +133,40 @@ export const refreshTokenOnUnauthorized = async (): Promise<string | null> => {
   })()
 
   return refreshPromise
+}
+
+// 開発用ログイン（ローカル環境のみ）
+export const devLogin = async (): Promise<boolean> => {
+  if (!isDevMode) return false
+
+  try {
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL}/api/auth/dev-login`,
+      {
+        method: "POST",
+        credentials: "include",
+      }
+    )
+
+    if (!response.ok) {
+      return false
+    }
+
+    const data = (await response.json()) as {
+      accessToken: string
+      user: { id: string; email: string; name: string; avatarUrl: string | null }
+    }
+    const user: User = {
+      id: data.user.id,
+      email: data.user.email,
+      displayName: data.user.name,
+      avatarUrl: data.user.avatarUrl,
+    }
+    useAuthStore.getState().setAuth(user, data.accessToken)
+    return true
+  } catch {
+    return false
+  }
 }
 
 // Logout

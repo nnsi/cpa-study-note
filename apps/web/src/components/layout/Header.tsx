@@ -1,8 +1,8 @@
 import { Link } from "@tanstack/react-router"
-import { useAuthStore } from "@/lib/auth"
+import { useAuthStore, logout } from "@/lib/auth"
 
 export const Header = () => {
-  const { user, isAuthenticated, clearAuth } = useAuthStore()
+  const { user, isAuthenticated } = useAuthStore()
 
   return (
     <header className="sticky top-0 z-50 h-18 glass border-b border-ink-100">
@@ -50,7 +50,7 @@ export const Header = () => {
 
             {/* ログアウトボタン */}
             <button
-              onClick={clearAuth}
+              onClick={logout}
               className="btn-ghost text-sm text-ink-500 hover:text-crimson-500"
             >
               ログアウト
