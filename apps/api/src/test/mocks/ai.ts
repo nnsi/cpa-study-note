@@ -29,8 +29,7 @@ export const createMockAIAdapter = (options: MockAIOptions = {}): AIAdapter => {
 
     streamText: async function* (_input: StreamTextInput): AsyncIterable<StreamChunk> {
       if (shouldError) {
-        yield { type: "error", error: errorMessage }
-        return
+        throw new Error(errorMessage)
       }
       for (const chunk of streamChunks) {
         yield { type: "text", content: chunk }
