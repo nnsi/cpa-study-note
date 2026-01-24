@@ -53,10 +53,10 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
   const providers = createProviders(env)
   const jwtSecret = new TextEncoder().encode(env.JWT_SECRET)
 
-  // Validate JWT_SECRET strength (32+ bytes recommended)
+  // Validate JWT_SECRET strength (32+ bytes required in production)
   if (env.ENVIRONMENT !== "local" && env.JWT_SECRET.length < 32) {
-    console.warn(
-      "WARNING: JWT_SECRET should be at least 32 characters for security"
+    throw new Error(
+      "JWT_SECRET must be at least 32 characters in production/staging environment"
     )
   }
 

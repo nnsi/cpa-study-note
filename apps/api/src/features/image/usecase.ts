@@ -9,6 +9,22 @@ const sanitizeFilename = (filename: string): string => {
   return basename.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 100)
 }
 
+// マジックバイト検証: ファイル形式の実際の検証
+const MAGIC_BYTES: Record<string, number[]> = {
+  "image/jpeg": [0xff, 0xd8, 0xff],
+  "image/png": [0x89, 0x50, 0x4e, 0x47],
+  "image/gif": [0x47, 0x49, 0x46],
+  "image/webp": [0x52, 0x49, 0x46, 0x46], // RIFF header
+}
+
+const validateMagicBytes = (buffer: ArrayBuffer, mimeType: string): boolean => {
+  const bytes = new Uint8Array(buffer)
+  const expected = MAGIC_BYTES[mimeType]
+  if (!expected) return false
+  if (bytes.length < expected.length) return false
+  return expected.every((b, i) => bytes[i] === b)
+}
+
 type ImageDeps = {
   imageRepo: ImageRepository
   aiAdapter: AIAdapter
@@ -66,6 +82,7 @@ export const createUploadUrl = async (
 
   // メタデータを先に保存
   await imageRepo.create({
+    id: imageId,
     userId,
     filename,
     mimeType,
@@ -95,6 +112,11 @@ export const uploadImage = async (
 
   if (image.userId !== userId) {
     return { ok: false, error: "Unauthorized", status: 403 }
+  }
+
+  // マジックバイト検証: 宣言されたMIMEタイプと実際のファイル形式が一致するか確認
+  if (!validateMagicBytes(body, image.mimeType)) {
+    return { ok: false, error: "Invalid file format", status: 400 }
   }
 
   // R2にアップロード

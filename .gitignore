@@ -5,6 +5,7 @@ dist
 .env
 .dev.vars
 .playwright-mcp
+nul
 
 # Terraform
 .terraform/

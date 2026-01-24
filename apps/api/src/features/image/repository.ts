@@ -14,18 +14,17 @@ export type Image = {
 }
 
 export type ImageRepository = {
-  create: (data: Omit<Image, "id" | "createdAt">) => Promise<Image>
+  create: (data: Omit<Image, "createdAt">) => Promise<Image>
   findById: (id: string) => Promise<Image | null>
   updateOcrText: (id: string, ocrText: string) => Promise<void>
 }
 
 export const createImageRepository = (db: Db): ImageRepository => ({
   create: async (data) => {
-    const id = crypto.randomUUID()
     const now = new Date()
 
     await db.insert(images).values({
-      id,
+      id: data.id,
       userId: data.userId,
       filename: data.filename,
       mimeType: data.mimeType,
@@ -35,7 +34,7 @@ export const createImageRepository = (db: Db): ImageRepository => ({
       createdAt: now,
     })
 
-    return { id, ...data, createdAt: now }
+    return { ...data, createdAt: now }
   },
 
   findById: async (id) => {

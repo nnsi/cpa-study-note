@@ -1,7 +1,7 @@
 import { Hono } from "hono"
 import { zValidator } from "@hono/zod-validator"
-import { z } from "zod"
 import type { Db } from "@cpa-study/db"
+import { uploadImageRequestSchema } from "@cpa-study/shared/schemas"
 import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
 import { createAIAdapter } from "@/shared/lib/ai"
@@ -12,6 +12,9 @@ import {
   performOCR,
   getImage,
 } from "./usecase"
+
+// 10MB制限
+const MAX_UPLOAD_SIZE = 10 * 1024 * 1024
 
 type ImageDeps = {
   env: Env
@@ -26,13 +29,7 @@ export const imageRoutes = ({ env, db }: ImageDeps) => {
     .post(
       "/upload-url",
       authMiddleware,
-      zValidator(
-        "json",
-        z.object({
-          filename: z.string(),
-          mimeType: z.string(),
-        })
-      ),
+      zValidator("json", uploadImageRequestSchema),
       async (c) => {
         const user = c.get("user")
         const { filename, mimeType } = c.req.valid("json")
@@ -51,6 +48,11 @@ export const imageRoutes = ({ env, db }: ImageDeps) => {
       const user = c.get("user")
       const imageId = c.req.param("imageId")
       const body = await c.req.arrayBuffer()
+
+      // サイズ制限チェック
+      if (body.byteLength > MAX_UPLOAD_SIZE) {
+        return c.json({ error: "File too large (max 10MB)" }, 413)
+      }
 
       const result = await uploadImage(
         { imageRepo, r2: env.R2 },

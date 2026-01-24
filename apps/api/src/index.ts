@@ -1,5 +1,6 @@
 import { Hono } from "hono"
 import { cors } from "hono/cors"
+import { secureHeaders } from "hono/secure-headers"
 import { createDb } from "@cpa-study/db"
 import { createAuthFeature } from "./features/auth"
 import { createTopicFeature } from "./features/topic"
@@ -8,7 +9,27 @@ import { createNoteFeature } from "./features/note"
 import { createImageFeature } from "./features/image"
 import type { Env, Variables } from "./shared/types/env"
 
+// 環境変数バリデーション
+const validateEnv = (env: Env): void => {
+  const required: (keyof Env)[] = [
+    "JWT_SECRET",
+    "GOOGLE_CLIENT_ID",
+    "GOOGLE_CLIENT_SECRET",
+    "API_BASE_URL",
+    "WEB_BASE_URL",
+  ]
+
+  for (const key of required) {
+    if (!env[key]) {
+      throw new Error(`Missing required environment variable: ${key}`)
+    }
+  }
+}
+
 const createApp = (env: Env) => {
+  // 起動時に環境変数をバリデーション
+  validateEnv(env)
+
   const db = createDb(env.DB)
 
   // CORS設定
@@ -36,6 +57,7 @@ const createApp = (env: Env) => {
   })
 
   const app = new Hono<{ Bindings: Env; Variables: Variables }>()
+    .use("*", secureHeaders())
     .use("*", corsMiddleware)
     .route("/api/auth", createAuthFeature(env, db))
     .route("/api/subjects", createTopicFeature(env, db))
