@@ -111,7 +111,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         const { content, imageId, ocrResult } = c.req.valid("json")
 
         const aiAdapter = createAIAdapter({
-          provider: env.AI_PROVIDER as "mock" | "vercel-ai",
+          provider: env.AI_PROVIDER,
           apiKey: env.OPENROUTER_API_KEY,
         })
 
@@ -148,7 +148,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         const { content, imageId, ocrResult } = c.req.valid("json")
 
         const aiAdapter = createAIAdapter({
-          provider: env.AI_PROVIDER as "mock" | "vercel-ai",
+          provider: env.AI_PROVIDER,
           apiKey: env.OPENROUTER_API_KEY,
         })
 
@@ -179,7 +179,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
       }
 
       const aiAdapter = createAIAdapter({
-        provider: env.AI_PROVIDER as "mock" | "vercel-ai",
+        provider: env.AI_PROVIDER,
         apiKey: env.OPENROUTER_API_KEY,
       })
 

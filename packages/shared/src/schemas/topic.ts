@@ -68,12 +68,16 @@ export const subjectWithStatsSchema = subjectSchema.extend({
 
 export type SubjectWithStats = z.infer<typeof subjectWithStatsSchema>
 
-export const categoryWithChildrenSchema = categorySchema.extend({
+// 再帰型は先に定義
+export type CategoryWithChildren = Category & {
+  children?: CategoryWithChildren[]
+  topics?: Topic[]
+}
+
+export const categoryWithChildrenSchema: z.ZodType<CategoryWithChildren> = categorySchema.extend({
   children: z.array(z.lazy(() => categoryWithChildrenSchema)).optional(),
   topics: z.array(topicSchema).optional(),
 })
-
-export type CategoryWithChildren = z.infer<typeof categoryWithChildrenSchema>
 
 export const topicWithProgressSchema = topicSchema.extend({
   progress: userTopicProgressSchema.nullable(),

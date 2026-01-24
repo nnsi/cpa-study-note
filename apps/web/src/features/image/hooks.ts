@@ -1,6 +1,10 @@
 import { useState, useCallback } from "react"
 import { useMutation } from "@tanstack/react-query"
+import { allowedMimeTypes, type AllowedMimeType } from "@cpa-study/shared/schemas"
 import * as api from "./api"
+
+const isAllowedMimeType = (type: string): type is AllowedMimeType =>
+  (allowedMimeTypes as readonly string[]).includes(type)
 
 type UploadState = {
   status: "idle" | "uploading" | "processing" | "done" | "error"
@@ -34,6 +38,10 @@ export const useImageUpload = () => {
 
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
+      if (!isAllowedMimeType(file.type)) {
+        throw new Error(`Unsupported file type: ${file.type}`)
+      }
+
       setState((prev) => ({
         ...prev,
         status: "uploading",

@@ -74,7 +74,7 @@ export const imageRoutes = ({ env, db }: ImageDeps) => {
       const imageId = c.req.param("imageId")
 
       const aiAdapter = createAIAdapter({
-        provider: env.AI_PROVIDER as "mock" | "vercel-ai",
+        provider: env.AI_PROVIDER,
         apiKey: env.OPENROUTER_API_KEY,
       })
 

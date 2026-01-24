@@ -35,7 +35,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
         const { sessionId } = c.req.valid("json")
 
         const aiAdapter = createAIAdapter({
-          provider: env.AI_PROVIDER as "mock" | "vercel-ai",
+          provider: env.AI_PROVIDER,
           apiKey: env.OPENROUTER_API_KEY,
         })
 

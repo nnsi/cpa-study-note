@@ -1,8 +1,7 @@
 import { createVercelAIAdapter } from "./adapters/vercel-ai"
 import { createMockAdapter } from "./adapters/mock"
 import type { AIAdapter } from "./types"
-
-export type AIProvider = "vercel-ai" | "mock"
+import type { AIProvider } from "../env"
 
 type AIAdapterConfig = {
   provider: AIProvider

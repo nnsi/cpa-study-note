@@ -1,6 +1,7 @@
 import { api } from "@/lib/api-client"
+import type { AllowedMimeType } from "@cpa-study/shared/schemas"
 
-export const getUploadUrl = async (filename: string, mimeType: string) => {
+export const getUploadUrl = async (filename: string, mimeType: AllowedMimeType) => {
   const res = await api.api.images["upload-url"].$post({
     json: { filename, mimeType },
   })

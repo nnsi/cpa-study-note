@@ -43,7 +43,7 @@ class_name = "RateLimiterDO"
 
 [env.staging.vars]
 ENVIRONMENT = "staging"
-AI_PROVIDER = "openrouter"
+AI_PROVIDER = "vercel-ai"
 
 # ステージング環境シークレット（GitHub Actions経由で設定）
 # OPENROUTER_API_KEY
@@ -73,7 +73,7 @@ class_name = "RateLimiterDO"
 
 [env.production.vars]
 ENVIRONMENT = "production"
-AI_PROVIDER = "openrouter"
+AI_PROVIDER = "vercel-ai"
 
 # 本番環境シークレット（GitHub Actions経由で設定）
 # OPENROUTER_API_KEY
