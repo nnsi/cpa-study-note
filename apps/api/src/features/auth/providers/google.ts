@@ -36,7 +36,8 @@ export const createGoogleProvider = (config: GoogleConfig): OAuthProvider => ({
     })
 
     if (!res.ok) {
-      throw new Error(`Token exchange failed: ${res.status}`)
+      console.error(`[Google OAuth] Token exchange failed: ${res.status}`)
+      throw new Error("Authentication failed")
     }
 
     return res.json()
@@ -48,7 +49,8 @@ export const createGoogleProvider = (config: GoogleConfig): OAuthProvider => ({
     })
 
     if (!res.ok) {
-      throw new Error(`User info failed: ${res.status}`)
+      console.error(`[Google OAuth] User info failed: ${res.status}`)
+      throw new Error("Failed to get user info")
     }
 
     const data = (await res.json()) as {

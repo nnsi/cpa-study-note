@@ -137,16 +137,26 @@ export const listMessages = async (
   }
 }
 
-// メッセージ取得（評価用）
+// メッセージ取得（評価用）- 所有権チェック付き
 export const getMessageForEvaluation = async (
   deps: Pick<ChatDeps, "chatRepo">,
+  userId: string,
   messageId: string
-): Promise<{ content: string } | null> => {
+): Promise<
+  { ok: true; content: string } | { ok: false; error: string; status: number }
+> => {
   const message = await deps.chatRepo.findMessageById(messageId)
   if (!message) {
-    return null
+    return { ok: false, error: "Message not found", status: 404 }
   }
-  return { content: message.content }
+
+  // セッション経由で所有権を確認
+  const session = await deps.chatRepo.findSessionById(message.sessionId)
+  if (!session || session.userId !== userId) {
+    return { ok: false, error: "Forbidden", status: 403 }
+  }
+
+  return { ok: true, content: message.content }
 }
 
 type SendMessageInput = {
@@ -229,17 +239,23 @@ export async function* sendMessage(
   // AIからのストリーミングレスポンス
   let fullResponse = ""
 
-  for await (const chunk of deps.aiAdapter.streamText({
-    model: AI_MODEL,
-    messages,
-    temperature: 0.7,
-    maxTokens: 2000,
-  })) {
-    if (chunk.type === "text" && chunk.content) {
-      fullResponse += chunk.content
-      yield chunk
+  try {
+    for await (const chunk of deps.aiAdapter.streamText({
+      model: AI_MODEL,
+      messages,
+      temperature: 0.7,
+      maxTokens: 2000,
+    })) {
+      if (chunk.type === "text" && chunk.content) {
+        fullResponse += chunk.content
+        yield chunk
+      }
+      // "done"チャンクはメッセージ保存後に送信するためここではyieldしない
     }
-    // "done"チャンクはメッセージ保存後に送信するためここではyieldしない
+  } catch (error) {
+    console.error("[AI] Stream error:", error)
+    yield { type: "error", error: "AI応答中にエラーが発生しました。再度お試しください。" }
+    return
   }
 
   // アシスタントメッセージを保存

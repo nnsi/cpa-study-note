@@ -1,6 +1,14 @@
 import type { ImageRepository } from "./repository"
 import type { AIAdapter } from "@/shared/lib/ai"
 
+// ファイル名サニタイズ: パストラバーサル防止
+const sanitizeFilename = (filename: string): string => {
+  // パス区切り文字を除去してベース名のみ取得
+  const basename = filename.split(/[\\/]/).pop() || "file"
+  // 許可文字（英数字、ドット、ハイフン、アンダースコア）のみ残し、100文字に制限
+  return basename.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 100)
+}
+
 type ImageDeps = {
   imageRepo: ImageRepository
   aiAdapter: AIAdapter
@@ -49,7 +57,9 @@ export const createUploadUrl = async (
   const { userId, filename, mimeType } = input
 
   const imageId = crypto.randomUUID()
-  const r2Key = `images/${userId}/${imageId}/${filename}`
+  const safeFilename = sanitizeFilename(filename)
+  // R2キーからuserIdを除去（DBで関連付けを管理）
+  const r2Key = `images/${imageId}/${safeFilename}`
 
   // R2への署名付きアップロードURLを生成
   const uploadUrl = `${apiBaseUrl}/api/images/${imageId}/upload`

@@ -37,7 +37,7 @@ export const createSessionRequestSchema = z.object({
 export type CreateSessionRequest = z.infer<typeof createSessionRequestSchema>
 
 export const sendMessageRequestSchema = z.object({
-  content: z.string().min(1),
+  content: z.string().min(1).max(10000),
   imageId: z.string().optional(),
 })
 

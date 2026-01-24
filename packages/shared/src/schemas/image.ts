@@ -13,10 +13,20 @@ export const imageSchema = z.object({
 
 export type Image = z.infer<typeof imageSchema>
 
+// Allowed MIME types for image upload
+export const allowedMimeTypes = [
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+] as const
+
+export type AllowedMimeType = (typeof allowedMimeTypes)[number]
+
 // Request schemas
 export const uploadImageRequestSchema = z.object({
-  filename: z.string(),
-  mimeType: z.string(),
+  filename: z.string().max(255),
+  mimeType: z.enum(allowedMimeTypes),
 })
 
 export type UploadImageRequest = z.infer<typeof uploadImageRequestSchema>

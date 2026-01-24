@@ -99,9 +99,9 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
       zValidator(
         "json",
         z.object({
-          content: z.string().min(1),
+          content: z.string().min(1).max(10000),
           imageId: z.string().optional(),
-          ocrResult: z.string().optional(),
+          ocrResult: z.string().max(50000).optional(),
         })
       ),
       async (c) => {
@@ -132,11 +132,12 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
     // 質問評価
     .post("/messages/:messageId/evaluate", authMiddleware, async (c) => {
       const messageId = c.req.param("messageId")
+      const user = c.get("user")
 
-      const message = await getMessageForEvaluation({ chatRepo }, messageId)
+      const result = await getMessageForEvaluation({ chatRepo }, user.id, messageId)
 
-      if (!message) {
-        return c.json({ error: "Message not found" }, 404)
+      if (!result.ok) {
+        return c.json({ error: result.error }, result.status as 404 | 403)
       }
 
       const aiAdapter = createAIAdapter({
@@ -147,7 +148,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
       const quality = await evaluateQuestion(
         { chatRepo, topicRepo, aiAdapter },
         messageId,
-        message.content
+        result.content
       )
 
       return c.json({ quality })

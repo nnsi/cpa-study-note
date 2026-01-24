@@ -23,9 +23,9 @@ export const createNoteRequestSchema = z.object({
 export type CreateNoteRequest = z.infer<typeof createNoteRequestSchema>
 
 export const updateNoteRequestSchema = z.object({
-  userMemo: z.string().optional(),
-  keyPoints: z.array(z.string()).optional(),
-  stumbledPoints: z.array(z.string()).optional(),
+  userMemo: z.string().max(50000).optional(),
+  keyPoints: z.array(z.string().max(1000)).max(50).optional(),
+  stumbledPoints: z.array(z.string().max(1000)).max(50).optional(),
 })
 
 export type UpdateNoteRequest = z.infer<typeof updateNoteRequestSchema>
