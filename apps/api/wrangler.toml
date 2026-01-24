@@ -12,6 +12,15 @@ migrations_dir = "../../packages/db/migrations"
 binding = "R2"
 bucket_name = "cpa-study-images"
 
+# Durable Objects (Rate Limiter)
+[[durable_objects.bindings]]
+name = "RATE_LIMITER"
+class_name = "RateLimiterDO"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["RateLimiterDO"]
+
 # ============================================
 # ステージング環境設定 (masterブランチ → stg)
 # ============================================
@@ -27,6 +36,10 @@ migrations_dir = "../../packages/db/migrations"
 [[env.staging.r2_buckets]]
 binding = "R2"
 bucket_name = "cpa-study-images-stg"
+
+[[env.staging.durable_objects.bindings]]
+name = "RATE_LIMITER"
+class_name = "RateLimiterDO"
 
 [env.staging.vars]
 ENVIRONMENT = "staging"
@@ -53,6 +66,10 @@ migrations_dir = "../../packages/db/migrations"
 [[env.production.r2_buckets]]
 binding = "R2"
 bucket_name = "cpa-study-images-prod"
+
+[[env.production.durable_objects.bindings]]
+name = "RATE_LIMITER"
+class_name = "RateLimiterDO"
 
 [env.production.vars]
 ENVIRONMENT = "production"

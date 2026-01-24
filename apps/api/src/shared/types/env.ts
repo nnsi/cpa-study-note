@@ -1,6 +1,7 @@
 export type Env = {
   DB: D1Database
   R2: R2Bucket
+  RATE_LIMITER: DurableObjectNamespace
   ENVIRONMENT: "local" | "staging" | "production"
   DEV_USER_ID?: string
   JWT_SECRET: string
@@ -21,4 +22,5 @@ export type User = {
 
 export type Variables = {
   user: User
+  rateLimitApplied?: boolean
 }

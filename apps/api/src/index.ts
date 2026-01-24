@@ -7,7 +7,20 @@ import { createTopicFeature } from "./features/topic"
 import { createChatFeature } from "./features/chat"
 import { createNoteFeature } from "./features/note"
 import { createImageFeature } from "./features/image"
+import {
+  createRateLimitStore,
+  createRateLimiterFactory,
+  RateLimiterDO,
+  type RateLimitStore,
+} from "./shared/lib/rate-limit"
 import type { Env, Variables } from "./shared/types/env"
+
+// Durable Object をエクスポート（Cloudflare Workers が認識するため）
+export { RateLimiterDO }
+
+// メモリストアをモジュールスコープで保持（ローカル開発用）
+// Cloudflare Workers ではモジュールスコープはワーカーの生存期間中維持される
+let memoryStore: RateLimitStore | null = null
 
 // 環境変数バリデーション
 const validateEnv = (env: Env): void => {
@@ -31,6 +44,18 @@ const createApp = (env: Env) => {
   validateEnv(env)
 
   const db = createDb(env.DB)
+
+  // レート制限ストアの作成
+  // local: インメモリ（モジュールスコープで永続化）
+  // staging/production: Durable Objects
+  const rateLimitStore =
+    env.ENVIRONMENT === "local"
+      ? (memoryStore ??= createRateLimitStore({ type: "memory" }))
+      : createRateLimitStore({ type: "durable-object", namespace: env.RATE_LIMITER })
+
+  const limiter = createRateLimiterFactory<{ Bindings: Env; Variables: Variables }>(
+    rateLimitStore
+  )
 
   // CORS設定
   const corsMiddleware = cors({
@@ -59,6 +84,16 @@ const createApp = (env: Env) => {
   const app = new Hono<{ Bindings: Env; Variables: Variables }>()
     .use("*", secureHeaders())
     .use("*", corsMiddleware)
+    // レート制限（より具体的なパスを先に定義）
+    // 認証系は厳格（5 req/min）
+    .use("/api/auth/*", limiter.strict())
+    // AI系は中程度（20 req/min）
+    .use("/api/chat/sessions/*/messages", limiter.moderate())
+    .use("/api/images/*/ocr", limiter.moderate())
+    .use("/api/notes", limiter.moderate())
+    // その他は緩め（100 req/min）
+    // rateLimitApplied フラグにより、上記で適用済みの場合はスキップされる
+    .use("/api/*", limiter.lenient())
     .route("/api/auth", createAuthFeature(env, db))
     .route("/api/subjects", createTopicFeature(env, db))
     .route("/api/chat", createChatFeature(env, db))
