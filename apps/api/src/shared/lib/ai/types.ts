@@ -19,10 +19,11 @@ export type GenerateTextResult = {
 }
 
 export type StreamChunk = {
-  type: "text" | "error" | "done"
+  type: "text" | "error" | "done" | "session_created"
   content?: string
   error?: string
   messageId?: string
+  sessionId?: string
 }
 
 export type AIAdapter = {

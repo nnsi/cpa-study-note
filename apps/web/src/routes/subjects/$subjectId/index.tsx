@@ -106,34 +106,48 @@ function CategoryItem({
   const paddingLeft = category.depth * 16
   const totals = getTotalCounts(category)
 
+  // 子カテゴリがある場合はリンクにしない（クリックしても遷移しない）
+  const itemContent = (
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <span className="text-ink-400">
+          {hasChildren ? "📂" : "📄"}
+        </span>
+        <span className="text-ink-800">{category.name}</span>
+      </div>
+      {totals.topicCount > 0 && (
+        <span
+          className={`text-sm ${
+            totals.understoodCount === totals.topicCount
+              ? "text-jade-600 font-medium"
+              : "text-ink-500"
+          }`}
+        >
+          {totals.understoodCount}/{totals.topicCount}
+        </span>
+      )}
+    </div>
+  )
+
   return (
     <div>
-      <Link
-        to="/subjects/$subjectId/$categoryId"
-        params={{ subjectId, categoryId: category.id }}
-        className="block py-3.5 px-4 rounded-xl hover:bg-ink-50 transition-colors"
-        style={{ paddingLeft: paddingLeft + 16 }}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-ink-400">
-              {hasChildren ? "📂" : "📄"}
-            </span>
-            <span className="text-ink-800">{category.name}</span>
-          </div>
-          {totals.topicCount > 0 && (
-            <span
-              className={`text-sm ${
-                totals.understoodCount === totals.topicCount
-                  ? "text-jade-600 font-medium"
-                  : "text-ink-500"
-              }`}
-            >
-              {totals.understoodCount}/{totals.topicCount}
-            </span>
-          )}
+      {hasChildren ? (
+        <div
+          className="block py-3.5 px-4 rounded-xl"
+          style={{ paddingLeft: paddingLeft + 16 }}
+        >
+          {itemContent}
         </div>
-      </Link>
+      ) : (
+        <Link
+          to="/subjects/$subjectId/$categoryId"
+          params={{ subjectId, categoryId: category.id }}
+          className="block py-3.5 px-4 rounded-xl hover:bg-ink-50 transition-colors"
+          style={{ paddingLeft: paddingLeft + 16 }}
+        >
+          {itemContent}
+        </Link>
+      )}
       {hasChildren && (
         <div>
           {category.children.map((child) => (

@@ -43,30 +43,13 @@ export const ChatMessageView = ({ message, isStreaming }: Props) => {
               {message.formattedTime}
             </span>
 
-            {/* 質問品質インジケーター */}
-            {message.questionQuality && (
-              <span
-                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-2xs font-medium ${
-                  message.questionQuality === "good"
-                    ? "bg-jade-100 text-jade-600"
-                    : "bg-amber-100 text-amber-600"
-                }`}
-              >
-                {message.questionQuality === "good" ? (
-                  <>
-                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                    </svg>
-                    良質
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
-                    </svg>
-                    改善可
-                  </>
-                )}
+            {/* 良質な質問インジケーター */}
+            {message.questionQuality === "good" && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-2xs font-medium bg-jade-100 text-jade-600">
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                </svg>
+                良質
               </span>
             )}
           </div>

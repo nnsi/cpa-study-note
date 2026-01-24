@@ -14,6 +14,7 @@ import {
   listMessages,
   getMessageForEvaluation,
   sendMessage,
+  sendMessageWithNewSession,
   evaluateQuestion,
 } from "./usecase"
 
@@ -118,6 +119,43 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
           { chatRepo, topicRepo, aiAdapter },
           {
             sessionId,
+            userId: user.id,
+            content,
+            imageId,
+            ocrResult,
+          }
+        )
+
+        return streamToSSE(c, stream)
+      }
+    )
+
+    // 新規セッション + メッセージ送信（最初のメッセージ送信時にセッションを作成）
+    .post(
+      "/topics/:topicId/messages/stream",
+      authMiddleware,
+      zValidator(
+        "json",
+        z.object({
+          content: z.string().min(1).max(10000),
+          imageId: z.string().optional(),
+          ocrResult: z.string().max(50000).optional(),
+        })
+      ),
+      async (c) => {
+        const topicId = c.req.param("topicId")
+        const user = c.get("user")
+        const { content, imageId, ocrResult } = c.req.valid("json")
+
+        const aiAdapter = createAIAdapter({
+          provider: env.AI_PROVIDER as "mock" | "vercel-ai",
+          apiKey: env.OPENROUTER_API_KEY,
+        })
+
+        const stream = sendMessageWithNewSession(
+          { chatRepo, topicRepo, aiAdapter },
+          {
+            topicId,
             userId: user.id,
             content,
             imageId,

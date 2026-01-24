@@ -5,12 +5,13 @@ import { ChatInputView } from "./ChatInput"
 import { useCreateNote } from "@/features/note"
 
 type Props = {
-  sessionId: string
+  sessionId: string | null
   topicId: string
+  onSessionCreated?: (sessionId: string) => void
 }
 
-export const ChatContainer = ({ sessionId, topicId }: Props) => {
-  const { messages, input } = useChat(sessionId)
+export const ChatContainer = ({ sessionId, topicId, onSessionCreated }: Props) => {
+  const { messages, input } = useChat({ sessionId, topicId, onSessionCreated })
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { mutate: createNote, isPending: isCreatingNote } = useCreateNote(topicId)
   const [noteCreated, setNoteCreated] = useState(false)
@@ -58,7 +59,7 @@ export const ChatContainer = ({ sessionId, topicId }: Props) => {
           <ChatMessageView
             message={{
               id: "pending-user",
-              sessionId,
+              sessionId: sessionId ?? "new",
               role: "user",
               content: input.pendingUserMessage.content,
               imageId: input.pendingUserMessage.imageId ?? null,
@@ -76,7 +77,7 @@ export const ChatContainer = ({ sessionId, topicId }: Props) => {
           <ChatMessageView
             message={{
               id: "streaming",
-              sessionId,
+              sessionId: sessionId ?? "new",
               role: "assistant",
               content: input.streamingText,
               imageId: null,
@@ -94,7 +95,7 @@ export const ChatContainer = ({ sessionId, topicId }: Props) => {
       </div>
 
       {/* ノート作成バー */}
-      {messages.displayMessages.length > 0 && (
+      {messages.displayMessages.length > 0 && sessionId && (
         <div className="px-4 py-3 border-t border-ink-100 bg-ink-50/50">
           {noteCreated ? (
             <div className="flex items-center justify-center gap-3 animate-scale-in">
@@ -114,9 +115,11 @@ export const ChatContainer = ({ sessionId, topicId }: Props) => {
           ) : (
             <button
               onClick={() => {
-                createNote(sessionId, {
-                  onSuccess: () => setNoteCreated(true),
-                })
+                if (sessionId) {
+                  createNote(sessionId, {
+                    onSuccess: () => setNoteCreated(true),
+                  })
+                }
               }}
               disabled={isCreatingNote}
               className="w-full py-2.5 flex items-center justify-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-xl transition-colors disabled:text-ink-400 disabled:cursor-not-allowed"

@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
-import { useState } from "react"
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useState, useCallback } from "react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { api } from "@/lib/api-client"
 import { ChatContainer } from "@/features/chat"
 import { TopicInfo } from "@/features/topic"
@@ -26,7 +26,9 @@ function TopicDetailPage() {
   const [sidebarTab, setSidebarTab] = useState<"info" | "notes" | "sessions">(
     "info"
   )
-  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null)
+  // null = 新規セッションモード（最初のメッセージ送信でセッション作成）
+  // "use-latest" = 最新のセッションを使用
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null | "use-latest">("use-latest")
   const queryClient = useQueryClient()
 
   const { data: topic, isLoading } = useQuery({
@@ -54,23 +56,22 @@ function TopicDetailPage() {
 
   const sessions: Session[] = sessionsData?.sessions ?? []
 
-  // 新しいセッションを作成
-  const createSessionMutation = useMutation({
-    mutationFn: async () => {
-      const res = await api.api.chat.sessions.$post({
-        json: { topicId },
-      })
-      if (!res.ok) throw new Error("Failed to create session")
-      return res.json()
-    },
-    onSuccess: (data) => {
-      setSelectedSessionId(data.session.id)
-      queryClient.invalidateQueries({ queryKey: ["chat", "sessions", topicId] })
-    },
-  })
+  // 新しいチャットを開始（セッションIDをnullにして新規モードに）
+  const startNewChat = useCallback(() => {
+    setSelectedSessionId(null)
+  }, [])
 
-  // 選択中のセッションID（なければ最新のセッション、それもなければnull）
-  const currentSessionId = selectedSessionId ?? sessions[0]?.id ?? null
+  // セッションが作成されたときのコールバック
+  const handleSessionCreated = useCallback((newSessionId: string) => {
+    setSelectedSessionId(newSessionId)
+    queryClient.invalidateQueries({ queryKey: ["chat", "sessions", topicId] })
+  }, [queryClient, topicId])
+
+  // 選択中のセッションID
+  // "use-latest" の場合は最新のセッションを使用、null は新規セッションモード
+  const currentSessionId = selectedSessionId === "use-latest"
+    ? (sessions[0]?.id ?? null)
+    : selectedSessionId
 
   if (isLoading) {
     return (
@@ -85,8 +86,17 @@ function TopicDetailPage() {
 
   return (
     <div className="h-[calc(100dvh-64px)] flex flex-col lg:flex-row">
-      {/* モバイル: タブ切り替え */}
+      {/* モバイル: ヘッダー + タブ切り替え */}
       <div className="lg:hidden border-b border-ink-100 bg-white">
+        <div className="px-4 py-2 border-b border-ink-100">
+          <Link
+            to="/subjects/$subjectId/$categoryId"
+            params={{ subjectId, categoryId }}
+            className="text-indigo-600 hover:underline text-sm"
+          >
+            ← 論点一覧
+          </Link>
+        </div>
         <div className="flex">
           {(["info", "chat", "notes"] as const).map((tab) => (
             <button
@@ -147,8 +157,7 @@ function TopicDetailPage() {
                 sessions={sessions}
                 currentSessionId={currentSessionId}
                 onSelect={setSelectedSessionId}
-                onCreateNew={() => createSessionMutation.mutate()}
-                isCreating={createSessionMutation.isPending}
+                onCreateNew={startNewChat}
               />
             )}
             {sidebarTab === "notes" && <TopicNotes topicId={topicId} />}
@@ -157,30 +166,12 @@ function TopicDetailPage() {
 
         {/* 右: チャット */}
         <main className="flex-1 flex flex-col">
-          {currentSessionId ? (
-            <ChatContainer
-              key={currentSessionId}
-              sessionId={currentSessionId}
-              topicId={topicId}
-            />
-          ) : (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center">
-                <p className="text-ink-500 mb-4">
-                  チャットセッションがありません
-                </p>
-                <button
-                  onClick={() => createSessionMutation.mutate()}
-                  disabled={createSessionMutation.isPending}
-                  className="btn-primary"
-                >
-                  {createSessionMutation.isPending
-                    ? "作成中..."
-                    : "新しいチャットを開始"}
-                </button>
-              </div>
-            </div>
-          )}
+          <ChatContainer
+            key={currentSessionId ?? "new"}
+            sessionId={currentSessionId}
+            topicId={topicId}
+            onSessionCreated={handleSessionCreated}
+          />
         </main>
       </div>
 
@@ -196,11 +187,12 @@ function TopicDetailPage() {
             {/* セッション選択バー */}
             <div className="flex items-center gap-2 px-4 py-2.5 bg-ink-50 border-b border-ink-100">
               <select
-                value={currentSessionId ?? ""}
-                onChange={(e) => setSelectedSessionId(e.target.value || null)}
+                value={currentSessionId ?? "new"}
+                onChange={(e) => setSelectedSessionId(e.target.value === "new" ? null : e.target.value)}
                 className="flex-1 text-sm border border-ink-200 rounded-lg px-3 py-1.5 bg-white"
               >
-                {sessions.map((s, i) => (
+                <option value="new">新しいチャット</option>
+                {sessions.map((s) => (
                   <option key={s.id} value={s.id}>
                     {new Date(s.createdAt).toLocaleDateString("ja-JP")} (
                     {s.messageCount}件)
@@ -208,30 +200,18 @@ function TopicDetailPage() {
                 ))}
               </select>
               <button
-                onClick={() => createSessionMutation.mutate()}
-                disabled={createSessionMutation.isPending}
+                onClick={startNewChat}
                 className="text-sm text-indigo-600 hover:text-indigo-700 whitespace-nowrap font-medium"
               >
                 + 新規
               </button>
             </div>
-            {currentSessionId ? (
-              <ChatContainer
-                key={currentSessionId}
-                sessionId={currentSessionId}
-                topicId={topicId}
-              />
-            ) : (
-              <div className="flex-1 flex items-center justify-center">
-                <button
-                  onClick={() => createSessionMutation.mutate()}
-                  disabled={createSessionMutation.isPending}
-                  className="btn-primary"
-                >
-                  新しいチャットを開始
-                </button>
-              </div>
-            )}
+            <ChatContainer
+              key={currentSessionId ?? "new"}
+              sessionId={currentSessionId}
+              topicId={topicId}
+              onSessionCreated={handleSessionCreated}
+            />
           </div>
         )}
         {activeTab === "notes" && (
@@ -250,22 +230,19 @@ function SessionList({
   currentSessionId,
   onSelect,
   onCreateNew,
-  isCreating,
 }: {
   sessions: Session[]
   currentSessionId: string | null
-  onSelect: (id: string) => void
+  onSelect: (id: string | null) => void
   onCreateNew: () => void
-  isCreating: boolean
 }) {
   return (
     <div className="p-4">
       <button
         onClick={onCreateNew}
-        disabled={isCreating}
-        className="w-full mb-4 py-2.5 px-4 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:bg-ink-400 transition-colors font-medium"
+        className="w-full mb-4 py-2.5 px-4 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors font-medium"
       >
-        {isCreating ? "作成中..." : "+ 新しいチャットを開始"}
+        + 新しいチャットを開始
       </button>
 
       {sessions.length === 0 ? (

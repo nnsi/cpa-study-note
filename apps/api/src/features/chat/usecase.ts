@@ -59,7 +59,7 @@ type SessionWithStats = SessionResponse & {
   messageCount: number
 }
 
-// セッション一覧取得
+// セッション一覧取得（メッセージが1件以上あるセッションのみ）
 export const listSessionsByTopic = async (
   deps: Pick<ChatDeps, "chatRepo">,
   userId: string,
@@ -79,7 +79,8 @@ export const listSessionsByTopic = async (
     })
   )
 
-  return sessionsWithStats
+  // メッセージが0件のセッションは除外
+  return sessionsWithStats.filter((s) => s.messageCount > 0)
 }
 
 // セッション取得
@@ -161,6 +162,14 @@ export const getMessageForEvaluation = async (
 
 type SendMessageInput = {
   sessionId: string
+  userId: string
+  content: string
+  imageId?: string
+  ocrResult?: string
+}
+
+type SendMessageWithNewSessionInput = {
+  topicId: string
   userId: string
   content: string
   imageId?: string
@@ -278,6 +287,103 @@ export async function* sendMessage(
   })
 
   // メッセージ保存後に"done"を送信（ユーザーメッセージIDを含める）
+  yield { type: "done" as const, messageId: userMessage.id }
+}
+
+// 新規セッション作成 + メッセージ送信（最初のメッセージ送信時にセッションを作成）
+export async function* sendMessageWithNewSession(
+  deps: ChatDeps,
+  input: SendMessageWithNewSessionInput
+): AsyncIterable<StreamChunk & { sessionId?: string }> {
+  const topic = await deps.topicRepo.findTopicById(input.topicId)
+  if (!topic) {
+    yield { type: "error", error: "Topic not found" }
+    return
+  }
+
+  // セッションを作成
+  const session = await deps.chatRepo.createSession({
+    userId: input.userId,
+    topicId: input.topicId,
+  })
+
+  // セッションIDを最初に通知
+  yield { type: "session_created" as const, sessionId: session.id }
+
+  // ユーザーメッセージを保存
+  const userMessage = await deps.chatRepo.createMessage({
+    sessionId: session.id,
+    role: "user",
+    content: input.content,
+    imageId: input.imageId ?? null,
+    ocrResult: input.ocrResult ?? null,
+    questionQuality: null,
+  })
+
+  // AI用メッセージを構築
+  const messages: AIMessage[] = []
+
+  // システムプロンプト
+  const systemPrompt =
+    topic.aiSystemPrompt ||
+    `あなたは公認会計士試験の学習をサポートするAIアシスタントです。
+現在の論点: ${topic.name}
+
+この論点に関する質問に対して、以下の方針で回答してください：
+- 論点の範囲内で回答する
+- 理解を深めるための説明を心がける
+- 正確性を保ちつつ、分かりやすく説明する
+- 他の論点への脱線を避ける`
+
+  messages.push({ role: "system", content: systemPrompt })
+
+  // 現在のユーザーメッセージ
+  const currentContent = input.ocrResult
+    ? `[画像から抽出されたテキスト]\n${input.ocrResult}\n\n${input.content}`
+    : input.content
+  messages.push({ role: "user", content: currentContent })
+
+  // AIからのストリーミングレスポンス
+  let fullResponse = ""
+
+  try {
+    for await (const chunk of deps.aiAdapter.streamText({
+      model: AI_MODEL,
+      messages,
+      temperature: 0.7,
+      maxTokens: 2000,
+    })) {
+      if (chunk.type === "text" && chunk.content) {
+        fullResponse += chunk.content
+        yield chunk
+      }
+    }
+  } catch (error) {
+    console.error("[AI] Stream error:", error)
+    yield { type: "error", error: "AI応答中にエラーが発生しました。再度お試しください。" }
+    return
+  }
+
+  // アシスタントメッセージを保存
+  if (fullResponse) {
+    await deps.chatRepo.createMessage({
+      sessionId: session.id,
+      role: "assistant",
+      content: fullResponse,
+      imageId: null,
+      ocrResult: null,
+      questionQuality: null,
+    })
+  }
+
+  // 進捗を更新
+  await deps.topicRepo.upsertProgress({
+    userId: input.userId,
+    topicId: input.topicId,
+    incrementQuestionCount: true,
+  })
+
+  // メッセージ保存後に"done"を送信
   yield { type: "done" as const, messageId: userMessage.id }
 }
 
