@@ -2,7 +2,7 @@ export type OAuthProvider = {
   name: string
   getAuthUrl: (state: string) => string
   exchangeCode: (code: string) => Promise<OAuthTokens>
-  getUserInfo: (accessToken: string) => Promise<OAuthUserInfo>
+  getUserInfo: (tokens: OAuthTokens) => Promise<OAuthUserInfo>
 }
 
 export type OAuthTokens = {
@@ -10,6 +10,7 @@ export type OAuthTokens = {
   refresh_token?: string
   expires_in?: number
   token_type?: string
+  id_token?: string // OIDC ID Token for secure user info extraction
 }
 
 export type OAuthUserInfo = {

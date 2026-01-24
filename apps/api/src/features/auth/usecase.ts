@@ -32,7 +32,7 @@ export const handleOAuthCallback = async (
 
   let oauthUser: OAuthUserInfo
   try {
-    oauthUser = await provider.getUserInfo(tokens.access_token)
+    oauthUser = await provider.getUserInfo(tokens)
   } catch {
     return err("USER_INFO_FAILED")
   }

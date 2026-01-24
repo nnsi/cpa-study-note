@@ -1,10 +1,14 @@
-import type { OAuthProvider } from "../domain"
+import * as jose from "jose"
+import type { OAuthProvider, OAuthTokens } from "../domain"
 
 type GoogleConfig = {
   clientId: string
   clientSecret: string
   redirectUri: string
 }
+
+// Google OIDC公開鍵エンドポイント
+const GOOGLE_JWKS_URI = "https://www.googleapis.com/oauth2/v3/certs"
 
 export const createGoogleProvider = (config: GoogleConfig): OAuthProvider => ({
   name: "google",
@@ -43,28 +47,43 @@ export const createGoogleProvider = (config: GoogleConfig): OAuthProvider => ({
     return res.json()
   },
 
-  getUserInfo: async (accessToken) => {
-    const res = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    })
+  getUserInfo: async (tokens: OAuthTokens) => {
+    const { id_token } = tokens
 
-    if (!res.ok) {
-      console.error(`[Google OAuth] User info failed: ${res.status}`)
+    if (!id_token) {
+      console.error("[Google OAuth] No ID token received")
       throw new Error("Failed to get user info")
     }
 
-    const data = (await res.json()) as {
-      id: string
-      email: string
-      name: string
-      picture?: string
-    }
+    try {
+      // Google公開鍵でID Tokenを検証
+      const JWKS = jose.createRemoteJWKSet(new URL(GOOGLE_JWKS_URI))
+      const { payload } = await jose.jwtVerify(id_token, JWKS, {
+        issuer: ["https://accounts.google.com", "accounts.google.com"],
+        audience: config.clientId,
+      })
 
-    return {
-      providerId: data.id,
-      email: data.email,
-      name: data.name,
-      avatarUrl: data.picture ?? null,
+      const { sub, email, name, picture } = payload as {
+        sub: string
+        email?: string
+        name?: string
+        picture?: string
+      }
+
+      if (!sub || !email) {
+        console.error("[Google OAuth] Missing required claims in ID token")
+        throw new Error("Failed to get user info")
+      }
+
+      return {
+        providerId: sub,
+        email,
+        name: name || email.split("@")[0],
+        avatarUrl: picture ?? null,
+      }
+    } catch (error) {
+      console.error("[Google OAuth] ID token verification failed:", error)
+      throw new Error("Failed to get user info")
     }
   },
 })
