@@ -8,6 +8,11 @@
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "test:api": "pnpm --filter @cpa-study/api test",
+    "test:web": "pnpm --filter @cpa-study/web test",
+    "test:shared": "pnpm --filter @cpa-study/shared test",
+    "test:coverage": "pnpm -r test:coverage",
     "db:generate": "pnpm --filter @cpa-study/db generate",
     "db:migrate": "pnpm --filter @cpa-study/db migrate",
     "db:seed": "pnpm --filter @cpa-study/db seed",
@@ -15,7 +20,9 @@
     "audit": "pnpm audit --audit-level moderate"
   },
   "devDependencies": {
-    "typescript": "^5.7.3"
+    "@vitest/coverage-v8": "^4.0.18",
+    "typescript": "^5.7.3",
+    "vitest": "^4.0.18"
   },
   "engines": {
     "node": ">=20.0.0",
