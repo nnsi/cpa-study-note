@@ -1,8 +1,8 @@
 export type Env = {
   DB: D1Database
   R2: R2Bucket
-  AUTH_MODE: "dev" | "production"
-  DEV_USER_ID: string
+  ENVIRONMENT: "local" | "staging" | "production"
+  DEV_USER_ID?: string
   JWT_SECRET: string
   GOOGLE_CLIENT_ID: string
   GOOGLE_CLIENT_SECRET: string

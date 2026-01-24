@@ -1,4 +1,5 @@
 export * from "./users"
+export * from "./auth"
 export * from "./topics"
 export * from "./chat"
 export * from "./notes"

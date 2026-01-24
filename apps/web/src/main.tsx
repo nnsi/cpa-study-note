@@ -5,6 +5,7 @@ import { RouterProvider, createRouter } from "@tanstack/react-router"
 import { routeTree } from "./routeTree.gen"
 import { ErrorBoundary } from "./components/ErrorBoundary"
 import { ToastContainer } from "./lib/toast"
+import { initializeAuth } from "./lib/auth"
 import "./index.css"
 
 // QueryClient設定（パフォーマンス最適化）
@@ -44,15 +45,26 @@ const LoadingFallback = () => (
 
 const rootElement = document.getElementById("root")!
 
-createRoot(rootElement).render(
-  <StrictMode>
-    <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <Suspense fallback={<LoadingFallback />}>
-          <RouterProvider router={router} />
-        </Suspense>
-        <ToastContainer />
-      </QueryClientProvider>
-    </ErrorBoundary>
-  </StrictMode>
-)
+// Initialize auth before rendering (skip for auth/callback page)
+const isAuthCallback = window.location.pathname === "/auth/callback"
+
+const startApp = async () => {
+  if (!isAuthCallback) {
+    await initializeAuth()
+  }
+
+  createRoot(rootElement).render(
+    <StrictMode>
+      <ErrorBoundary>
+        <QueryClientProvider client={queryClient}>
+          <Suspense fallback={<LoadingFallback />}>
+            <RouterProvider router={router} />
+          </Suspense>
+          <ToastContainer />
+        </QueryClientProvider>
+      </ErrorBoundary>
+    </StrictMode>
+  )
+}
+
+startApp()

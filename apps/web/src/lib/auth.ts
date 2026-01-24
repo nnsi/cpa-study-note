@@ -1,13 +1,12 @@
 import { create } from "zustand"
-import { persist } from "zustand/middleware"
 import { redirect } from "@tanstack/react-router"
 
 /**
- * 開発モード判定
- * VITE_AUTH_MODE=dev の場合のみ有効
- * 本番ビルドでは環境変数が設定されないため自動的に無効化される
+ * ローカル開発モード判定
+ * VITE_ENVIRONMENT=local の場合のみ有効
+ * staging/productionビルドでは環境変数が異なるため自動的に無効化される
  */
-export const isDevMode = import.meta.env.VITE_AUTH_MODE === "dev"
+export const isDevMode = import.meta.env.VITE_ENVIRONMENT === "local"
 const devUserId = import.meta.env.VITE_DEV_USER_ID || "test-user-1"
 
 // 開発用テストユーザー（本番では isDevMode=false のため使用されない）
@@ -28,42 +27,158 @@ type User = {
 type AuthState = {
   user: User | null
   token: string | null
+  isInitializing: boolean
   setAuth: (user: User, token: string) => void
   setDevAuth: () => void
   clearAuth: () => void
   isAuthenticated: () => boolean
   isDevUser: () => boolean
+  setInitializing: (value: boolean) => void
 }
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set, get) => ({
-      user: null,
-      token: null,
-      setAuth: (user, token) => {
-        localStorage.setItem("auth_token", token)
-        set({ user, token })
-      },
-      setDevAuth: () => {
-        set({ user: devUser, token: "dev-token" })
-      },
-      clearAuth: () => {
-        localStorage.removeItem("auth_token")
-        set({ user: null, token: null })
-      },
-      isAuthenticated: () => !!get().token,
-      isDevUser: () => get().token === "dev-token",
-    }),
-    {
-      name: "auth-storage",
-      partialize: (state) => ({ user: state.user, token: state.token }),
+// In-memory store (no persistence - tokens are stored in HttpOnly cookies)
+export const useAuthStore = create<AuthState>()((set, get) => ({
+  user: null,
+  token: null,
+  isInitializing: true,
+  setAuth: (user, token) => {
+    set({ user, token, isInitializing: false })
+  },
+  setDevAuth: () => {
+    set({ user: devUser, token: "dev-token", isInitializing: false })
+  },
+  clearAuth: () => {
+    set({ user: null, token: null, isInitializing: false })
+  },
+  isAuthenticated: () => !!get().token,
+  isDevUser: () => get().token === "dev-token",
+  setInitializing: (value) => set({ isInitializing: value }),
+}))
+
+// Initialize auth on app load (try to refresh token)
+let initPromise: Promise<boolean> | null = null
+
+export const initializeAuth = async (): Promise<boolean> => {
+  // Dev mode: skip refresh
+  if (isDevMode) {
+    useAuthStore.getState().setDevAuth()
+    return true
+  }
+
+  // Prevent multiple concurrent initializations
+  if (initPromise) return initPromise
+
+  initPromise = (async () => {
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/auth/refresh`,
+        {
+          method: "POST",
+          credentials: "include", // Send cookies
+        }
+      )
+
+      if (!response.ok) {
+        useAuthStore.getState().clearAuth()
+        return false
+      }
+
+      const data = (await response.json()) as {
+        accessToken: string
+        user: { id: string; email: string; name: string; avatarUrl: string | null }
+      }
+      const user: User = {
+        id: data.user.id,
+        email: data.user.email,
+        displayName: data.user.name,
+        avatarUrl: data.user.avatarUrl,
+      }
+      useAuthStore.getState().setAuth(user, data.accessToken)
+      return true
+    } catch {
+      useAuthStore.getState().clearAuth()
+      return false
+    } finally {
+      initPromise = null
     }
-  )
-)
+  })()
+
+  return initPromise
+}
+
+// Refresh token on 401 (call once per 401)
+let isRefreshing = false
+let refreshPromise: Promise<string | null> | null = null
+
+export const refreshTokenOnUnauthorized = async (): Promise<string | null> => {
+  // Dev mode: no refresh needed
+  if (isDevMode) return "dev-token"
+
+  // Prevent multiple concurrent refreshes
+  if (isRefreshing && refreshPromise) {
+    return refreshPromise
+  }
+
+  isRefreshing = true
+  refreshPromise = (async () => {
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/auth/refresh`,
+        {
+          method: "POST",
+          credentials: "include",
+        }
+      )
+
+      if (!response.ok) {
+        useAuthStore.getState().clearAuth()
+        return null
+      }
+
+      const data = (await response.json()) as {
+        accessToken: string
+        user: { id: string; email: string; name: string; avatarUrl: string | null }
+      }
+      const user: User = {
+        id: data.user.id,
+        email: data.user.email,
+        displayName: data.user.name,
+        avatarUrl: data.user.avatarUrl,
+      }
+      useAuthStore.getState().setAuth(user, data.accessToken)
+      return data.accessToken
+    } catch {
+      useAuthStore.getState().clearAuth()
+      return null
+    } finally {
+      isRefreshing = false
+      refreshPromise = null
+    }
+  })()
+
+  return refreshPromise
+}
+
+// Logout
+export const logout = async (): Promise<void> => {
+  try {
+    await fetch(`${import.meta.env.VITE_API_URL}/api/auth/logout`, {
+      method: "POST",
+      credentials: "include",
+    })
+  } catch {
+    // Ignore errors
+  }
+  useAuthStore.getState().clearAuth()
+}
 
 // 認証ガード: beforeLoadで使用
 export const requireAuth = () => {
-  const { token } = useAuthStore.getState()
+  const { token, isInitializing } = useAuthStore.getState()
+  if (isInitializing) {
+    // Still initializing, let the loader handle it
+    return
+  }
   if (!token) {
     throw redirect({ to: "/login" })
   }

@@ -2,10 +2,15 @@ import { ok, err, type Result } from "@/shared/lib/result"
 import type { User, AuthError, OAuthUserInfo } from "./domain"
 import type { AuthRepository } from "./repository"
 import type { createProviders } from "./providers"
+import type { User as EnvUser } from "@/shared/types/env"
 
 type AuthDeps = {
   repo: AuthRepository
   providers: ReturnType<typeof createProviders>
+}
+
+type RefreshDeps = {
+  repo: AuthRepository
 }
 
 export const handleOAuthCallback = async (
@@ -70,4 +75,54 @@ export const handleOAuthCallback = async (
   })
 
   return ok({ user: newUser, isNewUser: true })
+}
+
+// Hash token for comparison
+const hashToken = async (token: string) => {
+  const encoder = new TextEncoder()
+  const data = encoder.encode(token)
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("")
+}
+
+export const refreshAccessToken = async (
+  deps: RefreshDeps,
+  refreshToken: string,
+  jwtSecret: Uint8Array,
+  generateAccessToken: (user: EnvUser, secret: Uint8Array) => Promise<string>
+): Promise<
+  Result<{ accessToken: string; user: EnvUser }, AuthError>
+> => {
+  // Hash the provided token and look it up
+  const tokenHash = await hashToken(refreshToken)
+  const storedToken = await deps.repo.findRefreshTokenByHash(tokenHash)
+
+  if (!storedToken) {
+    return err("INVALID_REFRESH_TOKEN")
+  }
+
+  // Check expiration
+  if (storedToken.expiresAt < new Date()) {
+    // Delete expired token
+    await deps.repo.deleteRefreshToken(storedToken.id)
+    return err("REFRESH_TOKEN_EXPIRED")
+  }
+
+  // Get user
+  const user = await deps.repo.findUserById(storedToken.userId)
+  if (!user) {
+    return err("DB_ERROR")
+  }
+
+  // Generate new access token
+  const envUser: EnvUser = {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    avatarUrl: user.avatarUrl,
+  }
+  const accessToken = await generateAccessToken(envUser, jwtSecret)
+
+  return ok({ accessToken, user: envUser })
 }

@@ -1,32 +1,63 @@
 import { hc } from "hono/client"
 import type { AppType } from "@cpa-study/api"
+import { useAuthStore, refreshTokenOnUnauthorized, isDevMode } from "./auth"
 
-const isDevMode = import.meta.env.VITE_AUTH_MODE === "dev"
 const devUserId = import.meta.env.VITE_DEV_USER_ID || "test-user-1"
 
 const getHeaders = (): Record<string, string> => {
-  // zustandのストレージから直接読み取り
-  const stored = localStorage.getItem("auth-storage")
-  if (!stored) return {}
+  const { token } = useAuthStore.getState()
 
-  try {
-    const { state } = JSON.parse(stored)
-    const token = state?.token
+  if (!token) return {}
 
-    if (!token) return {}
-
-    // 開発モードかつ開発用トークンの場合: X-Dev-User-Id ヘッダーを使用
-    if (isDevMode && token === "dev-token") {
-      return { "X-Dev-User-Id": devUserId }
-    }
-
-    // 通常のJWTトークンを使用
-    return { Authorization: `Bearer ${token}` }
-  } catch {
-    return {}
+  // 開発モードかつ開発用トークンの場合: X-Dev-User-Id ヘッダーを使用
+  if (isDevMode && token === "dev-token") {
+    return { "X-Dev-User-Id": devUserId }
   }
+
+  // 通常のJWTトークンを使用
+  return { Authorization: `Bearer ${token}` }
+}
+
+// Custom fetch with 401 retry
+const fetchWithRetry: typeof fetch = async (input, init) => {
+  const headers = {
+    ...getHeaders(),
+    ...(init?.headers || {}),
+  }
+
+  const response = await fetch(input, {
+    ...init,
+    headers,
+    credentials: "include", // Always send cookies
+  })
+
+  // If 401, try to refresh token once
+  if (response.status === 401) {
+    const newToken = await refreshTokenOnUnauthorized()
+
+    if (newToken) {
+      // Retry with new token
+      const retryHeaders: Record<string, string> =
+        isDevMode && newToken === "dev-token"
+          ? { "X-Dev-User-Id": devUserId }
+          : { Authorization: `Bearer ${newToken}` }
+
+      return fetch(input, {
+        ...init,
+        headers: {
+          ...retryHeaders,
+          ...Object.fromEntries(
+            new Headers(init?.headers as HeadersInit | undefined).entries()
+          ),
+        },
+        credentials: "include",
+      })
+    }
+  }
+
+  return response
 }
 
 export const api = hc<AppType>(import.meta.env.VITE_API_URL || "", {
-  headers: getHeaders,
+  fetch: fetchWithRetry,
 })

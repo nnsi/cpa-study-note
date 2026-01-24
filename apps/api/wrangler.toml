@@ -29,6 +29,7 @@ binding = "R2"
 bucket_name = "cpa-study-images-stg"
 
 [env.staging.vars]
+ENVIRONMENT = "staging"
 AI_PROVIDER = "openrouter"
 
 # ステージング環境シークレット（GitHub Actions経由で設定）
@@ -54,6 +55,7 @@ binding = "R2"
 bucket_name = "cpa-study-images-prod"
 
 [env.production.vars]
+ENVIRONMENT = "production"
 AI_PROVIDER = "openrouter"
 
 # 本番環境シークレット（GitHub Actions経由で設定）

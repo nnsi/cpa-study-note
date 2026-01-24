@@ -36,8 +36,18 @@ export type UserOAuthConnection = {
   createdAt: Date
 }
 
+export type RefreshToken = {
+  id: string
+  userId: string
+  tokenHash: string
+  expiresAt: Date
+  createdAt: Date
+}
+
 export type AuthError =
   | "PROVIDER_NOT_FOUND"
   | "TOKEN_EXCHANGE_FAILED"
   | "USER_INFO_FAILED"
   | "DB_ERROR"
+  | "INVALID_REFRESH_TOKEN"
+  | "REFRESH_TOKEN_EXPIRED"

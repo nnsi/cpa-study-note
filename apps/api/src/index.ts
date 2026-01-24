@@ -11,8 +11,17 @@ import type { Env, Variables } from "./shared/types/env"
 const createApp = (env: Env) => {
   const db = createDb(env.DB)
 
+  // CORS設定: localは全許可、staging/productionはWEB_BASE_URLのみ許可
+  const corsMiddleware =
+    env.ENVIRONMENT === "local"
+      ? cors()
+      : cors({
+          origin: env.WEB_BASE_URL,
+          credentials: true,
+        })
+
   const app = new Hono<{ Bindings: Env; Variables: Variables }>()
-    .use("*", cors())
+    .use("*", corsMiddleware)
     .route("/api/auth", createAuthFeature(env, db))
     .route("/api/subjects", createTopicFeature(env, db))
     .route("/api/chat", createChatFeature(env, db))

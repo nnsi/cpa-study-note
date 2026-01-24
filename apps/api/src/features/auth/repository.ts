@@ -1,7 +1,7 @@
 import { eq, and } from "drizzle-orm"
 import type { Db } from "@cpa-study/db"
-import { users, userOAuthConnections } from "@cpa-study/db/schema"
-import type { User, UserOAuthConnection } from "./domain"
+import { users, userOAuthConnections, refreshTokens } from "@cpa-study/db/schema"
+import type { User, UserOAuthConnection, RefreshToken } from "./domain"
 
 export type AuthRepository = {
   findUserById: (id: string) => Promise<User | null>
@@ -14,6 +14,11 @@ export type AuthRepository = {
   createConnection: (
     connection: Omit<UserOAuthConnection, "id" | "createdAt">
   ) => Promise<UserOAuthConnection>
+  // Refresh Token
+  saveRefreshToken: (token: Omit<RefreshToken, "id" | "createdAt">) => Promise<RefreshToken>
+  findRefreshTokenByHash: (tokenHash: string) => Promise<RefreshToken | null>
+  deleteRefreshToken: (id: string) => Promise<void>
+  deleteAllUserRefreshTokens: (userId: string) => Promise<void>
 }
 
 export const createAuthRepository = (db: Db): AuthRepository => ({
@@ -87,5 +92,43 @@ export const createAuthRepository = (db: Db): AuthRepository => ({
       providerId: connection.providerId,
       createdAt: now,
     }
+  },
+
+  saveRefreshToken: async (token) => {
+    const id = crypto.randomUUID()
+    const now = new Date()
+
+    await db.insert(refreshTokens).values({
+      id,
+      userId: token.userId,
+      tokenHash: token.tokenHash,
+      expiresAt: token.expiresAt,
+      createdAt: now,
+    })
+
+    return {
+      id,
+      userId: token.userId,
+      tokenHash: token.tokenHash,
+      expiresAt: token.expiresAt,
+      createdAt: now,
+    }
+  },
+
+  findRefreshTokenByHash: async (tokenHash) => {
+    const result = await db
+      .select()
+      .from(refreshTokens)
+      .where(eq(refreshTokens.tokenHash, tokenHash))
+      .limit(1)
+    return result[0] ?? null
+  },
+
+  deleteRefreshToken: async (id) => {
+    await db.delete(refreshTokens).where(eq(refreshTokens.id, id))
+  },
+
+  deleteAllUserRefreshTokens: async (userId) => {
+    await db.delete(refreshTokens).where(eq(refreshTokens.userId, userId))
   },
 })
