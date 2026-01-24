@@ -1,0 +1,27 @@
+name = "cpa-study-web"
+compatibility_date = "2024-12-30"
+
+# Workers Static Assets
+[assets]
+directory = "./dist"
+not_found_handling = "single-page-application"
+
+# ============================================
+# ステージング環境設定
+# ============================================
+[env.staging]
+name = "cpa-study-web-stg"
+
+[env.staging.assets]
+directory = "./dist"
+not_found_handling = "single-page-application"
+
+# ============================================
+# 本番環境設定
+# ============================================
+[env.production]
+name = "cpa-study-web-prod"
+
+[env.production.assets]
+directory = "./dist"
+not_found_handling = "single-page-application"

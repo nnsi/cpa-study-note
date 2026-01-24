@@ -1,13 +1,6 @@
 name = "cpa-study-api"
 main = "src/index.ts"
-compatibility_date = "2024-12-01"
-
-[vars]
-AUTH_MODE = "dev"
-DEV_USER_ID = "test-user-1"
-AI_PROVIDER = "mock"
-API_BASE_URL = "http://127.0.0.1:8787"
-WEB_BASE_URL = "http://localhost:5174"
+compatibility_date = "2024-12-30"
 
 [[d1_databases]]
 binding = "DB"
@@ -18,3 +11,53 @@ migrations_dir = "../../packages/db/migrations"
 [[r2_buckets]]
 binding = "R2"
 bucket_name = "cpa-study-images"
+
+# ============================================
+# ステージング環境設定 (masterブランチ → stg)
+# ============================================
+[env.staging]
+name = "cpa-study-api-stg"
+
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "cpa-study-db-stg"
+database_id = "YOUR_STAGING_DATABASE_ID"
+migrations_dir = "../../packages/db/migrations"
+
+[[env.staging.r2_buckets]]
+binding = "R2"
+bucket_name = "cpa-study-images-stg"
+
+[env.staging.vars]
+AI_PROVIDER = "openrouter"
+
+# ステージング環境シークレット（GitHub Actions経由で設定）
+# OPENROUTER_API_KEY
+# GOOGLE_CLIENT_ID
+# GOOGLE_CLIENT_SECRET
+# JWT_SECRET
+
+# ============================================
+# 本番環境設定 (releaseブランチ → prod)
+# ============================================
+[env.production]
+name = "cpa-study-api-prod"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "cpa-study-db-prod"
+database_id = "YOUR_PRODUCTION_DATABASE_ID"
+migrations_dir = "../../packages/db/migrations"
+
+[[env.production.r2_buckets]]
+binding = "R2"
+bucket_name = "cpa-study-images-prod"
+
+[env.production.vars]
+AI_PROVIDER = "openrouter"
+
+# 本番環境シークレット（GitHub Actions経由で設定）
+# OPENROUTER_API_KEY
+# GOOGLE_CLIENT_ID
+# GOOGLE_CLIENT_SECRET
+# JWT_SECRET

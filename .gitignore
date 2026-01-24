@@ -3,4 +3,14 @@ node_modules
 dist
 .tanstack
 .env
+.dev.vars
 .playwright-mcp
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+tfplan
+.terraform.lock.hcl

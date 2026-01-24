@@ -1,0 +1,16 @@
+# Development Settings
+AUTH_MODE=dev
+DEV_USER_ID=test-user-1
+AI_PROVIDER=mock
+API_BASE_URL=http://127.0.0.1:8787
+WEB_BASE_URL=http://localhost:5174
+
+# OpenRouter API
+OPENROUTER_API_KEY=sk-or-xxxxxxxxxxxxx
+
+# Google OAuth (optional for dev mode)
+GOOGLE_CLIENT_ID=xxxxxxxxxxxxx.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=GOCSPX-xxxxxxxxxxxxx
+
+# JWT Secret (required for production auth)
+JWT_SECRET=your-secret-key-here
