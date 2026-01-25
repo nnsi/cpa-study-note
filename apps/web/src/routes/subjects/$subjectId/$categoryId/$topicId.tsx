@@ -171,6 +171,7 @@ function TopicDetailPage() {
             sessionId={currentSessionId}
             topicId={topicId}
             onSessionCreated={handleSessionCreated}
+            onNavigateToNotes={() => setSidebarTab("notes")}
           />
         </main>
       </div>
@@ -211,6 +212,7 @@ function TopicDetailPage() {
               sessionId={currentSessionId}
               topicId={topicId}
               onSessionCreated={handleSessionCreated}
+              onNavigateToNotes={() => setActiveTab("notes")}
             />
           </div>
         )}

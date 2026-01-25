@@ -10,9 +10,14 @@ const getHeaders = (): Record<string, string> => {
 
 // Custom fetch with 401 retry
 const fetchWithRetry: typeof fetch = async (input, init) => {
+  // Headers オブジェクトを正しく展開するために Object.fromEntries を使用
+  const initHeaders = init?.headers
+    ? Object.fromEntries(new Headers(init.headers as HeadersInit).entries())
+    : {}
+
   const headers = {
+    ...initHeaders,
     ...getHeaders(),
-    ...(init?.headers || {}),
   }
 
   const response = await fetch(input, {

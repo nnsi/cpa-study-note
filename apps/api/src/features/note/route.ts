@@ -12,7 +12,9 @@ import {
   listNotes,
   listNotesByTopic,
   getNote,
+  getNoteBySession,
   updateNote,
+  refreshNoteFromSession,
 } from "./usecase"
 
 type NoteDeps = {
@@ -67,6 +69,14 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
       return c.json({ notes })
     })
 
+    // セッション別ノート取得
+    .get("/session/:sessionId", authMiddleware, async (c) => {
+      const user = c.get("user")
+      const sessionId = c.req.param("sessionId")
+      const note = await getNoteBySession({ noteRepo }, user.id, sessionId)
+      return c.json({ note })
+    })
+
     // ノート詳細
     .get("/:noteId", authMiddleware, async (c) => {
       const user = c.get("user")
@@ -107,6 +117,32 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
         return c.json({ note: result.note })
       }
     )
+
+    // ノート再生成（最新の会話を反映）
+    .post("/:noteId/refresh", authMiddleware, async (c) => {
+      const user = c.get("user")
+      const noteId = c.req.param("noteId")
+
+      const aiAdapter = createAIAdapter({
+        provider: env.AI_PROVIDER,
+        apiKey: env.OPENROUTER_API_KEY,
+      })
+
+      const result = await refreshNoteFromSession(
+        { noteRepo, chatRepo, aiAdapter },
+        user.id,
+        noteId
+      )
+
+      if (!result.ok) {
+        return c.json(
+          { error: result.error },
+          result.status as 400 | 403 | 404
+        )
+      }
+
+      return c.json({ note: result.note })
+    })
 
   return app
 }

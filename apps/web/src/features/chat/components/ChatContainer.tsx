@@ -1,20 +1,21 @@
-import { useRef, useEffect, useState } from "react"
+import { useRef, useEffect } from "react"
 import { useChat } from "../hooks"
 import { ChatMessageView } from "./ChatMessage"
 import { ChatInputView } from "./ChatInput"
-import { useCreateNote } from "@/features/note"
+import { useCreateNote, useNoteBySession } from "@/features/note"
 
 type Props = {
   sessionId: string | null
   topicId: string
   onSessionCreated?: (sessionId: string) => void
+  onNavigateToNotes?: () => void
 }
 
-export const ChatContainer = ({ sessionId, topicId, onSessionCreated }: Props) => {
+export const ChatContainer = ({ sessionId, topicId, onSessionCreated, onNavigateToNotes }: Props) => {
   const { messages, input } = useChat({ sessionId, topicId, onSessionCreated })
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { mutate: createNote, isPending: isCreatingNote } = useCreateNote(topicId)
-  const [noteCreated, setNoteCreated] = useState(false)
+  const { data: existingNote } = useNoteBySession(sessionId)
 
   // 新しいメッセージが追加されたら自動スクロール
   useEffect(() => {
@@ -97,28 +98,26 @@ export const ChatContainer = ({ sessionId, topicId, onSessionCreated }: Props) =
       {/* ノート作成バー */}
       {messages.displayMessages.length > 0 && sessionId && (
         <div className="px-4 py-3 border-t border-ink-100 bg-ink-50/50">
-          {noteCreated ? (
-            <div className="flex items-center justify-center gap-3 animate-scale-in">
+          {existingNote?.note ? (
+            <div className="flex items-center justify-center gap-3">
               <div className="flex items-center gap-2 text-jade-600">
                 <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                 </svg>
-                <span className="text-sm font-medium">ノートを作成しました</span>
+                <span className="text-sm font-medium">ノートに記録済み</span>
               </div>
               <button
-                onClick={() => setNoteCreated(false)}
+                onClick={onNavigateToNotes}
                 className="text-sm text-indigo-500 hover:text-indigo-600 hover:underline"
               >
-                もう一度作成
+                確認する
               </button>
             </div>
           ) : (
             <button
               onClick={() => {
                 if (sessionId) {
-                  createNote(sessionId, {
-                    onSuccess: () => setNoteCreated(true),
-                  })
+                  createNote(sessionId)
                 }
               }}
               disabled={isCreatingNote}

@@ -56,6 +56,7 @@ const createMockNoteRepo = (overrides: Partial<NoteRepository> = {}): NoteReposi
   create: vi.fn().mockResolvedValue(createMockNote()),
   findById: vi.fn().mockResolvedValue(null),
   findByIdWithTopic: vi.fn().mockResolvedValue(null),
+  findBySessionId: vi.fn().mockResolvedValue(null),
   findByTopic: vi.fn().mockResolvedValue([]),
   findByUser: vi.fn().mockResolvedValue([]),
   update: vi.fn().mockResolvedValue(null),

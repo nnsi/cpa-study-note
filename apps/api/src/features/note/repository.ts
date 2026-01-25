@@ -31,11 +31,12 @@ export type NoteRepository = {
   create: (data: Omit<Note, "id" | "createdAt" | "updatedAt">) => Promise<Note>
   findById: (id: string) => Promise<Note | null>
   findByIdWithTopic: (id: string) => Promise<NoteWithTopicDetail | null>
+  findBySessionId: (sessionId: string) => Promise<Note | null>
   findByTopic: (userId: string, topicId: string) => Promise<Note[]>
   findByUser: (userId: string) => Promise<NoteWithTopic[]>
   update: (
     id: string,
-    data: Partial<Pick<Note, "userMemo" | "keyPoints" | "stumbledPoints">>
+    data: Partial<Pick<Note, "aiSummary" | "userMemo" | "keyPoints" | "stumbledPoints">>
   ) => Promise<Note | null>
 }
 
@@ -62,6 +63,22 @@ export const createNoteRepository = (db: Db): NoteRepository => ({
 
   findById: async (id) => {
     const result = await db.select().from(notes).where(eq(notes.id, id)).limit(1)
+    if (!result[0]) return null
+
+    return {
+      ...result[0],
+      keyPoints: (result[0].keyPoints as string[]) ?? [],
+      stumbledPoints: (result[0].stumbledPoints as string[]) ?? [],
+    }
+  },
+
+  findBySessionId: async (sessionId) => {
+    const result = await db
+      .select()
+      .from(notes)
+      .where(eq(notes.sessionId, sessionId))
+      .limit(1)
+
     if (!result[0]) return null
 
     return {

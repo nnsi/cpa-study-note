@@ -112,12 +112,25 @@ ${conversationText}
   let stumbledPoints: string[] = []
 
   try {
-    const parsed = JSON.parse(result.content)
+    // Markdownコードブロック (```json ... ```) を除去
+    let jsonContent = result.content.trim()
+    const codeBlockMatch = jsonContent.match(/```(?:json)?\s*([\s\S]*?)```/)
+    if (codeBlockMatch) {
+      jsonContent = codeBlockMatch[1].trim()
+    }
+
+    const parsed = JSON.parse(jsonContent)
     aiSummary = parsed.summary || ""
     keyPoints = parsed.keyPoints || []
     stumbledPoints = parsed.stumbledPoints || []
   } catch {
-    aiSummary = result.content
+    // パース失敗時はコードブロックを除去した上でそのまま保存
+    let fallback = result.content.trim()
+    const match = fallback.match(/```(?:json)?\s*([\s\S]*?)```/)
+    if (match) {
+      fallback = match[1].trim()
+    }
+    aiSummary = fallback
   }
 
   const note = await noteRepo.create({
@@ -206,6 +219,104 @@ export const updateNote = async (
   }
 
   const note = await deps.noteRepo.update(noteId, input)
+
+  return { ok: true, note: toNoteResponse(note!) }
+}
+
+// セッションIDからノート取得
+export const getNoteBySession = async (
+  deps: Pick<NoteDeps, "noteRepo">,
+  userId: string,
+  sessionId: string
+): Promise<NoteResponse | null> => {
+  const note = await deps.noteRepo.findBySessionId(sessionId)
+
+  if (!note || note.userId !== userId) {
+    return null
+  }
+
+  return toNoteResponse(note)
+}
+
+// ノート再生成（最新の会話を反映）
+export const refreshNoteFromSession = async (
+  deps: NoteDeps,
+  userId: string,
+  noteId: string
+): Promise<
+  { ok: true; note: NoteResponse } | { ok: false; error: string; status: number }
+> => {
+  const { noteRepo, chatRepo, aiAdapter } = deps
+
+  const existing = await noteRepo.findById(noteId)
+  if (!existing) {
+    return { ok: false, error: "Note not found", status: 404 }
+  }
+
+  if (existing.userId !== userId) {
+    return { ok: false, error: "Unauthorized", status: 403 }
+  }
+
+  if (!existing.sessionId) {
+    return { ok: false, error: "No session linked to this note", status: 400 }
+  }
+
+  const messages = await chatRepo.findMessagesBySession(existing.sessionId)
+
+  // AI要約再生成
+  const conversationText = messages
+    .map((m) => `${m.role === "user" ? "ユーザー" : "AI"}: ${m.content}`)
+    .join("\n\n")
+
+  const summaryPrompt = `以下のチャット履歴を要約し、学習ノートを作成してください。
+
+チャット履歴:
+${conversationText}
+
+以下の形式でJSON形式で回答してください:
+{
+  "summary": "全体の要約（2-3文）",
+  "keyPoints": ["重要ポイント1", "重要ポイント2", ...],
+  "stumbledPoints": ["つまずいたポイント1", ...]
+}`
+
+  const result = await aiAdapter.generateText({
+    model: "deepseek/deepseek-chat",
+    messages: [{ role: "user", content: summaryPrompt }],
+    temperature: 0.3,
+    maxTokens: 1000,
+  })
+
+  let aiSummary = ""
+  let keyPoints: string[] = []
+  let stumbledPoints: string[] = []
+
+  try {
+    // Markdownコードブロック (```json ... ```) を除去
+    let jsonContent = result.content.trim()
+    const codeBlockMatch = jsonContent.match(/```(?:json)?\s*([\s\S]*?)```/)
+    if (codeBlockMatch) {
+      jsonContent = codeBlockMatch[1].trim()
+    }
+
+    const parsed = JSON.parse(jsonContent)
+    aiSummary = parsed.summary || ""
+    keyPoints = parsed.keyPoints || []
+    stumbledPoints = parsed.stumbledPoints || []
+  } catch {
+    let fallback = result.content.trim()
+    const match = fallback.match(/```(?:json)?\s*([\s\S]*?)```/)
+    if (match) {
+      fallback = match[1].trim()
+    }
+    aiSummary = fallback
+  }
+
+  const note = await noteRepo.update(noteId, {
+    aiSummary,
+    keyPoints,
+    stumbledPoints,
+  })
 
   return { ok: true, note: toNoteResponse(note!) }
 }

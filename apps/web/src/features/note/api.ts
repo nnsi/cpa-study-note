@@ -15,3 +15,19 @@ export const createNote = async (sessionId: string) => {
   if (!res.ok) throw new Error("Failed to create note")
   return res.json()
 }
+
+export const getNoteBySession = async (sessionId: string) => {
+  const res = await api.api.notes.session[":sessionId"].$get({
+    param: { sessionId },
+  })
+  if (!res.ok) throw new Error("Failed to fetch note by session")
+  return res.json()
+}
+
+export const refreshNote = async (noteId: string) => {
+  const res = await api.api.notes[":noteId"].refresh.$post({
+    param: { noteId },
+  })
+  if (!res.ok) throw new Error("Failed to refresh note")
+  return res.json()
+}
