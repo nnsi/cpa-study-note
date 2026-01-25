@@ -14,6 +14,51 @@ import {
   type TestContext,
 } from "./helpers"
 
+// Response types for image endpoints
+type UploadUrlResponse = {
+  imageId: string
+  uploadUrl: string
+}
+
+type UploadResponse = {
+  success: boolean
+}
+
+type OcrResponse = {
+  imageId: string
+  ocrText: string
+}
+
+type ImageData = {
+  id: string
+  filename: string
+  mimeType: string
+  ocrText: string
+}
+
+type GetImageResponse = {
+  image: ImageData
+}
+
+type ErrorResponse = {
+  error: string
+}
+
+type CreateSessionResponse = {
+  session: { id: string }
+}
+
+type CreateNoteResponse = {
+  note: {
+    sessionId: string
+    aiSummary: string
+  }
+}
+
+type MessagesResponse = {
+  messages: Array<{ role: string }>
+}
+
 // Create a simple test image (1x1 PNG)
 const createTestImage = (): ArrayBuffer => {
   // Minimal valid PNG: 1x1 white pixel
@@ -52,7 +97,7 @@ describe("E2E: Image Flow", () => {
       })
 
       expect(res.status).toBe(200)
-      const data = await res.json()
+      const data = await res.json<UploadUrlResponse>()
       expect(data.imageId).toBeDefined()
       expect(data.uploadUrl).toBeDefined()
       expect(data.uploadUrl).toContain("/api/images/")
@@ -70,7 +115,7 @@ describe("E2E: Image Flow", () => {
       })
 
       expect(res.status).toBe(200)
-      const data = await res.json()
+      const data = await res.json<UploadUrlResponse>()
       imageId = data.imageId
       expect(imageId).toBeDefined()
     })
@@ -82,7 +127,7 @@ describe("E2E: Image Flow", () => {
       const res = await req.postRaw(`/api/images/${imageId}/upload`, imageData)
 
       expect(res.status).toBe(200)
-      const data = await res.json()
+      const data = await res.json<UploadResponse>()
       expect(data.success).toBe(true)
     })
 
@@ -92,7 +137,7 @@ describe("E2E: Image Flow", () => {
       const res = await req.post(`/api/images/${imageId}/ocr`)
 
       expect(res.status).toBe(200)
-      const data = await res.json()
+      const data = await res.json<OcrResponse>()
       expect(data.imageId).toBe(imageId)
       expect(data.ocrText).toBeDefined()
       // Mock AI adapter returns predefined text
@@ -105,7 +150,7 @@ describe("E2E: Image Flow", () => {
       const res = await req.get(`/api/images/${imageId}`)
 
       expect(res.status).toBe(200)
-      const data = await res.json()
+      const data = await res.json<GetImageResponse>()
       expect(data.image).toBeDefined()
       expect(data.image.id).toBe(imageId)
       expect(data.image.ocrText).toBeDefined()
@@ -126,7 +171,7 @@ describe("E2E: Image Flow", () => {
         filename: "large-image.png",
         mimeType: "image/png",
       })
-      const data = await res.json()
+      const data = await res.json<UploadUrlResponse>()
       imageId = data.imageId
     })
 
@@ -137,7 +182,7 @@ describe("E2E: Image Flow", () => {
       const res = await req.postRaw(`/api/images/${imageId}/upload`, largeBuffer)
 
       expect(res.status).toBe(413)
-      const data = await res.json()
+      const data = await res.json<ErrorResponse>()
       expect(data.error).toContain("too large")
     })
   })
@@ -160,14 +205,14 @@ describe("E2E: Image Flow", () => {
         filename: "accounting-formula.png",
         mimeType: "image/png",
       })
-      const { imageId: id } = await uploadUrlRes.json()
+      const { imageId: id } = await uploadUrlRes.json<UploadUrlResponse>()
       imageId = id
 
       const imageData = createTestImage()
       await req.postRaw(`/api/images/${imageId}/upload`, imageData)
 
       const ocrRes = await req.post(`/api/images/${imageId}/ocr`)
-      const ocrData = await ocrRes.json()
+      const ocrData = await ocrRes.json<OcrResponse>()
       ocrText = ocrData.ocrText
     })
 
@@ -202,7 +247,7 @@ describe("E2E: Image Flow", () => {
       const firstRes = await req.post(`/api/chat/sessions`, {
         topicId: ctx.testData.topicId,
       })
-      const { session } = await firstRes.json()
+      const { session } = await firstRes.json<CreateSessionResponse>()
 
       // Send message with image
       const res = await req.post(
@@ -231,7 +276,7 @@ describe("E2E: Image Flow", () => {
       })
       expect(uploadUrlRes.status).toBe(200)
 
-      const { imageId, uploadUrl } = await uploadUrlRes.json()
+      const { imageId, uploadUrl } = await uploadUrlRes.json<UploadUrlResponse>()
       expect(imageId).toBeDefined()
       expect(uploadUrl).toBeDefined()
 
@@ -244,7 +289,7 @@ describe("E2E: Image Flow", () => {
       const ocrRes = await req.post(`/api/images/${imageId}/ocr`)
       expect(ocrRes.status).toBe(200)
 
-      const { ocrText } = await ocrRes.json()
+      const { ocrText } = await ocrRes.json<OcrResponse>()
       expect(ocrText).toBeDefined()
       expect(ocrText.length).toBeGreaterThan(0)
 
@@ -252,7 +297,7 @@ describe("E2E: Image Flow", () => {
       const imageRes = await req.get(`/api/images/${imageId}`)
       expect(imageRes.status).toBe(200)
 
-      const { image } = await imageRes.json()
+      const { image } = await imageRes.json<GetImageResponse>()
       expect(image.id).toBe(imageId)
       expect(image.filename).toBe("study-notes.png")
       expect(image.mimeType).toBe("image/png")
@@ -298,7 +343,7 @@ describe("E2E: Image Flow", () => {
       const noteRes = await req.post("/api/notes", { sessionId })
       expect(noteRes.status).toBe(201)
 
-      const { note } = await noteRes.json()
+      const { note } = await noteRes.json<CreateNoteResponse>()
       expect(note.sessionId).toBe(sessionId)
       expect(note.aiSummary).toBeDefined()
 
@@ -306,12 +351,12 @@ describe("E2E: Image Flow", () => {
       const messagesRes = await req.get(`/api/chat/sessions/${sessionId}/messages`)
       expect(messagesRes.status).toBe(200)
 
-      const { messages } = await messagesRes.json()
+      const { messages } = await messagesRes.json<MessagesResponse>()
       // Should have 4 messages (2 user + 2 assistant)
       expect(messages.length).toBe(4)
 
       // Verify user messages contain image reference
-      const userMessages = messages.filter((m: { role: string }) => m.role === "user")
+      const userMessages = messages.filter((m) => m.role === "user")
       expect(userMessages.length).toBe(2)
     })
   })

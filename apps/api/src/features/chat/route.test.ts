@@ -12,6 +12,44 @@ import { createMockAIAdapter } from "@/test/mocks/ai"
 import type { Env, Variables } from "@/shared/types/env"
 import Database from "better-sqlite3"
 
+// Response types for test assertions
+type ErrorResponse = { error: string }
+
+type SessionResponse = {
+  session: {
+    id: string
+    topicId: string
+    userId: string
+    createdAt: string
+    updatedAt: string
+  }
+}
+
+type SessionListResponse = {
+  sessions: Array<{
+    id: string
+    topicId: string
+    userId: string
+    messageCount: number
+    createdAt: string
+    updatedAt: string
+  }>
+}
+
+type MessageListResponse = {
+  messages: Array<{
+    id: string
+    sessionId: string
+    role: string
+    content: string
+    createdAt: string
+  }>
+}
+
+type EvaluateResponse = {
+  quality: string
+}
+
 // Test environment
 const createTestEnv = (): Env => ({
   ENVIRONMENT: "local",
@@ -106,7 +144,7 @@ describe("Chat Routes", () => {
       )
 
       expect(res.status).toBe(201)
-      const body = await res.json()
+      const body = await res.json<SessionResponse>()
       expect(body).toHaveProperty("session")
       expect(body.session.topicId).toBe(testData.topicId)
       expect(body.session.userId).toBe(testData.userId)
@@ -124,7 +162,7 @@ describe("Chat Routes", () => {
       )
 
       expect(res.status).toBe(404)
-      const body = await res.json()
+      const body = await res.json<ErrorResponse>()
       expect(body.error).toBe("Topic not found")
     })
 
@@ -156,7 +194,7 @@ describe("Chat Routes", () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await res.json()
+      const body = await res.json<SessionListResponse>()
       expect(body.sessions).toEqual([])
     })
 
@@ -193,7 +231,7 @@ describe("Chat Routes", () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await res.json()
+      const body = await res.json<SessionListResponse>()
       expect(body.sessions.length).toBe(1)
       expect(body.sessions[0].id).toBe(sessionId)
       expect(body.sessions[0].messageCount).toBe(1)
@@ -221,7 +259,7 @@ describe("Chat Routes", () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await res.json()
+      const body = await res.json<SessionListResponse>()
       expect(body.sessions.length).toBe(0)
     })
   })
@@ -249,7 +287,7 @@ describe("Chat Routes", () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await res.json()
+      const body = await res.json<SessionResponse>()
       expect(body.session.id).toBe(sessionId)
       expect(body.session.topicId).toBe(testData.topicId)
     })
@@ -262,7 +300,7 @@ describe("Chat Routes", () => {
       )
 
       expect(res.status).toBe(404)
-      const body = await res.json()
+      const body = await res.json<ErrorResponse>()
       expect(body.error).toBe("Session not found")
     })
 
@@ -300,7 +338,7 @@ describe("Chat Routes", () => {
       )
 
       expect(res.status).toBe(403)
-      const body = await res.json()
+      const body = await res.json<ErrorResponse>()
       expect(body.error).toBe("Unauthorized")
     })
   })
@@ -348,7 +386,7 @@ describe("Chat Routes", () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await res.json()
+      const body = await res.json<MessageListResponse>()
       expect(body.messages.length).toBe(2)
       expect(body.messages[0].role).toBe("user")
       expect(body.messages[1].role).toBe("assistant")
@@ -611,7 +649,7 @@ describe("Chat Routes", () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await res.json()
+      const body = await res.json<EvaluateResponse>()
       expect(body).toHaveProperty("quality")
       expect(["good", "surface"]).toContain(body.quality)
     })
@@ -624,7 +662,7 @@ describe("Chat Routes", () => {
       )
 
       expect(res.status).toBe(404)
-      const body = await res.json()
+      const body = await res.json<ErrorResponse>()
       expect(body.error).toBe("Message not found")
     })
 
@@ -674,7 +712,7 @@ describe("Chat Routes", () => {
       )
 
       expect(res.status).toBe(403)
-      const body = await res.json()
+      const body = await res.json<ErrorResponse>()
       expect(body.error).toBe("Forbidden")
     })
   })

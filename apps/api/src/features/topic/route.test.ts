@@ -13,6 +13,83 @@ import {
   type TestContext,
 } from "@/test/helpers"
 
+// レスポンス型定義
+type SubjectsListResponse = {
+  subjects: Array<{
+    id: string
+    name: string
+    categoryCount: number
+    topicCount: number
+  }>
+}
+
+type SubjectDetailResponse = {
+  subject: {
+    id: string
+    name: string
+    categoryCount: number
+  }
+}
+
+type CategoriesResponse = {
+  categories: Array<{
+    id: string
+    name: string
+    depth: number
+    children: Array<{
+      id: string
+      name: string
+      depth: number
+    }>
+    understoodCount?: number
+  }>
+}
+
+type TopicsListResponse = {
+  topics: Array<{
+    id: string
+    name: string
+  }>
+}
+
+type TopicDetailResponse = {
+  topic: {
+    id: string
+    name: string
+    progress?: {
+      understood: boolean
+    }
+  }
+}
+
+type ProgressResponse = {
+  progress: {
+    topicId: string
+    understood: boolean
+    lastAccessedAt: string
+  }
+}
+
+type ProgressListResponse = {
+  progress: Array<{
+    topicId: string
+    understood: boolean
+  }>
+}
+
+type ProgressStatsResponse = {
+  stats: Array<{
+    subjectId: string
+    subjectName: string
+    totalTopics: number
+    understoodTopics: number
+  }>
+}
+
+type ErrorResponse = {
+  error: string
+}
+
 describe("Topic Routes", () => {
   let ctx: TestContext
   let app: Hono<{ Bindings: Env; Variables: Variables }>
@@ -43,15 +120,15 @@ describe("Topic Routes", () => {
       const res = await app.request("/subjects")
 
       expect(res.status).toBe(200)
-      const body = await res.json()
+      const body = await res.json<SubjectsListResponse>()
       expect(body.subjects).toBeDefined()
       expect(body.subjects.length).toBeGreaterThanOrEqual(2)
 
-      const subject1 = body.subjects.find((s: any) => s.id === ctx.testData.subjectId)
+      const subject1 = body.subjects.find((s) => s.id === ctx.testData.subjectId)
       expect(subject1).toBeDefined()
-      expect(subject1.name).toBe("財務会計論")
-      expect(subject1.categoryCount).toBeGreaterThanOrEqual(1)
-      expect(subject1.topicCount).toBeGreaterThanOrEqual(1)
+      expect(subject1!.name).toBe("財務会計論")
+      expect(subject1!.categoryCount).toBeGreaterThanOrEqual(1)
+      expect(subject1!.topicCount).toBeGreaterThanOrEqual(1)
     })
   })
 
@@ -60,7 +137,7 @@ describe("Topic Routes", () => {
       const res = await app.request(`/subjects/${ctx.testData.subjectId}`)
 
       expect(res.status).toBe(200)
-      const body = await res.json()
+      const body = await res.json<SubjectDetailResponse>()
       expect(body.subject).toBeDefined()
       expect(body.subject.id).toBe(ctx.testData.subjectId)
       expect(body.subject.name).toBe("財務会計論")
@@ -71,7 +148,7 @@ describe("Topic Routes", () => {
       const res = await app.request("/subjects/non-existent-subject")
 
       expect(res.status).toBe(404)
-      const body = await res.json()
+      const body = await res.json<ErrorResponse>()
       expect(body.error).toBe("Subject not found")
     })
   })
@@ -81,15 +158,15 @@ describe("Topic Routes", () => {
       const res = await app.request(`/subjects/${ctx.testData.subjectId}/categories`)
 
       expect(res.status).toBe(200)
-      const body = await res.json()
+      const body = await res.json<CategoriesResponse>()
       expect(body.categories).toBeDefined()
       expect(Array.isArray(body.categories)).toBe(true)
 
       // ルートカテゴリを確認
-      const rootCategory = body.categories.find((c: any) => c.id === ctx.testData.categoryId)
+      const rootCategory = body.categories.find((c) => c.id === ctx.testData.categoryId)
       expect(rootCategory).toBeDefined()
-      expect(rootCategory.name).toBe("計算")
-      expect(rootCategory.depth).toBe(0)
+      expect(rootCategory!.name).toBe("計算")
+      expect(rootCategory!.depth).toBe(0)
     })
 
     it("認証時はユーザーの進捗情報が含まれる", async () => {
@@ -101,27 +178,27 @@ describe("Topic Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json()
+      const body = await res.json<CategoriesResponse>()
 
       // 進捗情報が含まれていることを確認
-      const category = body.categories.find((c: any) => c.id === ctx.testData.categoryId)
-      expect(category.understoodCount).toBeGreaterThanOrEqual(0)
+      const category = body.categories.find((c) => c.id === ctx.testData.categoryId)
+      expect(category!.understoodCount).toBeGreaterThanOrEqual(0)
     })
 
     it("子カテゴリが親の children に含まれる", async () => {
       const res = await app.request(`/subjects/${ctx.testData.subjectId}/categories`)
 
       expect(res.status).toBe(200)
-      const body = await res.json()
+      const body = await res.json<CategoriesResponse>()
 
-      const rootCategory = body.categories.find((c: any) => c.id === ctx.testData.categoryId)
-      expect(rootCategory.children).toBeDefined()
-      expect(Array.isArray(rootCategory.children)).toBe(true)
+      const rootCategory = body.categories.find((c) => c.id === ctx.testData.categoryId)
+      expect(rootCategory!.children).toBeDefined()
+      expect(Array.isArray(rootCategory!.children)).toBe(true)
 
-      const childCategory = rootCategory.children.find((c: any) => c.id === additionalData.childCategoryId)
+      const childCategory = rootCategory!.children.find((c) => c.id === additionalData.childCategoryId)
       expect(childCategory).toBeDefined()
-      expect(childCategory.name).toBe("子カテゴリ")
-      expect(childCategory.depth).toBe(1)
+      expect(childCategory!.name).toBe("子カテゴリ")
+      expect(childCategory!.depth).toBe(1)
     })
   })
 
@@ -132,13 +209,13 @@ describe("Topic Routes", () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await res.json()
+      const body = await res.json<TopicsListResponse>()
       expect(body.topics).toBeDefined()
       expect(body.topics.length).toBeGreaterThanOrEqual(2)
 
-      const topic1 = body.topics.find((t: any) => t.id === ctx.testData.topicId)
+      const topic1 = body.topics.find((t) => t.id === ctx.testData.topicId)
       expect(topic1).toBeDefined()
-      expect(topic1.name).toBe("有価証券")
+      expect(topic1!.name).toBe("有価証券")
     })
   })
 
@@ -152,7 +229,7 @@ describe("Topic Routes", () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await res.json()
+      const body = await res.json<TopicDetailResponse>()
       expect(body.topic).toBeDefined()
       expect(body.topic.id).toBe(ctx.testData.topicId)
       expect(body.topic.name).toBe("有価証券")
@@ -169,9 +246,9 @@ describe("Topic Routes", () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await res.json()
+      const body = await res.json<TopicDetailResponse>()
       expect(body.topic.progress).toBeDefined()
-      expect(body.topic.progress.understood).toBe(true)
+      expect(body.topic.progress!.understood).toBe(true)
     })
 
     it("存在しない論点は404を返す", async () => {
@@ -183,7 +260,7 @@ describe("Topic Routes", () => {
       )
 
       expect(res.status).toBe(404)
-      const body = await res.json()
+      const body = await res.json<ErrorResponse>()
       expect(body.error).toBe("Topic not found")
     })
 
@@ -206,7 +283,7 @@ describe("Topic Routes", () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await res.json()
+      const body = await res.json<ProgressResponse>()
       expect(body.progress).toBeDefined()
       expect(body.progress.understood).toBe(true)
       expect(body.progress.topicId).toBe(ctx.testData.topicId)
@@ -234,7 +311,7 @@ describe("Topic Routes", () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await res.json()
+      const body = await res.json<ProgressResponse>()
       expect(body.progress.understood).toBe(false)
     })
 
@@ -249,7 +326,7 @@ describe("Topic Routes", () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await res.json()
+      const body = await res.json<ProgressResponse>()
       expect(body.progress).toBeDefined()
       expect(body.progress.lastAccessedAt).toBeDefined()
     })
@@ -266,7 +343,7 @@ describe("Topic Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json()
+      const body = await res.json<ProgressListResponse>()
       expect(body.progress).toBeDefined()
       expect(Array.isArray(body.progress)).toBe(true)
       expect(body.progress.length).toBeGreaterThanOrEqual(2)
@@ -278,7 +355,7 @@ describe("Topic Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json()
+      const body = await res.json<ProgressListResponse>()
       expect(body.progress).toEqual([])
     })
   })
@@ -292,15 +369,15 @@ describe("Topic Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json()
+      const body = await res.json<ProgressStatsResponse>()
       expect(body.stats).toBeDefined()
       expect(Array.isArray(body.stats)).toBe(true)
 
-      const subjectStats = body.stats.find((s: any) => s.subjectId === ctx.testData.subjectId)
+      const subjectStats = body.stats.find((s) => s.subjectId === ctx.testData.subjectId)
       expect(subjectStats).toBeDefined()
-      expect(subjectStats.subjectName).toBe("財務会計論")
-      expect(subjectStats.totalTopics).toBeGreaterThanOrEqual(1)
-      expect(subjectStats.understoodTopics).toBeGreaterThanOrEqual(1)
+      expect(subjectStats!.subjectName).toBe("財務会計論")
+      expect(subjectStats!.totalTopics).toBeGreaterThanOrEqual(1)
+      expect(subjectStats!.understoodTopics).toBeGreaterThanOrEqual(1)
     })
   })
 })

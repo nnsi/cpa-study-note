@@ -102,13 +102,17 @@ describe("validateMagicBytes", () => {
     expect(validateMagicBytes(randomBytes.buffer, "image/gif")).toBe(false)
     expect(validateMagicBytes(randomBytes.buffer, "image/webp")).toBe(false)
 
-    // テキストデータ
-    const textData = new TextEncoder().encode("This is not an image")
-    expect(validateMagicBytes(textData.buffer, "image/jpeg")).toBe(false)
+    // テキストデータ - ArrayBufferを明示的に作成
+    const textBytes = new TextEncoder().encode("This is not an image")
+    const textBuffer = new ArrayBuffer(textBytes.byteLength)
+    new Uint8Array(textBuffer).set(textBytes)
+    expect(validateMagicBytes(textBuffer, "image/jpeg")).toBe(false)
 
-    // HTMLデータ（XSS攻撃の試み）
-    const htmlData = new TextEncoder().encode("<script>alert('xss')</script>")
-    expect(validateMagicBytes(htmlData.buffer, "image/png")).toBe(false)
+    // HTMLデータ（XSS攻撃の試み）- ArrayBufferを明示的に作成
+    const htmlBytes = new TextEncoder().encode("<script>alert('xss')</script>")
+    const htmlBuffer = new ArrayBuffer(htmlBytes.byteLength)
+    new Uint8Array(htmlBuffer).set(htmlBytes)
+    expect(validateMagicBytes(htmlBuffer, "image/png")).toBe(false)
   })
 
   it("空ファイルを拒否する", () => {
@@ -148,5 +152,33 @@ describe("validateMagicBytes", () => {
     expect(validateMagicBytes(validPng, "application/pdf")).toBe(false)
     expect(validateMagicBytes(validPng, "text/html")).toBe(false)
     expect(validateMagicBytes(validPng, "")).toBe(false)
+  })
+
+  it("大きなファイルでもマジックバイトが正しければtrue（サイズ検証はルート層で実施）", () => {
+    // 10MB + 1バイトの大きなバッファを作成
+    const MAX_SIZE = 10 * 1024 * 1024
+    const largeBuffer = new ArrayBuffer(MAX_SIZE + 1)
+    const view = new Uint8Array(largeBuffer)
+    // PNG magic bytes
+    view[0] = 0x89
+    view[1] = 0x50
+    view[2] = 0x4e
+    view[3] = 0x47
+
+    // validateMagicBytesはマジックバイトのみ検証し、サイズは検証しない
+    // サイズ制限はroute.tsで別途チェックする設計
+    expect(validateMagicBytes(largeBuffer, "image/png")).toBe(true)
+  })
+
+  it("ちょうど10MBの境界値で正しく動作する", () => {
+    const MAX_SIZE = 10 * 1024 * 1024
+    const exactBuffer = new ArrayBuffer(MAX_SIZE)
+    const view = new Uint8Array(exactBuffer)
+    // JPEG magic bytes
+    view[0] = 0xff
+    view[1] = 0xd8
+    view[2] = 0xff
+
+    expect(validateMagicBytes(exactBuffer, "image/jpeg")).toBe(true)
   })
 })

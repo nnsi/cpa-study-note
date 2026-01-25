@@ -14,6 +14,41 @@ import {
 } from "@/test/helpers"
 import { createMockAIAdapter, mockAIPresets } from "@/test/mocks/ai"
 
+// レスポンス型定義
+type NoteResponse = {
+  note: {
+    id: string
+    topicId: string
+    sessionId: string
+    userId: string
+    userMemo: string | null
+    keyPoints: string[] | null
+    stumbledPoints: string[] | null
+    topicName?: string
+    subjectName?: string
+    categoryId?: string
+    subjectId?: string
+    createdAt: string
+    updatedAt: string
+  }
+}
+
+type NotesListResponse = {
+  notes: Array<{
+    id: string
+    topicId: string
+    userId: string
+    topicName?: string
+    subjectName?: string
+    createdAt: string
+    updatedAt: string
+  }>
+}
+
+type ErrorResponse = {
+  error: string
+}
+
 // AI Adapterをモック
 vi.mock("@/shared/lib/ai", () => ({
   createAIAdapter: () => mockAIPresets.noteSummary,
@@ -52,7 +87,7 @@ describe("Note Routes", () => {
       })
 
       expect(res.status).toBe(201)
-      const body = await res.json()
+      const body = await res.json<NoteResponse>()
       expect(body.note).toBeDefined()
       expect(body.note.topicId).toBe(ctx.testData.topicId)
       expect(body.note.sessionId).toBe(additionalData.sessionId)
@@ -67,7 +102,7 @@ describe("Note Routes", () => {
       })
 
       expect(res.status).toBe(404)
-      const body = await res.json()
+      const body = await res.json<ErrorResponse>()
       expect(body.error).toBe("Session not found")
     })
 
@@ -79,7 +114,7 @@ describe("Note Routes", () => {
       })
 
       expect(res.status).toBe(403)
-      const body = await res.json()
+      const body = await res.json<ErrorResponse>()
       expect(body.error).toBe("Unauthorized")
     })
 
@@ -105,7 +140,7 @@ describe("Note Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json()
+      const body = await res.json<NotesListResponse>()
       expect(body.notes).toBeDefined()
       expect(Array.isArray(body.notes)).toBe(true)
       expect(body.notes.length).toBe(2)
@@ -121,7 +156,7 @@ describe("Note Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json()
+      const body = await res.json<NotesListResponse>()
       expect(body.notes).toEqual([])
     })
 
@@ -134,7 +169,7 @@ describe("Note Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json()
+      const body = await res.json<NotesListResponse>()
       expect(body.notes.length).toBe(1)
       expect(body.notes[0].userId).toBe(ctx.testData.userId)
     })
@@ -151,10 +186,10 @@ describe("Note Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json()
+      const body = await res.json<NotesListResponse>()
       expect(body.notes).toBeDefined()
       expect(body.notes.length).toBe(2)
-      body.notes.forEach((note: any) => {
+      body.notes.forEach((note) => {
         expect(note.topicId).toBe(ctx.testData.topicId)
       })
     })
@@ -165,7 +200,7 @@ describe("Note Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json()
+      const body = await res.json<NotesListResponse>()
       expect(body.notes).toEqual([])
     })
   })
@@ -179,7 +214,7 @@ describe("Note Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json()
+      const body = await res.json<NoteResponse>()
       expect(body.note).toBeDefined()
       expect(body.note.id).toBe(noteId)
       expect(body.note.topicName).toBeDefined()
@@ -194,7 +229,7 @@ describe("Note Routes", () => {
       })
 
       expect(res.status).toBe(404)
-      const body = await res.json()
+      const body = await res.json<ErrorResponse>()
       expect(body.error).toBe("Note not found")
     })
 
@@ -206,7 +241,7 @@ describe("Note Routes", () => {
       })
 
       expect(res.status).toBe(403)
-      const body = await res.json()
+      const body = await res.json<ErrorResponse>()
       expect(body.error).toBe("Unauthorized")
     })
   })
@@ -225,7 +260,7 @@ describe("Note Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json()
+      const body = await res.json<NoteResponse>()
       expect(body.note).toBeDefined()
       expect(body.note.userMemo).toBe("更新されたメモ")
       expect(body.note.keyPoints).toEqual(["新しいポイント1", "新しいポイント2"])
@@ -243,7 +278,7 @@ describe("Note Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json()
+      const body = await res.json<NoteResponse>()
       expect(body.note.stumbledPoints).toEqual(["つまずきA", "つまずきB"])
     })
 
@@ -255,7 +290,7 @@ describe("Note Routes", () => {
       })
 
       expect(res.status).toBe(404)
-      const body = await res.json()
+      const body = await res.json<ErrorResponse>()
       expect(body.error).toBe("Note not found")
     })
 
@@ -269,7 +304,7 @@ describe("Note Routes", () => {
       })
 
       expect(res.status).toBe(403)
-      const body = await res.json()
+      const body = await res.json<ErrorResponse>()
       expect(body.error).toBe("Unauthorized")
     })
 
@@ -283,7 +318,7 @@ describe("Note Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json()
+      const body = await res.json<NoteResponse>()
       expect(body.note).toBeDefined()
     })
   })
@@ -313,7 +348,57 @@ describe("Note Routes", () => {
       })
 
       expect(res.status).toBe(401)
-      const body = await res.json()
+      const body = await res.json<ErrorResponse>()
+      expect(body.error).toBe("Unauthorized")
+    })
+
+    it("本番環境で認証なしの場合は401を返す（POST /notes）", async () => {
+      const prodEnv = { ...ctx.env, ENVIRONMENT: "production" as const }
+      const routes = noteRoutes({ env: prodEnv, db: ctx.db as any })
+
+      const prodApp = new Hono<{ Bindings: Env; Variables: Variables }>()
+      prodApp.use("*", async (c, next) => {
+        if (!c.env) {
+          (c as any).env = {}
+        }
+        Object.assign(c.env, prodEnv)
+        await next()
+      })
+      prodApp.route("/notes", routes)
+
+      const res = await prodApp.request("/notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: "some-session-id" }),
+      })
+
+      expect(res.status).toBe(401)
+      const body = await res.json<ErrorResponse>()
+      expect(body.error).toBe("Unauthorized")
+    })
+
+    it("本番環境で認証なしの場合は401を返す（PUT /notes/:noteId）", async () => {
+      const prodEnv = { ...ctx.env, ENVIRONMENT: "production" as const }
+      const routes = noteRoutes({ env: prodEnv, db: ctx.db as any })
+
+      const prodApp = new Hono<{ Bindings: Env; Variables: Variables }>()
+      prodApp.use("*", async (c, next) => {
+        if (!c.env) {
+          (c as any).env = {}
+        }
+        Object.assign(c.env, prodEnv)
+        await next()
+      })
+      prodApp.route("/notes", routes)
+
+      const res = await prodApp.request("/notes/some-note-id", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userMemo: "test" }),
+      })
+
+      expect(res.status).toBe(401)
+      const body = await res.json<ErrorResponse>()
       expect(body.error).toBe("Unauthorized")
     })
   })

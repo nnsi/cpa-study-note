@@ -15,6 +15,38 @@ import {
   type TestContext,
 } from "./helpers"
 
+// Response types for chat endpoints
+type ChatSession = {
+  id: string
+  topicId: string
+  userId: string
+}
+
+type CreateSessionResponse = {
+  session: ChatSession
+}
+
+type GetSessionResponse = {
+  session: ChatSession
+}
+
+type ListSessionsResponse = {
+  sessions: Array<{ id: string }>
+}
+
+type ChatMessage = {
+  id: string
+  role: string
+}
+
+type MessagesResponse = {
+  messages: ChatMessage[]
+}
+
+type EvaluateResponse = {
+  quality: string
+}
+
 describe("E2E: Chat Flow", () => {
   let ctx: TestContext
   let req: ReturnType<typeof createTestRequest>
@@ -37,7 +69,7 @@ describe("E2E: Chat Flow", () => {
       })
 
       expect(res.status).toBe(201)
-      const data = await res.json()
+      const data = await res.json<CreateSessionResponse>()
       expect(data.session).toBeDefined()
       expect(data.session.id).toBeDefined()
       expect(data.session.topicId).toBe(ctx.testData.topicId)
@@ -60,7 +92,7 @@ describe("E2E: Chat Flow", () => {
       const res = await req.get(`/api/chat/sessions/${sessionId}`)
 
       expect(res.status).toBe(200)
-      const data = await res.json()
+      const data = await res.json<GetSessionResponse>()
       expect(data.session).toBeDefined()
       expect(data.session.id).toBe(sessionId)
     })
@@ -71,7 +103,7 @@ describe("E2E: Chat Flow", () => {
       const res = await req.get(`/api/chat/topics/${ctx.testData.topicId}/sessions`)
 
       expect(res.status).toBe(200)
-      const data = await res.json()
+      const data = await res.json<ListSessionsResponse>()
       expect(data.sessions).toBeDefined()
       expect(Array.isArray(data.sessions)).toBe(true)
       // Sessions with no messages are filtered out
@@ -86,7 +118,7 @@ describe("E2E: Chat Flow", () => {
       const res = await req.post("/api/chat/sessions", {
         topicId: ctx.testData.topicId,
       })
-      const data = await res.json()
+      const data = await res.json<CreateSessionResponse>()
       sessionId = data.session.id
     })
 
@@ -116,7 +148,7 @@ describe("E2E: Chat Flow", () => {
       const res = await req.get(`/api/chat/sessions/${sessionId}/messages`)
 
       expect(res.status).toBe(200)
-      const data = await res.json()
+      const data = await res.json<MessagesResponse>()
       expect(data.messages).toBeDefined()
       expect(data.messages.length).toBeGreaterThanOrEqual(2) // User message + AI response
     })
@@ -132,14 +164,14 @@ describe("E2E: Chat Flow", () => {
 
       // Get all messages
       const messagesRes = await req.get(`/api/chat/sessions/${sessionId}/messages`)
-      const data = await messagesRes.json()
+      const data = await messagesRes.json<MessagesResponse>()
 
       // Should have at least 4 messages (2 user + 2 AI)
       expect(data.messages.length).toBeGreaterThanOrEqual(4)
 
       // Check message order
-      const userMessages = data.messages.filter((m: { role: string }) => m.role === "user")
-      const assistantMessages = data.messages.filter((m: { role: string }) => m.role === "assistant")
+      const userMessages = data.messages.filter((m) => m.role === "user")
+      const assistantMessages = data.messages.filter((m) => m.role === "assistant")
 
       expect(userMessages.length).toBeGreaterThanOrEqual(2)
       expect(assistantMessages.length).toBeGreaterThanOrEqual(2)
@@ -205,9 +237,9 @@ describe("E2E: Chat Flow", () => {
 
       // Get messages to find the user message ID
       const messagesRes = await req.get(`/api/chat/sessions/${sessionId}/messages`)
-      const data = await messagesRes.json()
-      const userMessage = data.messages.find((m: { role: string }) => m.role === "user")
-      messageId = userMessage?.id
+      const data = await messagesRes.json<MessagesResponse>()
+      const userMessage = data.messages.find((m) => m.role === "user")
+      messageId = userMessage?.id ?? ""
     })
 
     it("should evaluate question quality", async () => {
@@ -216,7 +248,7 @@ describe("E2E: Chat Flow", () => {
       const res = await req.post(`/api/chat/messages/${messageId}/evaluate`)
 
       expect(res.status).toBe(200)
-      const data = await res.json()
+      const data = await res.json<EvaluateResponse>()
       expect(data.quality).toBeDefined()
       expect(["good", "surface", "unclear"]).toContain(data.quality)
     })
@@ -259,7 +291,7 @@ describe("E2E: Chat Flow", () => {
       // Step 3: Get all messages and verify conversation history
       const messagesRes = await req.get(`/api/chat/sessions/${sessionId}/messages`)
       expect(messagesRes.status).toBe(200)
-      const { messages } = await messagesRes.json()
+      const { messages } = await messagesRes.json<MessagesResponse>()
 
       // Should have 4 messages: 2 user + 2 assistant
       expect(messages.length).toBe(4)
@@ -271,18 +303,18 @@ describe("E2E: Chat Flow", () => {
       expect(messages[3].role).toBe("assistant")
 
       // Step 4: Evaluate one of the user's questions
-      const userMessage = messages.find((m: { role: string }) => m.role === "user")
-      const evalRes = await req.post(`/api/chat/messages/${userMessage.id}/evaluate`)
+      const userMessage = messages.find((m) => m.role === "user")
+      const evalRes = await req.post(`/api/chat/messages/${userMessage!.id}/evaluate`)
       expect(evalRes.status).toBe(200)
 
-      const { quality } = await evalRes.json()
+      const { quality } = await evalRes.json<EvaluateResponse>()
       expect(["good", "surface", "unclear"]).toContain(quality)
 
       // Step 5: Verify session appears in topic sessions list
       const sessionsRes = await req.get(`/api/chat/topics/${ctx.testData.topicId}/sessions`)
       expect(sessionsRes.status).toBe(200)
-      const { sessions } = await sessionsRes.json()
-      expect(sessions.some((s: { id: string }) => s.id === sessionId)).toBe(true)
+      const { sessions } = await sessionsRes.json<ListSessionsResponse>()
+      expect(sessions.some((s) => s.id === sessionId)).toBe(true)
     })
   })
 })

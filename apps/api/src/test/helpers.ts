@@ -7,6 +7,12 @@ import { createTestDatabase, TestDatabase, seedTestData } from "./mocks/db"
 import { createMockR2Bucket } from "./mocks/r2"
 import * as schema from "@cpa-study/db/schema"
 
+// レスポンスを型付きでパースするヘルパー
+export const parseJsonResponse = async <T>(res: Response): Promise<T> => {
+  const json = await res.json()
+  return json as T
+}
+
 // テスト用の環境変数
 export const createTestEnv = (): Env => ({
   ENVIRONMENT: "local",
@@ -175,8 +181,8 @@ export const createNoteTestData = (db: TestDatabase, userId: string, topicId: st
       sessionId,
       aiSummary: "テスト要約",
       userMemo: "テストメモ",
-      keyPoints: JSON.stringify(["ポイント1", "ポイント2"]),
-      stumbledPoints: JSON.stringify(["つまずき1"]),
+      keyPoints: ["ポイント1", "ポイント2"],
+      stumbledPoints: ["つまずき1"],
       createdAt: now,
       updatedAt: now,
     })

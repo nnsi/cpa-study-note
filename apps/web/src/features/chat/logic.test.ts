@@ -109,7 +109,7 @@ describe("countQuestionQuality", () => {
 })
 
 describe("formatMessagesForDisplay", () => {
-  it("タイムゾーン変換", () => {
+  it("タイムゾーン変換 - フォーマットが時:分形式であること", () => {
     const messages: ChatMessage[] = [
       createMessage({
         id: "1",
@@ -132,6 +132,73 @@ describe("formatMessagesForDisplay", () => {
     // isUserフラグ
     expect(result[0].isUser).toBe(true)
     expect(result[1].isUser).toBe(false)
+  })
+
+  it("タイムゾーン変換 - 異なる時刻が正しく区別される", () => {
+    const messages: ChatMessage[] = [
+      createMessage({
+        id: "1",
+        createdAt: "2024-01-15T00:00:00.000Z", // UTC真夜中
+      }),
+      createMessage({
+        id: "2",
+        createdAt: "2024-01-15T12:00:00.000Z", // UTC正午
+      }),
+    ]
+
+    const result = formatMessagesForDisplay(messages)
+
+    // 両方の時刻が正しい形式であることを確認
+    expect(result[0].formattedTime).toMatch(/^\d{2}:\d{2}$/)
+    expect(result[1].formattedTime).toMatch(/^\d{2}:\d{2}$/)
+    // 2つの時刻が異なることを確認（12時間差なので必ず異なる）
+    expect(result[0].formattedTime).not.toBe(result[1].formattedTime)
+  })
+
+  it("タイムゾーン変換 - 深夜境界（UTC 23:59と00:00）が正しく処理される", () => {
+    const messages: ChatMessage[] = [
+      createMessage({
+        id: "1",
+        createdAt: "2024-01-14T23:59:00.000Z",
+      }),
+      createMessage({
+        id: "2",
+        createdAt: "2024-01-15T00:00:00.000Z",
+      }),
+    ]
+
+    const result = formatMessagesForDisplay(messages)
+
+    // 両方とも正しい形式
+    expect(result[0].formattedTime).toMatch(/^\d{2}:\d{2}$/)
+    expect(result[1].formattedTime).toMatch(/^\d{2}:\d{2}$/)
+
+    // 1分差があることを確認（タイムゾーンに依存しない検証）
+    const time0 = result[0].formattedTime.split(":").map(Number)
+    const time1 = result[1].formattedTime.split(":").map(Number)
+    const minutes0 = time0[0] * 60 + time0[1]
+    const minutes1 = time1[0] * 60 + time1[1]
+    // 1分差または23:59分差（日付をまたぐ場合）
+    const diff = Math.abs(minutes1 - minutes0)
+    expect([1, 1439]).toContain(diff)
+  })
+
+  it("タイムゾーン変換 - toLocaleTimeStringでja-JP形式の文字列を生成", () => {
+    const messages: ChatMessage[] = [
+      createMessage({
+        id: "1",
+        createdAt: "2024-01-15T15:45:00.000Z",
+      }),
+    ]
+
+    const result = formatMessagesForDisplay(messages)
+
+    // 時:分が2桁ずつであることを確認（ja-JPの特徴）
+    const [hour, minute] = result[0].formattedTime.split(":")
+    expect(hour).toMatch(/^\d{2}$/)
+    expect(minute).toMatch(/^\d{2}$/)
+    // 分が45であることを確認（タイムゾーンに関係なく分は変わらない）
+    expect(minute).toBe("45")
   })
 
   it("空配列", () => {

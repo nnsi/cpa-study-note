@@ -9,6 +9,32 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest"
 import { setupTestEnv, cleanupTestEnv, type TestContext } from "./helpers"
 
+// Response types for auth endpoints
+type ProvidersResponse = {
+  providers: string[]
+}
+
+type ErrorResponse = {
+  error: string
+}
+
+type AuthUser = {
+  id: string
+}
+
+type LoginResponse = {
+  accessToken: string
+  user: AuthUser
+}
+
+type MeResponse = {
+  user: AuthUser
+}
+
+type LogoutResponse = {
+  success: boolean
+}
+
 describe("E2E: Auth Flow", () => {
   let ctx: TestContext
 
@@ -27,7 +53,7 @@ describe("E2E: Auth Flow", () => {
       }, ctx.env)
 
       expect(res.status).toBe(200)
-      const data = await res.json()
+      const data = await res.json<ProvidersResponse>()
       expect(data.providers).toContain("google")
     })
 
@@ -49,7 +75,7 @@ describe("E2E: Auth Flow", () => {
       }, ctx.env)
 
       expect(res.status).toBe(400)
-      const data = await res.json()
+      const data = await res.json<ErrorResponse>()
       expect(data.error).toBe("Missing code")
     })
 
@@ -59,8 +85,56 @@ describe("E2E: Auth Flow", () => {
       }, ctx.env)
 
       expect(res.status).toBe(400)
-      const data = await res.json()
+      const data = await res.json<ErrorResponse>()
       expect(data.error).toBe("Invalid state")
+    })
+
+    // Note: Full OAuth callback success flow is tested at the route level
+    // with mocked providers. E2E tests use dev-login as the equivalent
+    // authentication flow for the local environment.
+    it("should complete auth flow via dev-login (equivalent to OAuth success)", async () => {
+      // Step 1: Get dev login tokens (equivalent to OAuth callback success)
+      const loginRes = await ctx.app.request("/api/auth/dev-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      }, ctx.env)
+
+      expect(loginRes.status).toBe(200)
+      const loginData = await loginRes.json<LoginResponse>()
+      expect(loginData.accessToken).toBeDefined()
+      expect(loginData.user).toBeDefined()
+
+      // Step 2: Extract refresh token from cookie
+      const setCookie = loginRes.headers.get("Set-Cookie")
+      const match = setCookie?.match(/refresh_token=([^;]+)/)
+      const refreshToken = match ? match[1] : null
+      expect(refreshToken).toBeDefined()
+
+      // Step 3: Use access token to get user info (simulates authenticated request)
+      const meRes = await ctx.app.request("/api/auth/me", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${loginData.accessToken}`,
+        },
+      }, ctx.env)
+
+      expect(meRes.status).toBe(200)
+      const meData = await meRes.json<MeResponse>()
+      expect(meData.user.id).toBe(loginData.user.id)
+
+      // Step 4: Refresh token flow (part of complete auth cycle)
+      const refreshRes = await ctx.app.request("/api/auth/refresh", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: `refresh_token=${refreshToken}`,
+        },
+      }, ctx.env)
+
+      expect(refreshRes.status).toBe(200)
+      const refreshData = await refreshRes.json<LoginResponse>()
+      expect(refreshData.accessToken).toBeDefined()
+      expect(refreshData.user.id).toBe(loginData.user.id)
     })
   })
 
@@ -72,7 +146,7 @@ describe("E2E: Auth Flow", () => {
       }, ctx.env)
 
       expect(res.status).toBe(200)
-      const data = await res.json()
+      const data = await res.json<LoginResponse>()
       expect(data.accessToken).toBeDefined()
       expect(data.user).toBeDefined()
       expect(data.user.id).toBe(ctx.testData.userId)
@@ -122,7 +196,7 @@ describe("E2E: Auth Flow", () => {
       }, ctx.env)
 
       expect(res.status).toBe(200)
-      const data = await res.json()
+      const data = await res.json<LoginResponse>()
       expect(data.accessToken).toBeDefined()
       expect(data.user).toBeDefined()
     })
@@ -134,7 +208,7 @@ describe("E2E: Auth Flow", () => {
       }, ctx.env)
 
       expect(res.status).toBe(401)
-      const data = await res.json()
+      const data = await res.json<ErrorResponse>()
       expect(data.error).toBe("No refresh token")
     })
 
@@ -180,7 +254,7 @@ describe("E2E: Auth Flow", () => {
       }, ctx.env)
 
       expect(res.status).toBe(200)
-      const data = await res.json()
+      const data = await res.json<LogoutResponse>()
       expect(data.success).toBe(true)
 
       // Cookie should be cleared
@@ -215,7 +289,7 @@ describe("E2E: Auth Flow", () => {
       }, ctx.env)
 
       expect(res.status).toBe(200)
-      const data = await res.json()
+      const data = await res.json<MeResponse>()
       expect(data.user).toBeDefined()
       expect(data.user.id).toBe(ctx.testData.userId)
     })

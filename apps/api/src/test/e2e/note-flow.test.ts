@@ -14,6 +14,30 @@ import {
   type TestContext,
 } from "./helpers"
 
+// Response types for note endpoints
+type Note = {
+  id: string
+  sessionId: string
+  topicId: string
+  userId: string
+  aiSummary: string
+  userMemo: string
+  keyPoints: string[]
+  stumbledPoints: string[]
+}
+
+type CreateNoteResponse = {
+  note: Note
+}
+
+type GetNoteResponse = {
+  note: Note
+}
+
+type ListNotesResponse = {
+  notes: Array<{ id: string; topicId: string }>
+}
+
 describe("E2E: Note Flow", () => {
   let ctx: TestContext
   let req: ReturnType<typeof createTestRequest>
@@ -58,7 +82,7 @@ describe("E2E: Note Flow", () => {
       })
 
       expect(res.status).toBe(201)
-      const data = await res.json()
+      const data = await res.json<CreateNoteResponse>()
       expect(data.note).toBeDefined()
       expect(data.note.id).toBeDefined()
       expect(data.note.sessionId).toBe(sessionId)
@@ -86,7 +110,7 @@ describe("E2E: Note Flow", () => {
       const res = await req.get(`/api/notes/${noteId}`)
 
       expect(res.status).toBe(200)
-      const data = await res.json()
+      const data = await res.json<GetNoteResponse>()
       expect(data.note).toBeDefined()
       expect(data.note.id).toBe(noteId)
       expect(data.note.aiSummary).toBeDefined()
@@ -117,7 +141,7 @@ describe("E2E: Note Flow", () => {
       const res = await req.get("/api/notes")
 
       expect(res.status).toBe(200)
-      const data = await res.json()
+      const data = await res.json<ListNotesResponse>()
       expect(data.notes).toBeDefined()
       expect(Array.isArray(data.notes)).toBe(true)
       expect(data.notes.length).toBeGreaterThanOrEqual(1)
@@ -127,13 +151,13 @@ describe("E2E: Note Flow", () => {
       const res = await req.get(`/api/notes/topic/${ctx.testData.topicId}`)
 
       expect(res.status).toBe(200)
-      const data = await res.json()
+      const data = await res.json<ListNotesResponse>()
       expect(data.notes).toBeDefined()
       expect(Array.isArray(data.notes)).toBe(true)
       expect(data.notes.length).toBeGreaterThanOrEqual(1)
 
       // All notes should be for the specified topic
-      data.notes.forEach((note: { topicId: string }) => {
+      data.notes.forEach((note) => {
         expect(note.topicId).toBe(ctx.testData.topicId)
       })
     })
@@ -153,7 +177,7 @@ describe("E2E: Note Flow", () => {
       const sessionId = sessionChunk?.sessionId
 
       const noteRes = await req.post("/api/notes", { sessionId })
-      const data = await noteRes.json()
+      const data = await noteRes.json<CreateNoteResponse>()
       noteId = data.note.id
     }, 15000)
 
@@ -163,7 +187,7 @@ describe("E2E: Note Flow", () => {
       })
 
       expect(res.status).toBe(200)
-      const data = await res.json()
+      const data = await res.json<GetNoteResponse>()
       expect(data.note).toBeDefined()
       expect(data.note.userMemo).toContain("減損会計のポイント")
     })
@@ -179,7 +203,7 @@ describe("E2E: Note Flow", () => {
       })
 
       expect(res.status).toBe(200)
-      const data = await res.json()
+      const data = await res.json<GetNoteResponse>()
       expect(data.note).toBeDefined()
       expect(data.note.keyPoints).toBeDefined()
     })
@@ -193,7 +217,7 @@ describe("E2E: Note Flow", () => {
       })
 
       expect(res.status).toBe(200)
-      const data = await res.json()
+      const data = await res.json<GetNoteResponse>()
       expect(data.note).toBeDefined()
       expect(data.note.stumbledPoints).toBeDefined()
     })
@@ -206,7 +230,7 @@ describe("E2E: Note Flow", () => {
       })
 
       expect(res.status).toBe(200)
-      const data = await res.json()
+      const data = await res.json<GetNoteResponse>()
       expect(data.note.userMemo).toBe("更新されたメモ")
       expect(data.note.keyPoints).toBeDefined()
       expect(data.note.stumbledPoints).toBeDefined()
@@ -221,7 +245,7 @@ describe("E2E: Note Flow", () => {
       // Re-fetch and verify
       const res = await req.get(`/api/notes/${noteId}`)
       expect(res.status).toBe(200)
-      const data = await res.json()
+      const data = await res.json<GetNoteResponse>()
       expect(data.note.userMemo).toBe("永続化テスト用のメモ")
     })
 
@@ -257,7 +281,7 @@ describe("E2E: Note Flow", () => {
       const noteRes = await req.post("/api/notes", { sessionId })
       expect(noteRes.status).toBe(201)
 
-      const { note } = await noteRes.json()
+      const { note } = await noteRes.json<CreateNoteResponse>()
       expect(note.aiSummary).toBeDefined()
       expect(note.aiSummary.length).toBeGreaterThan(0)
 
@@ -289,7 +313,7 @@ describe("E2E: Note Flow", () => {
       const finalRes = await req.get(`/api/notes/${note.id}`)
       expect(finalRes.status).toBe(200)
 
-      const { note: finalNote } = await finalRes.json()
+      const { note: finalNote } = await finalRes.json<GetNoteResponse>()
       expect(finalNote.aiSummary).toBeDefined()
       expect(finalNote.userMemo).toContain("棚卸資産の評価方法")
       expect(finalNote.keyPoints).toBeDefined()
@@ -299,15 +323,15 @@ describe("E2E: Note Flow", () => {
       const listRes = await req.get("/api/notes")
       expect(listRes.status).toBe(200)
 
-      const { notes } = await listRes.json()
-      expect(notes.some((n: { id: string }) => n.id === note.id)).toBe(true)
+      const { notes } = await listRes.json<ListNotesResponse>()
+      expect(notes.some((n) => n.id === note.id)).toBe(true)
 
       // Step 8: Verify note appears in topic-specific listing
       const topicNotesRes = await req.get(`/api/notes/topic/${ctx.testData.topicId}`)
       expect(topicNotesRes.status).toBe(200)
 
-      const { notes: topicNotes } = await topicNotesRes.json()
-      expect(topicNotes.some((n: { id: string }) => n.id === note.id)).toBe(true)
+      const { notes: topicNotes } = await topicNotesRes.json<ListNotesResponse>()
+      expect(topicNotes.some((n) => n.id === note.id)).toBe(true)
     })
   })
 })

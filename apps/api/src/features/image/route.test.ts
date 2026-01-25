@@ -14,6 +14,16 @@ import {
 } from "@/test/helpers"
 import { createMockAIAdapter, mockAIPresets } from "@/test/mocks/ai"
 import { MAGIC_BYTES } from "./usecase"
+import type {
+  Image,
+  UploadUrlResponse,
+  OcrResultResponse,
+} from "@cpa-study/shared/schemas"
+
+// レスポンス型定義
+type UploadResponse = { success: boolean }
+type ErrorResponse = { error: string }
+type ImageMetadataResponse = { image: Image }
 
 // AI Adapterをモック
 vi.mock("@/shared/lib/ai", () => ({
@@ -56,7 +66,7 @@ describe("Image Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json()
+      const body = await res.json<UploadUrlResponse>()
       expect(body.uploadUrl).toBeDefined()
       expect(body.imageId).toBeDefined()
       expect(body.uploadUrl).toContain(body.imageId)
@@ -86,7 +96,7 @@ describe("Image Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json()
+      const body = await res.json<UploadUrlResponse>()
       expect(body.uploadUrl).toBeDefined()
     })
 
@@ -167,7 +177,7 @@ describe("Image Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json()
+      const body = await res.json<UploadResponse>()
       expect(body.success).toBe(true)
     })
 
@@ -182,7 +192,7 @@ describe("Image Routes", () => {
       })
 
       expect(res.status).toBe(404)
-      const body = await res.json()
+      const body = await res.json<ErrorResponse>()
       expect(body.error).toBe("Image not found")
     })
 
@@ -199,7 +209,7 @@ describe("Image Routes", () => {
       })
 
       expect(res.status).toBe(403)
-      const body = await res.json()
+      const body = await res.json<ErrorResponse>()
       expect(body.error).toBe("Unauthorized")
     })
 
@@ -207,7 +217,9 @@ describe("Image Routes", () => {
       const { imageId } = createImageTestData(ctx.db, ctx.testData.userId)
 
       // 不正なマジックバイト（テキストファイル）
-      const invalidBuffer = new TextEncoder().encode("This is not an image").buffer
+      const textData = new TextEncoder().encode("This is not an image")
+      const invalidBuffer = new ArrayBuffer(textData.byteLength)
+      new Uint8Array(invalidBuffer).set(textData)
 
       const res = await app.request(`/images/${imageId}/upload`, {
         method: "POST",
@@ -219,7 +231,7 @@ describe("Image Routes", () => {
       })
 
       expect(res.status).toBe(400)
-      const body = await res.json()
+      const body = await res.json<ErrorResponse>()
       expect(body.error).toBe("Invalid file format")
     })
 
@@ -245,7 +257,7 @@ describe("Image Routes", () => {
       })
 
       expect(res.status).toBe(413)
-      const body = await res.json()
+      const body = await res.json<ErrorResponse>()
       expect(body.error).toContain("10MB")
     })
   })
@@ -269,7 +281,7 @@ describe("Image Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json()
+      const body = await res.json<OcrResultResponse>()
       expect(body.imageId).toBe(imageId)
       expect(body.ocrText).toBeDefined()
     })
@@ -281,7 +293,7 @@ describe("Image Routes", () => {
       })
 
       expect(res.status).toBe(404)
-      const body = await res.json()
+      const body = await res.json<ErrorResponse>()
       expect(body.error).toBe("Image not found")
     })
 
@@ -294,7 +306,7 @@ describe("Image Routes", () => {
       })
 
       expect(res.status).toBe(403)
-      const body = await res.json()
+      const body = await res.json<ErrorResponse>()
       expect(body.error).toBe("Unauthorized")
     })
 
@@ -308,7 +320,7 @@ describe("Image Routes", () => {
       })
 
       expect(res.status).toBe(404)
-      const body = await res.json()
+      const body = await res.json<ErrorResponse>()
       expect(body.error).toBe("Image file not found")
     })
   })
@@ -322,7 +334,7 @@ describe("Image Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json()
+      const body = await res.json<ImageMetadataResponse>()
       expect(body.image).toBeDefined()
       expect(body.image.id).toBe(imageId)
       expect(body.image.filename).toBe("test.png")
@@ -336,7 +348,7 @@ describe("Image Routes", () => {
       })
 
       expect(res.status).toBe(404)
-      const body = await res.json()
+      const body = await res.json<ErrorResponse>()
       expect(body.error).toBe("Image not found")
     })
 
@@ -348,7 +360,7 @@ describe("Image Routes", () => {
       })
 
       expect(res.status).toBe(403)
-      const body = await res.json()
+      const body = await res.json<ErrorResponse>()
       expect(body.error).toBe("Unauthorized")
     })
   })
@@ -378,7 +390,7 @@ describe("Image Routes", () => {
       })
 
       expect(res.status).toBe(401)
-      const body = await res.json()
+      const body = await res.json<ErrorResponse>()
       expect(body.error).toBe("Unauthorized")
     })
 
@@ -401,7 +413,63 @@ describe("Image Routes", () => {
       })
 
       expect(res.status).toBe(401)
-      const body = await res.json()
+      const body = await res.json<ErrorResponse>()
+      expect(body.error).toBe("Unauthorized")
+    })
+
+    it("本番環境で認証なしの場合は401を返す（POST /images/:imageId/upload）", async () => {
+      const prodEnv = { ...ctx.env, ENVIRONMENT: "production" as const }
+      const routes = imageRoutes({ env: prodEnv, db: ctx.db as any })
+
+      const prodApp = new Hono<{ Bindings: Env; Variables: Variables }>()
+      prodApp.use("*", async (c, next) => {
+        if (!c.env) {
+          (c as any).env = {}
+        }
+        Object.assign(c.env, prodEnv)
+        await next()
+      })
+      prodApp.route("/images", routes)
+
+      const pngBuffer = new ArrayBuffer(100)
+      const view = new Uint8Array(pngBuffer)
+      view[0] = 0x89
+      view[1] = 0x50
+      view[2] = 0x4e
+      view[3] = 0x47
+
+      const res = await prodApp.request("/images/some-image-id/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/octet-stream" },
+        body: pngBuffer,
+      })
+
+      expect(res.status).toBe(401)
+      const body = await res.json<ErrorResponse>()
+      expect(body.error).toBe("Unauthorized")
+    })
+
+    it("本番環境で認証なしの場合は401を返す（POST /images/:imageId/ocr）", async () => {
+      const prodEnv = { ...ctx.env, ENVIRONMENT: "production" as const }
+      const routes = imageRoutes({ env: prodEnv, db: ctx.db as any })
+
+      const prodApp = new Hono<{ Bindings: Env; Variables: Variables }>()
+      prodApp.use("*", async (c, next) => {
+        if (!c.env) {
+          (c as any).env = {}
+        }
+        Object.assign(c.env, prodEnv)
+        await next()
+      })
+      prodApp.route("/images", routes)
+
+      const res = await prodApp.request("/images/some-image-id/ocr", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      })
+
+      expect(res.status).toBe(401)
+      const body = await res.json<ErrorResponse>()
       expect(body.error).toBe("Unauthorized")
     })
   })

@@ -101,11 +101,23 @@ export const createMockR2Bucket = (): R2Bucket => {
         body = combined.buffer as ArrayBuffer
       }
 
+      // httpMetadata can be Headers or R2HTTPMetadata, convert if needed
+      let httpMetadata: R2HTTPMetadata | undefined
+      if (options?.httpMetadata) {
+        if (options.httpMetadata instanceof Headers) {
+          httpMetadata = {
+            contentType: options.httpMetadata.get("content-type") ?? undefined,
+          }
+        } else {
+          httpMetadata = options.httpMetadata
+        }
+      }
+
       const meta: R2ObjectMeta = {
         key,
         size: body.byteLength,
         etag: `mock-etag-${Date.now()}`,
-        httpMetadata: options?.httpMetadata,
+        httpMetadata,
         customMetadata: options?.customMetadata,
         uploaded: new Date(),
       }
@@ -133,11 +145,12 @@ export const createMockR2Bucket = (): R2Bucket => {
         }
       }
 
+      const truncated = objects.length >= limit
       return {
         objects,
-        truncated: objects.length >= limit,
-        delimitedPrefixes: [],
-      }
+        truncated,
+        delimitedPrefixes: [] as string[],
+      } as R2Objects
     },
 
     createMultipartUpload: async (): Promise<R2MultipartUpload> => {

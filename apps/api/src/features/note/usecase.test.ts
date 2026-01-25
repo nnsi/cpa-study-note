@@ -162,6 +162,46 @@ describe("Note UseCase", () => {
       }
     })
 
+    it("メッセージが空のセッションでも処理を続行する", async () => {
+      // セッションは存在するがメッセージが空の場合のテスト
+      const session = createMockSession()
+      const emptyMessages: ReturnType<typeof createMockMessage>[] = []
+      const createdNote = createMockNote({
+        aiSummary: "空の会話からの要約",
+        keyPoints: [],
+        stumbledPoints: [],
+      })
+
+      const noteRepo = createMockNoteRepo({
+        create: vi.fn().mockResolvedValue(createdNote),
+      })
+      const chatRepo = createMockChatRepo({
+        findSessionById: vi.fn().mockResolvedValue(session),
+        findMessagesBySession: vi.fn().mockResolvedValue(emptyMessages),
+      })
+      const aiAdapter = createMockAIAdapter({
+        generateText: vi.fn().mockResolvedValue({
+          content: JSON.stringify({
+            summary: "空の会話からの要約",
+            keyPoints: [],
+            stumbledPoints: [],
+          }),
+        }),
+      })
+
+      const result = await createNoteFromSession(
+        { noteRepo, chatRepo, aiAdapter },
+        { userId: "user-1", sessionId: "session-1" }
+      )
+
+      // 現在の実装では空メッセージでもAI呼び出しを行う
+      expect(result.ok).toBe(true)
+      expect(aiAdapter.generateText).toHaveBeenCalled()
+      // AIに渡されるプロンプトに空の会話が含まれることを確認
+      const callArgs = (aiAdapter.generateText as ReturnType<typeof vi.fn>).mock.calls[0][0]
+      expect(callArgs.messages[0].content).toContain("チャット履歴:")
+    })
+
     it("AIがJSONを返さない場合はcontentをそのまま要約として使用", async () => {
       const session = createMockSession()
       const messages = [createMockMessage()]
