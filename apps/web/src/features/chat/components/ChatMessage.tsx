@@ -1,4 +1,44 @@
+import Markdown, { type Components } from "react-markdown"
 import type { DisplayMessage } from "../logic"
+
+// マークダウンコンポーネントのカスタム設定
+const markdownComponents: Components = {
+  // リンクは新しいタブで開く
+  a: ({ children, href }) => (
+    <a href={href} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">
+      {children}
+    </a>
+  ),
+  // コードブロックのスタイル
+  code: ({ children, className }) => {
+    const isInline = !className
+    return isInline ? (
+      <code className="px-1 py-0.5 bg-ink-100 rounded text-ink-700 text-xs font-mono">
+        {children}
+      </code>
+    ) : (
+      <code className={`${className || ""} text-xs font-mono`}>{children}</code>
+    )
+  },
+  // コードブロックをpreで囲む
+  pre: ({ children }) => (
+    <pre className="bg-ink-100 rounded p-3 overflow-x-auto my-2">{children}</pre>
+  ),
+  // 見出しのサイズ調整
+  h1: ({ children }) => <h3 className="text-base font-bold mt-3 mb-2">{children}</h3>,
+  h2: ({ children }) => <h4 className="text-sm font-bold mt-3 mb-2">{children}</h4>,
+  h3: ({ children }) => <h5 className="text-sm font-semibold mt-2 mb-1">{children}</h5>,
+  // リストのスタイル
+  ul: ({ children }) => <ul className="list-disc list-inside space-y-1 my-2">{children}</ul>,
+  ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 my-2">{children}</ol>,
+  li: ({ children }) => <li className="text-ink-800">{children}</li>,
+  // 段落
+  p: ({ children }) => <p className="my-2 leading-relaxed">{children}</p>,
+  // 強調
+  strong: ({ children }) => <strong className="font-semibold text-ink-900">{children}</strong>,
+  // 水平線
+  hr: () => <hr className="my-3 border-ink-200" />,
+}
 
 type Props = {
   message: DisplayMessage
@@ -30,9 +70,17 @@ export const ChatMessageView = ({ message, isStreaming }: Props) => {
         }`}
       >
         {/* メッセージ本文 */}
-        <div className={`whitespace-pre-wrap break-words leading-relaxed ${isUser ? "text-white" : "text-ink-800"}`}>
-          {message.content}
-        </div>
+        {isUser ? (
+          <div className="whitespace-pre-wrap break-words leading-relaxed text-white">
+            {message.content}
+          </div>
+        ) : (
+          <div className="prose prose-sm max-w-none break-words text-ink-800">
+            <Markdown components={markdownComponents}>
+              {message.content}
+            </Markdown>
+          </div>
+        )}
 
         {/* メタ情報 */}
         {!isStreaming && (
