@@ -21,11 +21,17 @@ export type ChatMessage = {
   createdAt: Date
 }
 
+export type QuestionQualityStats = {
+  goodCount: number
+  surfaceCount: number
+}
+
 export type ChatRepository = {
   createSession: (data: { userId: string; topicId: string }) => Promise<ChatSession>
   findSessionById: (id: string) => Promise<ChatSession | null>
   findSessionsByTopic: (userId: string, topicId: string) => Promise<ChatSession[]>
   getSessionMessageCount: (sessionId: string) => Promise<number>
+  getSessionQualityStats: (sessionId: string) => Promise<QuestionQualityStats>
   createMessage: (data: Omit<ChatMessage, "id" | "createdAt">) => Promise<ChatMessage>
   findMessageById: (id: string) => Promise<ChatMessage | null>
   findMessagesBySession: (sessionId: string) => Promise<ChatMessage[]>
@@ -73,6 +79,35 @@ export const createChatRepository = (db: Db): ChatRepository => ({
       .from(chatMessages)
       .where(eq(chatMessages.sessionId, sessionId))
     return result[0]?.count ?? 0
+  },
+
+  getSessionQualityStats: async (sessionId) => {
+    const result = await db
+      .select({
+        quality: chatMessages.questionQuality,
+        count: sql<number>`count(*)`,
+      })
+      .from(chatMessages)
+      .where(
+        and(
+          eq(chatMessages.sessionId, sessionId),
+          eq(chatMessages.role, "user")
+        )
+      )
+      .groupBy(chatMessages.questionQuality)
+
+    let goodCount = 0
+    let surfaceCount = 0
+
+    for (const row of result) {
+      if (row.quality === "good") {
+        goodCount = row.count
+      } else if (row.quality === "surface") {
+        surfaceCount = row.count
+      }
+    }
+
+    return { goodCount, surfaceCount }
   },
 
   createMessage: async (data) => {

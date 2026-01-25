@@ -1,4 +1,4 @@
-import type { TopicRepository } from "./repository"
+import type { TopicRepository, TopicFilterParams } from "./repository"
 
 type TopicDeps = {
   repo: TopicRepository
@@ -224,11 +224,25 @@ export const updateProgress = async (
   understood?: boolean
 ): Promise<ProgressResponse> => {
   const { repo } = deps
+
+  // 現在の進捗を取得して、understood が変更されたかチェック
+  const currentProgress = await repo.findProgress(userId, topicId)
+  const previousUnderstood = currentProgress?.understood ?? false
+
   const progress = await repo.upsertProgress({
     userId,
     topicId,
     understood,
   })
+
+  // understood フラグが変更された場合は履歴を記録
+  if (understood !== undefined && understood !== previousUnderstood) {
+    await repo.createCheckHistory({
+      userId,
+      topicId,
+      action: understood ? "checked" : "unchecked",
+    })
+  }
 
   return {
     ...progress,
@@ -251,6 +265,29 @@ export const listUserProgress = async (
     lastAccessedAt: p.lastAccessedAt?.toISOString() ?? null,
     createdAt: p.createdAt.toISOString(),
     updatedAt: p.updatedAt.toISOString(),
+  }))
+}
+
+// チェック履歴レスポンス型
+type CheckHistoryResponse = {
+  id: string
+  action: "checked" | "unchecked"
+  checkedAt: string
+}
+
+// チェック履歴取得
+export const getCheckHistory = async (
+  deps: TopicDeps,
+  userId: string,
+  topicId: string
+): Promise<CheckHistoryResponse[]> => {
+  const { repo } = deps
+  const history = await repo.findCheckHistoryByTopic(userId, topicId)
+
+  return history.map((h) => ({
+    id: h.id,
+    action: h.action,
+    checkedAt: h.checkedAt.toISOString(),
   }))
 }
 
@@ -294,5 +331,69 @@ export const getSubjectProgressStats = async (
     subjectName: subject.name,
     totalTopics: topicCountMap.get(subject.id) ?? 0,
     understoodTopics: progressMap.get(subject.id) ?? 0,
+  }))
+}
+
+// 最近触った論点レスポンス型
+type RecentTopicResponse = {
+  topicId: string
+  topicName: string
+  subjectId: string
+  subjectName: string
+  categoryId: string
+  lastAccessedAt: string
+}
+
+// 最近触った論点取得
+export const listRecentTopics = async (
+  deps: TopicDeps,
+  userId: string,
+  limit: number = 10
+): Promise<RecentTopicResponse[]> => {
+  const { repo } = deps
+  const topics = await repo.findRecentTopics(userId, limit)
+
+  return topics.map((t) => ({
+    topicId: t.topicId,
+    topicName: t.topicName,
+    subjectId: t.subjectId,
+    subjectName: t.subjectName,
+    categoryId: t.categoryId,
+    lastAccessedAt: t.lastAccessedAt.toISOString(),
+  }))
+}
+
+// フィルタ済み論点レスポンス型
+type FilteredTopicResponse = {
+  id: string
+  name: string
+  categoryId: string
+  subjectId: string
+  subjectName: string
+  sessionCount: number
+  lastChatAt: string | null
+  understood: boolean
+  goodQuestionCount: number
+}
+
+// フィルタ済み論点取得
+export const filterTopics = async (
+  deps: TopicDeps,
+  userId: string,
+  filters: TopicFilterParams
+): Promise<FilteredTopicResponse[]> => {
+  const { repo } = deps
+  const topics = await repo.findFilteredTopics(userId, filters)
+
+  return topics.map((t) => ({
+    id: t.id,
+    name: t.name,
+    categoryId: t.categoryId,
+    subjectId: t.subjectId,
+    subjectName: t.subjectName,
+    sessionCount: t.sessionCount,
+    lastChatAt: t.lastChatAt ? new Date(t.lastChatAt).toISOString() : null,
+    understood: Boolean(t.understood),
+    goodQuestionCount: t.goodQuestionCount,
   }))
 }

@@ -2,6 +2,7 @@ import { Hono } from "hono"
 import { zValidator } from "@hono/zod-validator"
 import { z } from "zod"
 import type { Db } from "@cpa-study/db"
+import { topicFilterRequestSchema } from "@cpa-study/shared/schemas"
 import type { Env, Variables } from "@/shared/types/env"
 import {
   authMiddleware,
@@ -17,6 +18,9 @@ import {
   updateProgress,
   listUserProgress,
   getSubjectProgressStats,
+  getCheckHistory,
+  filterTopics,
+  listRecentTopics,
 } from "./usecase"
 
 type TopicDeps = {
@@ -34,6 +38,21 @@ export const topicRoutes = ({ db }: TopicDeps) => {
       const subjects = await listSubjects(deps)
       return c.json({ subjects })
     })
+
+    // 論点フィルタ（/:subjectId より前に定義）
+    .get(
+      "/filter",
+      authMiddleware,
+      zValidator("query", topicFilterRequestSchema),
+      async (c) => {
+        const user = c.get("user")
+        const filters = c.req.valid("query")
+
+        const topics = await filterTopics(deps, user.id, filters)
+
+        return c.json({ topics })
+      }
+    )
 
     // 科目詳細
     .get("/:subjectId", async (c) => {
@@ -102,6 +121,20 @@ export const topicRoutes = ({ db }: TopicDeps) => {
       }
     )
 
+    // チェック履歴取得
+    .get(
+      "/:subjectId/topics/:topicId/check-history",
+      authMiddleware,
+      async (c) => {
+        const topicId = c.req.param("topicId")
+        const user = c.get("user")
+
+        const history = await getCheckHistory(deps, user.id, topicId)
+
+        return c.json({ history })
+      }
+    )
+
     // ユーザーの全進捗取得
     .get("/progress/me", authMiddleware, async (c) => {
       const user = c.get("user")
@@ -114,6 +147,13 @@ export const topicRoutes = ({ db }: TopicDeps) => {
       const user = c.get("user")
       const stats = await getSubjectProgressStats(deps, user.id)
       return c.json({ stats })
+    })
+
+    // 最近触った論点リスト
+    .get("/progress/recent", authMiddleware, async (c) => {
+      const user = c.get("user")
+      const topics = await listRecentTopics(deps, user.id, 10)
+      return c.json({ topics })
     })
 
   return app

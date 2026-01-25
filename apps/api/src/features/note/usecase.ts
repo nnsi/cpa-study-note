@@ -83,15 +83,30 @@ export const createNoteFromSession = async (
 
   const messages = await chatRepo.findMessagesBySession(sessionId)
 
+  // 良質な質問（深掘り質問）を抽出
+  const goodQuestions = messages
+    .filter((m) => m.role === "user" && m.questionQuality === "good")
+    .map((m) => m.content)
+
   // AI要約生成
   const conversationText = messages
-    .map((m) => `${m.role === "user" ? "ユーザー" : "AI"}: ${m.content}`)
+    .map((m) => {
+      const prefix = m.role === "user" ? "ユーザー" : "AI"
+      const qualityMark = m.role === "user" && m.questionQuality === "good" ? " [深掘り質問]" : ""
+      return `${prefix}${qualityMark}: ${m.content}`
+    })
     .join("\n\n")
 
+  const goodQuestionsSection = goodQuestions.length > 0
+    ? `\n\n## 特に良質な質問（深掘り質問）:\n${goodQuestions.map((q, i) => `${i + 1}. ${q}`).join("\n")}`
+    : ""
+
   const summaryPrompt = `以下のチャット履歴を要約し、学習ノートを作成してください。
+[深掘り質問]とマークされた質問は、因果関係を問う質問や仮説を含む質問など、学習において特に価値のある質問です。
+これらの質問とその回答を優先的にキーポイントに反映してください。
 
 チャット履歴:
-${conversationText}
+${conversationText}${goodQuestionsSection}
 
 以下の形式でJSON形式で回答してください:
 {
@@ -263,15 +278,30 @@ export const refreshNoteFromSession = async (
 
   const messages = await chatRepo.findMessagesBySession(existing.sessionId)
 
+  // 良質な質問（深掘り質問）を抽出
+  const goodQuestions = messages
+    .filter((m) => m.role === "user" && m.questionQuality === "good")
+    .map((m) => m.content)
+
   // AI要約再生成
   const conversationText = messages
-    .map((m) => `${m.role === "user" ? "ユーザー" : "AI"}: ${m.content}`)
+    .map((m) => {
+      const prefix = m.role === "user" ? "ユーザー" : "AI"
+      const qualityMark = m.role === "user" && m.questionQuality === "good" ? " [深掘り質問]" : ""
+      return `${prefix}${qualityMark}: ${m.content}`
+    })
     .join("\n\n")
 
+  const goodQuestionsSection = goodQuestions.length > 0
+    ? `\n\n## 特に良質な質問（深掘り質問）:\n${goodQuestions.map((q, i) => `${i + 1}. ${q}`).join("\n")}`
+    : ""
+
   const summaryPrompt = `以下のチャット履歴を要約し、学習ノートを作成してください。
+[深掘り質問]とマークされた質問は、因果関係を問う質問や仮説を含む質問など、学習において特に価値のある質問です。
+これらの質問とその回答を優先的にキーポイントに反映してください。
 
 チャット履歴:
-${conversationText}
+${conversationText}${goodQuestionsSection}
 
 以下の形式でJSON形式で回答してください:
 {

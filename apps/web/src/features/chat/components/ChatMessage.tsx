@@ -148,13 +148,21 @@ export const ChatMessageView = ({ message, isStreaming }: Props) => {
               {message.formattedTime}
             </span>
 
-            {/* 良質な質問インジケーター */}
+            {/* 質問の質インジケーター */}
             {message.questionQuality === "good" && (
               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-2xs font-medium bg-jade-100 text-jade-600">
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                 </svg>
-                良質
+                深掘り
+              </span>
+            )}
+            {message.questionQuality === "surface" && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-2xs font-medium bg-amber-100 text-amber-600">
+                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2L2 22h20L12 2zm0 4.5l7.5 13H4.5L12 6.5z" />
+                </svg>
+                確認
               </span>
             )}
           </div>

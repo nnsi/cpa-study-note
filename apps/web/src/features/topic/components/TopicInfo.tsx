@@ -1,5 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { api } from "@/lib/api-client"
+import { useCheckHistory } from "../hooks"
+import type { CheckHistoryItem } from "../api"
 
 type Topic = {
   id: string
@@ -41,8 +43,15 @@ export const TopicInfo = ({ topic, subjectId }: Props) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["topics", topic.id] })
       queryClient.invalidateQueries({ queryKey: ["progress", "me"] })
+      queryClient.invalidateQueries({ queryKey: ["check-history", topic.id] })
     },
   })
+
+  // チェック履歴を取得
+  const { data: historyData, isLoading: isLoadingHistory } = useCheckHistory(
+    subjectId,
+    topic.id
+  )
 
   const isUnderstood = topic.progress?.understood ?? false
 
@@ -84,6 +93,20 @@ export const TopicInfo = ({ topic, subjectId }: Props) => {
           </div>
         </div>
       )}
+
+      {/* チェック履歴タイムライン */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold text-ink-700">チェック履歴</h3>
+        {isLoadingHistory ? (
+          <div className="animate-pulse space-y-2">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="h-10 skeleton rounded" />
+            ))}
+          </div>
+        ) : (
+          <CheckHistoryTimeline history={historyData?.history ?? []} />
+        )}
+      </div>
     </div>
   )
 }
@@ -101,4 +124,90 @@ function formatRelativeTime(dateString: string): string {
   if (diffHours < 24) return `${diffHours}時間前`
   if (diffDays < 7) return `${diffDays}日前`
   return date.toLocaleDateString("ja-JP")
+}
+
+// チェック履歴タイムラインコンポーネント
+const CheckHistoryTimeline = ({ history }: { history: CheckHistoryItem[] }) => {
+  if (history.length === 0) {
+    return (
+      <p className="text-sm text-ink-500 text-center py-2">
+        まだチェック履歴がありません
+      </p>
+    )
+  }
+
+  return (
+    <div className="relative">
+      {/* タイムラインの縦線 */}
+      <div className="absolute left-3 top-2 bottom-2 w-0.5 bg-ink-200" />
+
+      <div className="space-y-3">
+        {history.map((item) => {
+          const isChecked = item.action === "checked"
+          const date = new Date(item.checkedAt)
+
+          return (
+            <div key={item.id} className="relative flex items-start gap-3 pl-1">
+              {/* ドットインジケーター */}
+              <div
+                className={`relative z-10 flex-shrink-0 size-5 rounded-full flex items-center justify-center ${
+                  isChecked
+                    ? "bg-jade-100 text-jade-600"
+                    : "bg-ink-100 text-ink-500"
+                }`}
+              >
+                {isChecked ? (
+                  <svg
+                    className="size-3"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={3}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="m4.5 12.75 6 6 9-13.5"
+                    />
+                  </svg>
+                ) : (
+                  <svg
+                    className="size-3"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                )}
+              </div>
+
+              {/* 内容 */}
+              <div className="flex-1 min-w-0 pt-0.5">
+                <p className={`text-sm font-medium ${
+                  isChecked ? "text-jade-700" : "text-ink-600"
+                }`}>
+                  {isChecked ? "理解済みにチェック" : "チェックを外す"}
+                </p>
+                <p className="text-xs text-ink-500 mt-0.5">
+                  {date.toLocaleDateString("ja-JP", {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </p>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
 }

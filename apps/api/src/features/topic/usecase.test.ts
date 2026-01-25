@@ -12,6 +12,8 @@ import {
   updateProgress,
   listUserProgress,
   getSubjectProgressStats,
+  getCheckHistory,
+  filterTopics,
 } from "./usecase"
 
 // テストデータ生成ヘルパー
@@ -66,6 +68,15 @@ const createMockProgress = (overrides = {}) => ({
   ...overrides,
 })
 
+const createMockCheckHistory = (overrides = {}) => ({
+  id: "history-1",
+  userId: "user-1",
+  topicId: "topic-1",
+  action: "checked" as const,
+  checkedAt: createMockDate(),
+  ...overrides,
+})
+
 // モックリポジトリファクトリ
 const createMockRepo = (overrides: Partial<TopicRepository> = {}): TopicRepository => ({
   findAllSubjects: vi.fn().mockResolvedValue([]),
@@ -81,6 +92,10 @@ const createMockRepo = (overrides: Partial<TopicRepository> = {}): TopicReposito
   findProgressByUser: vi.fn().mockResolvedValue([]),
   getProgressCountsByCategory: vi.fn().mockResolvedValue([]),
   getProgressCountsBySubject: vi.fn().mockResolvedValue([]),
+  findRecentTopics: vi.fn().mockResolvedValue([]),
+  createCheckHistory: vi.fn().mockResolvedValue(createMockCheckHistory()),
+  findCheckHistoryByTopic: vi.fn().mockResolvedValue([]),
+  findFilteredTopics: vi.fn().mockResolvedValue([]),
   ...overrides,
 })
 
@@ -282,6 +297,7 @@ describe("Topic UseCase", () => {
     it("理解フラグをtrueに更新する（understood）", async () => {
       const updatedProgress = createMockProgress({ understood: true })
       const repo = createMockRepo({
+        findProgress: vi.fn().mockResolvedValue(null),
         upsertProgress: vi.fn().mockResolvedValue(updatedProgress),
       })
 
@@ -298,6 +314,7 @@ describe("Topic UseCase", () => {
     it("理解フラグをfalseに更新する（struggling）", async () => {
       const updatedProgress = createMockProgress({ understood: false })
       const repo = createMockRepo({
+        findProgress: vi.fn().mockResolvedValue(createMockProgress({ understood: true })),
         upsertProgress: vi.fn().mockResolvedValue(updatedProgress),
       })
 
@@ -319,6 +336,7 @@ describe("Topic UseCase", () => {
         updatedAt: now,
       })
       const repo = createMockRepo({
+        findProgress: vi.fn().mockResolvedValue(null),
         upsertProgress: vi.fn().mockResolvedValue(progress),
       })
 
@@ -326,6 +344,62 @@ describe("Topic UseCase", () => {
 
       expect(result.lastAccessedAt).toBe(now.toISOString())
       expect(result.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T/)
+    })
+
+    it("understood が false から true に変更されたとき履歴を記録する", async () => {
+      const repo = createMockRepo({
+        findProgress: vi.fn().mockResolvedValue(createMockProgress({ understood: false })),
+        upsertProgress: vi.fn().mockResolvedValue(createMockProgress({ understood: true })),
+        createCheckHistory: vi.fn().mockResolvedValue(createMockCheckHistory()),
+      })
+
+      await updateProgress({ repo }, "user-1", "topic-1", true)
+
+      expect(repo.createCheckHistory).toHaveBeenCalledWith({
+        userId: "user-1",
+        topicId: "topic-1",
+        action: "checked",
+      })
+    })
+
+    it("understood が true から false に変更されたとき履歴を記録する", async () => {
+      const repo = createMockRepo({
+        findProgress: vi.fn().mockResolvedValue(createMockProgress({ understood: true })),
+        upsertProgress: vi.fn().mockResolvedValue(createMockProgress({ understood: false })),
+        createCheckHistory: vi.fn().mockResolvedValue(createMockCheckHistory({ action: "unchecked" })),
+      })
+
+      await updateProgress({ repo }, "user-1", "topic-1", false)
+
+      expect(repo.createCheckHistory).toHaveBeenCalledWith({
+        userId: "user-1",
+        topicId: "topic-1",
+        action: "unchecked",
+      })
+    })
+
+    it("understood が変更されないときは履歴を記録しない", async () => {
+      const repo = createMockRepo({
+        findProgress: vi.fn().mockResolvedValue(createMockProgress({ understood: true })),
+        upsertProgress: vi.fn().mockResolvedValue(createMockProgress({ understood: true })),
+        createCheckHistory: vi.fn(),
+      })
+
+      await updateProgress({ repo }, "user-1", "topic-1", true)
+
+      expect(repo.createCheckHistory).not.toHaveBeenCalled()
+    })
+
+    it("understood が undefined のときは履歴を記録しない", async () => {
+      const repo = createMockRepo({
+        findProgress: vi.fn().mockResolvedValue(createMockProgress({ understood: true })),
+        upsertProgress: vi.fn().mockResolvedValue(createMockProgress({ understood: true })),
+        createCheckHistory: vi.fn(),
+      })
+
+      await updateProgress({ repo }, "user-1", "topic-1", undefined)
+
+      expect(repo.createCheckHistory).not.toHaveBeenCalled()
     })
   })
 
@@ -402,6 +476,131 @@ describe("Topic UseCase", () => {
       const result = await getSubjectProgressStats({ repo }, "user-1")
 
       expect(result[0].understoodTopics).toBe(0)
+    })
+  })
+
+  describe("getCheckHistory", () => {
+    it("論点のチェック履歴を時系列で取得する", async () => {
+      const now = new Date()
+      const historyList = [
+        createMockCheckHistory({ id: "history-1", action: "checked", checkedAt: now }),
+        createMockCheckHistory({ id: "history-2", action: "unchecked", checkedAt: new Date(now.getTime() + 1000) }),
+      ]
+      const repo = createMockRepo({
+        findCheckHistoryByTopic: vi.fn().mockResolvedValue(historyList),
+      })
+
+      const result = await getCheckHistory({ repo }, "user-1", "topic-1")
+
+      expect(result).toHaveLength(2)
+      expect(result[0].id).toBe("history-1")
+      expect(result[0].action).toBe("checked")
+      expect(result[0].checkedAt).toBe(now.toISOString())
+      expect(result[1].action).toBe("unchecked")
+    })
+
+    it("履歴がない場合は空配列を返す", async () => {
+      const repo = createMockRepo({
+        findCheckHistoryByTopic: vi.fn().mockResolvedValue([]),
+      })
+
+      const result = await getCheckHistory({ repo }, "user-1", "topic-1")
+
+      expect(result).toEqual([])
+    })
+
+    it("repoのfindCheckHistoryByTopicを正しく呼び出す", async () => {
+      const repo = createMockRepo({
+        findCheckHistoryByTopic: vi.fn().mockResolvedValue([]),
+      })
+
+      await getCheckHistory({ repo }, "user-1", "topic-1")
+
+      expect(repo.findCheckHistoryByTopic).toHaveBeenCalledWith("user-1", "topic-1")
+    })
+  })
+
+  describe("filterTopics", () => {
+    const createMockFilteredTopic = (overrides = {}) => ({
+      id: "topic-1",
+      name: "有価証券",
+      subjectId: "subject-1",
+      subjectName: "財務会計論",
+      sessionCount: 3,
+      lastChatAt: new Date(),
+      understood: true,
+      goodQuestionCount: 2,
+      lastCheckedAt: new Date(),
+      ...overrides,
+    })
+
+    it("フィルタ済み論点一覧を取得する", async () => {
+      const mockTopics = [
+        createMockFilteredTopic({ id: "topic-1", sessionCount: 5 }),
+        createMockFilteredTopic({ id: "topic-2", sessionCount: 2 }),
+      ]
+      const repo = createMockRepo({
+        findFilteredTopics: vi.fn().mockResolvedValue(mockTopics),
+      })
+
+      const result = await filterTopics({ repo }, "user-1", {})
+
+      expect(result).toHaveLength(2)
+      expect(result[0].id).toBe("topic-1")
+      expect(result[0].sessionCount).toBe(5)
+    })
+
+    it("lastChatAt を ISO形式に変換する", async () => {
+      const now = new Date()
+      const mockTopics = [createMockFilteredTopic({ lastChatAt: now })]
+      const repo = createMockRepo({
+        findFilteredTopics: vi.fn().mockResolvedValue(mockTopics),
+      })
+
+      const result = await filterTopics({ repo }, "user-1", {})
+
+      expect(result[0].lastChatAt).toBe(now.toISOString())
+    })
+
+    it("lastChatAt が null の場合は null を返す", async () => {
+      const mockTopics = [createMockFilteredTopic({ lastChatAt: null })]
+      const repo = createMockRepo({
+        findFilteredTopics: vi.fn().mockResolvedValue(mockTopics),
+      })
+
+      const result = await filterTopics({ repo }, "user-1", {})
+
+      expect(result[0].lastChatAt).toBeNull()
+    })
+
+    it("understood を boolean に変換する", async () => {
+      const mockTopics = [
+        createMockFilteredTopic({ id: "topic-1", understood: 1 as any }),
+        createMockFilteredTopic({ id: "topic-2", understood: 0 as any }),
+      ]
+      const repo = createMockRepo({
+        findFilteredTopics: vi.fn().mockResolvedValue(mockTopics),
+      })
+
+      const result = await filterTopics({ repo }, "user-1", {})
+
+      expect(result[0].understood).toBe(true)
+      expect(result[1].understood).toBe(false)
+    })
+
+    it("フィルタパラメータをリポジトリに渡す", async () => {
+      const repo = createMockRepo({
+        findFilteredTopics: vi.fn().mockResolvedValue([]),
+      })
+      const filters = {
+        minSessionCount: 3,
+        understood: true,
+        minGoodQuestionCount: 2,
+      }
+
+      await filterTopics({ repo }, "user-1", filters)
+
+      expect(repo.findFilteredTopics).toHaveBeenCalledWith("user-1", filters)
     })
   })
 })

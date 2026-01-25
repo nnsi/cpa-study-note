@@ -57,6 +57,8 @@ export const createSession = async (
 
 type SessionWithStats = SessionResponse & {
   messageCount: number
+  goodCount: number
+  surfaceCount: number
 }
 
 // セッション一覧取得（メッセージが1件以上あるセッションのみ）
@@ -69,12 +71,17 @@ export const listSessionsByTopic = async (
 
   const sessionsWithStats = await Promise.all(
     sessions.map(async (session) => {
-      const messageCount = await deps.chatRepo.getSessionMessageCount(session.id)
+      const [messageCount, qualityStats] = await Promise.all([
+        deps.chatRepo.getSessionMessageCount(session.id),
+        deps.chatRepo.getSessionQualityStats(session.id),
+      ])
       return {
         ...session,
         createdAt: session.createdAt.toISOString(),
         updatedAt: session.updatedAt.toISOString(),
         messageCount,
+        goodCount: qualityStats.goodCount,
+        surfaceCount: qualityStats.surfaceCount,
       }
     })
   )

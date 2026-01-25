@@ -38,12 +38,19 @@ export const ChatContainer = ({ sessionId, topicId, onSessionCreated, onNavigate
               この論点について質問してみましょう
             </h3>
             <p className="text-sm text-ink-500 text-center max-w-xs">
-              良質な質問をすると
+              深い質問には
               <span className="inline-flex items-center mx-1 px-1.5 py-0.5 bg-jade-100 text-jade-600 rounded text-xs font-medium">
                 <svg className="w-3 h-3 mr-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                 </svg>
-                良質
+                深掘り
+              </span>
+              確認には
+              <span className="inline-flex items-center mx-1 px-1.5 py-0.5 bg-amber-100 text-amber-600 rounded text-xs font-medium">
+                <svg className="w-3 h-3 mr-0.5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2L2 22h20L12 2zm0 4.5l7.5 13H4.5L12 6.5z" />
+                </svg>
+                確認
               </span>
               マークがつきます
             </p>

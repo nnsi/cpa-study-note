@@ -1,6 +1,8 @@
 import { useState } from "react"
 import { Link } from "@tanstack/react-router"
+import { useQuery } from "@tanstack/react-query"
 import { useNotesByTopic, useRefreshNote } from "../hooks"
+import { api } from "@/lib/api-client"
 
 type Note = {
   id: string
@@ -12,6 +14,51 @@ type Note = {
   createdAt: string
 }
 
+type ChatMessage = {
+  id: string
+  sessionId: string
+  role: string
+  content: string
+  questionQuality: "good" | "surface" | null
+  createdAt: string
+}
+
+// 深掘り質問を取得するカスタムフック
+const useGoodQuestionsByTopic = (sessionIds: string[]) => {
+  return useQuery({
+    queryKey: ["good-questions", ...sessionIds],
+    queryFn: async () => {
+      if (sessionIds.length === 0) return []
+
+      // 各セッションのメッセージを取得
+      const messagePromises = sessionIds.map(async (sessionId) => {
+        try {
+          const res = await api.api.chat.sessions[":sessionId"].messages.$get({
+            param: { sessionId },
+          })
+          if (!res.ok) return []
+          const data = await res.json()
+          return data.messages as ChatMessage[]
+        } catch {
+          return []
+        }
+      })
+
+      const allMessages = await Promise.all(messagePromises)
+
+      // 深掘り質問のみをフィルタ
+      return allMessages
+        .flat()
+        .filter((msg) => msg.role === "user" && msg.questionQuality === "good")
+        .sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        )
+    },
+    enabled: sessionIds.length > 0,
+  })
+}
+
 type Props = {
   topicId: string
 }
@@ -21,6 +68,17 @@ export const TopicNotes = ({ topicId }: Props) => {
   const { mutate: refreshNote, isPending: isRefreshing } = useRefreshNote(topicId)
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null)
   const [refreshingNoteId, setRefreshingNoteId] = useState<string | null>(null)
+  const [showDeepDiveQuestions, setShowDeepDiveQuestions] = useState(false)
+
+  const notes: Note[] = data?.notes || []
+
+  // セッションIDを収集（深掘り質問取得用）
+  const sessionIds = notes
+    .map((note) => note.sessionId)
+    .filter((id): id is string => id !== null)
+
+  const { data: goodQuestions, isLoading: isLoadingQuestions } =
+    useGoodQuestionsByTopic(sessionIds)
 
   if (isLoading) {
     return (
@@ -42,8 +100,6 @@ export const TopicNotes = ({ topicId }: Props) => {
     )
   }
 
-  const notes: Note[] = data?.notes || []
-
   if (notes.length === 0) {
     return (
       <div className="p-4 text-center text-ink-500">
@@ -60,7 +116,81 @@ export const TopicNotes = ({ topicId }: Props) => {
   }
 
   return (
-    <div className="p-4 space-y-3">
+    <div className="p-4 space-y-4">
+      {/* 深掘り質問セクション */}
+      {(goodQuestions?.length ?? 0) > 0 && (
+        <div className="bg-jade-50 border border-jade-200 rounded-xl overflow-hidden">
+          <button
+            onClick={() => setShowDeepDiveQuestions(!showDeepDiveQuestions)}
+            className="w-full p-3 text-left hover:bg-jade-100/50 transition-colors"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="flex items-center justify-center size-6 bg-jade-100 rounded-full">
+                  <svg
+                    className="size-3.5 text-jade-600"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2.5}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="m4.5 12.75 6 6 9-13.5"
+                    />
+                  </svg>
+                </span>
+                <span className="text-sm font-semibold text-jade-800">
+                  深掘りした質問
+                </span>
+                <span className="px-1.5 py-0.5 bg-jade-200 text-jade-700 text-xs font-medium rounded-full">
+                  {goodQuestions?.length ?? 0}件
+                </span>
+              </div>
+              <span className="text-jade-500">
+                {showDeepDiveQuestions ? "▲" : "▼"}
+              </span>
+            </div>
+          </button>
+
+          {showDeepDiveQuestions && (
+            <div className="px-3 pb-3 border-t border-jade-200">
+              {isLoadingQuestions ? (
+                <div className="animate-pulse space-y-2 pt-3">
+                  {[...Array(2)].map((_, i) => (
+                    <div key={i} className="h-12 skeleton rounded" />
+                  ))}
+                </div>
+              ) : (
+                <ul className="divide-y divide-jade-100">
+                  {goodQuestions?.map((question) => (
+                    <li key={question.id} className="py-2.5 first:pt-3">
+                      <p className="text-sm text-jade-900 line-clamp-3">
+                        {question.content}
+                      </p>
+                      <p className="text-xs text-jade-600 mt-1">
+                        {new Date(question.createdAt).toLocaleDateString(
+                          "ja-JP",
+                          {
+                            month: "short",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          }
+                        )}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ノート一覧 */}
+      <div className="space-y-3">
       {notes.map((note) => {
         const isExpanded = expandedNoteId === note.id
 
@@ -191,6 +321,7 @@ export const TopicNotes = ({ topicId }: Props) => {
           </div>
         )
       })}
+      </div>
     </div>
   )
 }

@@ -84,3 +84,63 @@ export const topicWithProgressSchema = topicSchema.extend({
 })
 
 export type TopicWithProgress = z.infer<typeof topicWithProgressSchema>
+
+// TopicCheckHistory schemas
+export const checkActionSchema = z.enum(["checked", "unchecked"])
+export type CheckAction = z.infer<typeof checkActionSchema>
+
+export const topicCheckHistorySchema = z.object({
+  id: z.string(),
+  topicId: z.string(),
+  userId: z.string(),
+  action: checkActionSchema,
+  checkedAt: z.string().datetime(),
+})
+
+export type TopicCheckHistory = z.infer<typeof topicCheckHistorySchema>
+
+// Response schema for check history API
+export const topicCheckHistoryResponseSchema = z.object({
+  id: z.string(),
+  action: checkActionSchema,
+  checkedAt: z.string().datetime(),
+})
+
+export type TopicCheckHistoryResponse = z.infer<typeof topicCheckHistoryResponseSchema>
+
+// Filter schemas
+export const topicFilterRequestSchema = z.object({
+  minSessionCount: z.coerce.number().int().min(0).optional(),
+  daysSinceLastChat: z.coerce.number().int().min(0).optional(),
+  understood: z
+    .enum(["true", "false"])
+    .transform((v) => v === "true")
+    .optional(),
+  hasPostCheckChat: z
+    .enum(["true", "false"])
+    .transform((v) => v === "true")
+    .optional(),
+  minGoodQuestionCount: z.coerce.number().int().min(0).optional(),
+})
+
+export type TopicFilterRequest = z.input<typeof topicFilterRequestSchema>
+
+export const filteredTopicSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  categoryId: z.string(),
+  subjectId: z.string(),
+  subjectName: z.string(),
+  sessionCount: z.number(),
+  lastChatAt: z.string().datetime().nullable(),
+  understood: z.boolean(),
+  goodQuestionCount: z.number(),
+})
+
+export type FilteredTopic = z.infer<typeof filteredTopicSchema>
+
+export const topicFilterResponseSchema = z.object({
+  topics: z.array(filteredTopicSchema),
+})
+
+export type TopicFilterResponse = z.infer<typeof topicFilterResponseSchema>

@@ -86,6 +86,14 @@ type ProgressStatsResponse = {
   }>
 }
 
+type CheckHistoryResponse = {
+  history: Array<{
+    id: string
+    action: "checked" | "unchecked"
+    checkedAt: string
+  }>
+}
+
 type ErrorResponse = {
   error: string
 }
@@ -378,6 +386,345 @@ describe("Topic Routes", () => {
       expect(subjectStats!.subjectName).toBe("財務会計論")
       expect(subjectStats!.totalTopics).toBeGreaterThanOrEqual(1)
       expect(subjectStats!.understoodTopics).toBeGreaterThanOrEqual(1)
+    })
+  })
+
+  describe("GET /subjects/:subjectId/topics/:topicId/check-history - チェック履歴取得", () => {
+    it("チェック履歴を取得できる", async () => {
+      // まず進捗を更新してチェック履歴を作成
+      await app.request(
+        `/subjects/${ctx.testData.subjectId}/topics/${ctx.testData.topicId}/progress`,
+        {
+          method: "PUT",
+          headers: createAuthHeaders(ctx.testData.userId),
+          body: JSON.stringify({ understood: true }),
+        }
+      )
+
+      const res = await app.request(
+        `/subjects/${ctx.testData.subjectId}/topics/${ctx.testData.topicId}/check-history`,
+        {
+          headers: createAuthHeaders(ctx.testData.userId),
+        }
+      )
+
+      expect(res.status).toBe(200)
+      const body = await res.json<CheckHistoryResponse>()
+      expect(body.history).toBeDefined()
+      expect(Array.isArray(body.history)).toBe(true)
+      expect(body.history.length).toBeGreaterThanOrEqual(1)
+      expect(body.history[0].action).toBe("checked")
+      expect(body.history[0].checkedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/)
+    })
+
+    it("チェック・アンチェック両方の履歴が記録される", async () => {
+      // チェック
+      await app.request(
+        `/subjects/${ctx.testData.subjectId}/topics/${ctx.testData.topicId}/progress`,
+        {
+          method: "PUT",
+          headers: createAuthHeaders(ctx.testData.userId),
+          body: JSON.stringify({ understood: true }),
+        }
+      )
+
+      // アンチェック
+      await app.request(
+        `/subjects/${ctx.testData.subjectId}/topics/${ctx.testData.topicId}/progress`,
+        {
+          method: "PUT",
+          headers: createAuthHeaders(ctx.testData.userId),
+          body: JSON.stringify({ understood: false }),
+        }
+      )
+
+      const res = await app.request(
+        `/subjects/${ctx.testData.subjectId}/topics/${ctx.testData.topicId}/check-history`,
+        {
+          headers: createAuthHeaders(ctx.testData.userId),
+        }
+      )
+
+      expect(res.status).toBe(200)
+      const body = await res.json<CheckHistoryResponse>()
+      expect(body.history.length).toBeGreaterThanOrEqual(2)
+
+      // 時系列で並んでいる（最新が先）
+      const actions = body.history.map((h) => h.action)
+      expect(actions).toContain("checked")
+      expect(actions).toContain("unchecked")
+    })
+
+    it("履歴がない場合は空配列を返す", async () => {
+      const res = await app.request(
+        `/subjects/${ctx.testData.subjectId}/topics/${additionalData.topic2Id}/check-history`,
+        {
+          headers: createAuthHeaders(ctx.testData.userId),
+        }
+      )
+
+      expect(res.status).toBe(200)
+      const body = await res.json<CheckHistoryResponse>()
+      expect(body.history).toEqual([])
+    })
+
+    it("他のユーザーの履歴は取得できない", async () => {
+      // テストユーザーでチェック履歴を作成
+      await app.request(
+        `/subjects/${ctx.testData.subjectId}/topics/${ctx.testData.topicId}/progress`,
+        {
+          method: "PUT",
+          headers: createAuthHeaders(ctx.testData.userId),
+          body: JSON.stringify({ understood: true }),
+        }
+      )
+
+      // 別ユーザーで取得（履歴は空のはず）
+      const res = await app.request(
+        `/subjects/${ctx.testData.subjectId}/topics/${ctx.testData.topicId}/check-history`,
+        {
+          headers: createAuthHeaders(additionalData.otherUserId),
+        }
+      )
+
+      expect(res.status).toBe(200)
+      const body = await res.json<CheckHistoryResponse>()
+      expect(body.history).toEqual([])
+    })
+  })
+
+  describe("GET /subjects/filter - 論点フィルタ", () => {
+    type FilterResponse = {
+      topics: Array<{
+        id: string
+        name: string
+        subjectId: string
+        subjectName: string
+        sessionCount: number
+        lastChatAt: string | null
+        understood: boolean
+        goodQuestionCount: number
+      }>
+    }
+
+    it("認証済みユーザーがフィルタ結果を取得できる", async () => {
+      const res = await app.request("/subjects/filter", {
+        headers: createAuthHeaders(ctx.testData.userId),
+      })
+
+      expect(res.status).toBe(200)
+      const body = await res.json<FilterResponse>()
+      expect(body.topics).toBeDefined()
+      expect(Array.isArray(body.topics)).toBe(true)
+    })
+
+    it("understood=true でフィルタできる", async () => {
+      // understood を true に設定
+      createProgressTestData(ctx.db, ctx.testData.userId, ctx.testData.topicId, true)
+      createProgressTestData(ctx.db, ctx.testData.userId, additionalData.topic2Id, false)
+
+      const res = await app.request("/subjects/filter?understood=true", {
+        headers: createAuthHeaders(ctx.testData.userId),
+      })
+
+      expect(res.status).toBe(200)
+      const body = await res.json<FilterResponse>()
+
+      // understood=true の論点のみ
+      for (const topic of body.topics) {
+        expect(topic.understood).toBe(true)
+      }
+    })
+
+    it("understood=false でフィルタできる", async () => {
+      createProgressTestData(ctx.db, ctx.testData.userId, ctx.testData.topicId, true)
+      createProgressTestData(ctx.db, ctx.testData.userId, additionalData.topic2Id, false)
+
+      const res = await app.request("/subjects/filter?understood=false", {
+        headers: createAuthHeaders(ctx.testData.userId),
+      })
+
+      expect(res.status).toBe(200)
+      const body = await res.json<FilterResponse>()
+
+      // understood=false の論点のみ（進捗がないものも含む）
+      for (const topic of body.topics) {
+        expect(topic.understood).toBe(false)
+      }
+    })
+
+    it("minSessionCount でフィルタできる", async () => {
+      // additionalData には sessionId が1件あるはず
+      const res = await app.request("/subjects/filter?minSessionCount=1", {
+        headers: createAuthHeaders(ctx.testData.userId),
+      })
+
+      expect(res.status).toBe(200)
+      const body = await res.json<FilterResponse>()
+
+      // セッションが1件以上の論点のみ
+      for (const topic of body.topics) {
+        expect(topic.sessionCount).toBeGreaterThanOrEqual(1)
+      }
+    })
+
+    it("minGoodQuestionCount でフィルタできる", async () => {
+      const res = await app.request("/subjects/filter?minGoodQuestionCount=1", {
+        headers: createAuthHeaders(ctx.testData.userId),
+      })
+
+      expect(res.status).toBe(200)
+      const body = await res.json<FilterResponse>()
+
+      // goodQuestionCount が1以上の論点のみ
+      for (const topic of body.topics) {
+        expect(topic.goodQuestionCount).toBeGreaterThanOrEqual(1)
+      }
+    })
+
+    it("複数のフィルタを組み合わせられる", async () => {
+      createProgressTestData(ctx.db, ctx.testData.userId, ctx.testData.topicId, true)
+
+      const res = await app.request("/subjects/filter?understood=true&minSessionCount=0", {
+        headers: createAuthHeaders(ctx.testData.userId),
+      })
+
+      expect(res.status).toBe(200)
+      const body = await res.json<FilterResponse>()
+
+      for (const topic of body.topics) {
+        expect(topic.understood).toBe(true)
+        expect(topic.sessionCount).toBeGreaterThanOrEqual(0)
+      }
+    })
+
+    it("レスポンスに必要なフィールドが含まれる", async () => {
+      const res = await app.request("/subjects/filter", {
+        headers: createAuthHeaders(ctx.testData.userId),
+      })
+
+      expect(res.status).toBe(200)
+      const body = await res.json<FilterResponse>()
+
+      if (body.topics.length > 0) {
+        const topic = body.topics[0]
+        expect(topic).toHaveProperty("id")
+        expect(topic).toHaveProperty("name")
+        expect(topic).toHaveProperty("subjectId")
+        expect(topic).toHaveProperty("subjectName")
+        expect(topic).toHaveProperty("sessionCount")
+        expect(topic).toHaveProperty("lastChatAt")
+        expect(topic).toHaveProperty("understood")
+        expect(topic).toHaveProperty("goodQuestionCount")
+      }
+    })
+  })
+
+  describe("GET /subjects/progress/recent - 最近触った論点", () => {
+    type RecentTopicsResponse = {
+      topics: Array<{
+        topicId: string
+        topicName: string
+        subjectId: string
+        subjectName: string
+        categoryId: string
+        lastAccessedAt: string
+      }>
+    }
+
+    it("認証済みユーザーが最近の論点リストを取得できる", async () => {
+      const res = await app.request("/subjects/progress/recent", {
+        headers: createAuthHeaders(ctx.testData.userId),
+      })
+
+      expect(res.status).toBe(200)
+      const body = await res.json<RecentTopicsResponse>()
+      expect(body.topics).toBeDefined()
+      expect(Array.isArray(body.topics)).toBe(true)
+    })
+
+    it("lastAccessedAt でソートされた論点が返る", async () => {
+      // 論点にアクセスして lastAccessedAt を設定
+      await app.request(
+        `/subjects/${ctx.testData.subjectId}/topics/${ctx.testData.topicId}`,
+        {
+          headers: createAuthHeaders(ctx.testData.userId),
+        }
+      )
+
+      // 少し待ってから別の論点にアクセス
+      await new Promise((resolve) => setTimeout(resolve, 10))
+      await app.request(
+        `/subjects/${ctx.testData.subjectId}/topics/${additionalData.topic2Id}`,
+        {
+          headers: createAuthHeaders(ctx.testData.userId),
+        }
+      )
+
+      const res = await app.request("/subjects/progress/recent", {
+        headers: createAuthHeaders(ctx.testData.userId),
+      })
+
+      expect(res.status).toBe(200)
+      const body = await res.json<RecentTopicsResponse>()
+      expect(body.topics.length).toBeGreaterThanOrEqual(2)
+
+      // lastAccessedAt が降順になっているか確認
+      for (let i = 1; i < body.topics.length; i++) {
+        const prev = new Date(body.topics[i - 1].lastAccessedAt)
+        const curr = new Date(body.topics[i].lastAccessedAt)
+        expect(prev.getTime()).toBeGreaterThanOrEqual(curr.getTime())
+      }
+    })
+
+    it("レスポンスに必要なフィールドが含まれる", async () => {
+      // 論点にアクセス
+      await app.request(
+        `/subjects/${ctx.testData.subjectId}/topics/${ctx.testData.topicId}`,
+        {
+          headers: createAuthHeaders(ctx.testData.userId),
+        }
+      )
+
+      const res = await app.request("/subjects/progress/recent", {
+        headers: createAuthHeaders(ctx.testData.userId),
+      })
+
+      expect(res.status).toBe(200)
+      const body = await res.json<RecentTopicsResponse>()
+
+      if (body.topics.length > 0) {
+        const topic = body.topics[0]
+        expect(topic).toHaveProperty("topicId")
+        expect(topic).toHaveProperty("topicName")
+        expect(topic).toHaveProperty("subjectId")
+        expect(topic).toHaveProperty("subjectName")
+        expect(topic).toHaveProperty("categoryId")
+        expect(topic).toHaveProperty("lastAccessedAt")
+        expect(topic.lastAccessedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/)
+      }
+    })
+
+    it("アクセス履歴がない場合は空配列を返す", async () => {
+      // 新しいユーザーでアクセス
+      const res = await app.request("/subjects/progress/recent", {
+        headers: createAuthHeaders(additionalData.otherUserId),
+      })
+
+      expect(res.status).toBe(200)
+      const body = await res.json<RecentTopicsResponse>()
+      expect(body.topics).toEqual([])
+    })
+
+    it("production環境で未認証の場合は401を返す", async () => {
+      // production環境用のappを作成
+      const prodEnv = { ...ctx.env, ENVIRONMENT: "production" as const }
+      const prodApp = new Hono<{ Bindings: Env; Variables: Variables }>()
+      prodApp.route("/subjects", topicRoutes({ env: prodEnv, db: ctx.db as any }))
+
+      const res = await prodApp.request("/subjects/progress/recent", {}, prodEnv)
+
+      expect(res.status).toBe(401)
     })
   })
 })

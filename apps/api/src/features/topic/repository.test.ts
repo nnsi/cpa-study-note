@@ -437,4 +437,164 @@ describe("TopicRepository", () => {
       expect(stats.topicCount).toBe(3)
     })
   })
+
+  describe("createCheckHistory", () => {
+    it("should create a new check history record", async () => {
+      const history = await repository.createCheckHistory({
+        userId: testData.userId,
+        topicId: testData.topicId,
+        action: "checked",
+      })
+
+      expect(history.id).toBeDefined()
+      expect(history.userId).toBe(testData.userId)
+      expect(history.topicId).toBe(testData.topicId)
+      expect(history.action).toBe("checked")
+      expect(history.checkedAt).toBeInstanceOf(Date)
+    })
+
+    it("should create unchecked history record", async () => {
+      const history = await repository.createCheckHistory({
+        userId: testData.userId,
+        topicId: testData.topicId,
+        action: "unchecked",
+      })
+
+      expect(history.action).toBe("unchecked")
+    })
+
+    it("should allow multiple history records for same topic", async () => {
+      await repository.createCheckHistory({
+        userId: testData.userId,
+        topicId: testData.topicId,
+        action: "checked",
+      })
+
+      await repository.createCheckHistory({
+        userId: testData.userId,
+        topicId: testData.topicId,
+        action: "unchecked",
+      })
+
+      const historyList = await repository.findCheckHistoryByTopic(
+        testData.userId,
+        testData.topicId
+      )
+
+      expect(historyList.length).toBe(2)
+    })
+  })
+
+  describe("findCheckHistoryByTopic", () => {
+    it("should return history records for specific user and topic", async () => {
+      await repository.createCheckHistory({
+        userId: testData.userId,
+        topicId: testData.topicId,
+        action: "checked",
+      })
+
+      const historyList = await repository.findCheckHistoryByTopic(
+        testData.userId,
+        testData.topicId
+      )
+
+      expect(historyList.length).toBe(1)
+      expect(historyList[0].userId).toBe(testData.userId)
+      expect(historyList[0].topicId).toBe(testData.topicId)
+    })
+
+    it("should return history ordered by checkedAt descending (newest first)", async () => {
+      await repository.createCheckHistory({
+        userId: testData.userId,
+        topicId: testData.topicId,
+        action: "checked",
+      })
+
+      // SQLiteのタイムスタンプ精度の問題を回避するため十分な時間を空ける
+      await new Promise((resolve) => setTimeout(resolve, 1100))
+
+      await repository.createCheckHistory({
+        userId: testData.userId,
+        topicId: testData.topicId,
+        action: "unchecked",
+      })
+
+      const historyList = await repository.findCheckHistoryByTopic(
+        testData.userId,
+        testData.topicId
+      )
+
+      expect(historyList.length).toBe(2)
+      // 最新（unchecked）が先
+      expect(historyList[0].action).toBe("unchecked")
+      expect(historyList[1].action).toBe("checked")
+      expect(historyList[0].checkedAt.getTime()).toBeGreaterThanOrEqual(
+        historyList[1].checkedAt.getTime()
+      )
+    })
+
+    it("should return empty array when no history exists", async () => {
+      const historyList = await repository.findCheckHistoryByTopic(
+        testData.userId,
+        testData.topicId
+      )
+
+      expect(historyList).toHaveLength(0)
+    })
+
+    it("should not return other user's history", async () => {
+      const now = new Date()
+      // 別ユーザーを作成
+      db.insert(schema.users)
+        .values({
+          id: "other-user",
+          email: "other@example.com",
+          name: "Other User",
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run()
+
+      await repository.createCheckHistory({
+        userId: "other-user",
+        topicId: testData.topicId,
+        action: "checked",
+      })
+
+      const historyList = await repository.findCheckHistoryByTopic(
+        testData.userId,
+        testData.topicId
+      )
+
+      expect(historyList).toHaveLength(0)
+    })
+
+    it("should not return history for other topics", async () => {
+      const now = new Date()
+      // 別の論点を作成
+      db.insert(schema.topics)
+        .values({
+          id: "other-topic",
+          categoryId: testData.categoryId,
+          name: "別の論点",
+          displayOrder: 10,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run()
+
+      await repository.createCheckHistory({
+        userId: testData.userId,
+        topicId: "other-topic",
+        action: "checked",
+      })
+
+      const historyList = await repository.findCheckHistoryByTopic(
+        testData.userId,
+        testData.topicId
+      )
+
+      expect(historyList).toHaveLength(0)
+    })
+  })
 })

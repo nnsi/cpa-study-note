@@ -131,6 +131,26 @@ export const createTestDatabase = (): {
       ocr_text TEXT,
       created_at INTEGER NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS topic_check_history (
+      id TEXT PRIMARY KEY NOT NULL,
+      topic_id TEXT NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      action TEXT NOT NULL,
+      checked_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS metric_snapshots (
+      id TEXT PRIMARY KEY NOT NULL,
+      date TEXT NOT NULL,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      checked_topic_count INTEGER NOT NULL DEFAULT 0,
+      session_count INTEGER NOT NULL DEFAULT 0,
+      message_count INTEGER NOT NULL DEFAULT 0,
+      good_question_count INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      UNIQUE(date, user_id)
+    );
   `)
 
   const db = drizzle(sqlite, { schema })

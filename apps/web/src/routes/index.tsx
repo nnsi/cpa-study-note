@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { useAuthStore } from "@/lib/auth"
 import { ProgressStats } from "@/features/progress"
+import { MiniMetricsChart } from "@/features/metrics"
+import { TodayActivityCard, RecentTopicsList } from "@/features/home"
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -99,8 +101,14 @@ function DashboardPage({ user }: { user: User | null }) {
         <p className="text-ink-600">今日も学習を頑張りましょう</p>
       </div>
 
-      {/* クイックアクセス */}
+      {/* 今日の活動 + 最近の論点 */}
       <div className="grid gap-4 md:grid-cols-2">
+        <TodayActivityCard />
+        <RecentTopicsList />
+      </div>
+
+      {/* クイックアクセス */}
+      <div className="grid gap-4 md:grid-cols-3">
         <QuickAccessCard
           to="/subjects"
           icon={
@@ -111,6 +119,18 @@ function DashboardPage({ user }: { user: User | null }) {
           title="論点マップ"
           description="科目・論点を選んで学習"
           accentColor="indigo"
+        />
+
+        <QuickAccessCard
+          to="/review"
+          icon={
+            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z" />
+            </svg>
+          }
+          title="論点フィルタ"
+          description="復習が必要な論点を抽出"
+          accentColor="jade"
         />
 
         <QuickAccessCard
@@ -134,6 +154,15 @@ function DashboardPage({ user }: { user: User | null }) {
         </div>
         <ProgressStats />
       </section>
+
+      {/* 日次推移グラフ（簡易版） */}
+      <section>
+        <div className="flex items-center gap-3 mb-4">
+          <h2 className="heading-serif text-xl">学習推移</h2>
+          <div className="flex-1 divider" />
+        </div>
+        <MiniMetricsChart />
+      </section>
     </div>
   )
 }
@@ -150,7 +179,7 @@ function QuickAccessCard({
   icon: React.ReactNode
   title: string
   description: string
-  accentColor: "indigo" | "amber"
+  accentColor: "indigo" | "amber" | "jade"
 }) {
   const colorClasses = {
     indigo: {
@@ -162,6 +191,11 @@ function QuickAccessCard({
       bg: "bg-amber-50",
       text: "text-amber-600",
       gradient: "from-amber-500/10 to-transparent",
+    },
+    jade: {
+      bg: "bg-jade-100",
+      text: "text-jade-600",
+      gradient: "from-jade-500/10 to-transparent",
     },
   }
 

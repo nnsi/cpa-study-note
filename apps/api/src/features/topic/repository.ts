@@ -1,11 +1,23 @@
-import { eq, and, sql } from "drizzle-orm"
+import { eq, and, sql, desc, gte, lte, gt } from "drizzle-orm"
 import type { Db } from "@cpa-study/db"
 import {
   subjects,
   categories,
   topics,
   userTopicProgress,
+  topicCheckHistory,
+  chatSessions,
+  chatMessages,
 } from "@cpa-study/db/schema"
+
+export type RecentTopicRow = {
+  topicId: string
+  topicName: string
+  subjectId: string
+  subjectName: string
+  categoryId: string
+  lastAccessedAt: Date
+}
 
 export type TopicRepository = {
   // Subjects
@@ -31,6 +43,20 @@ export type TopicRepository = {
     subjectId: string
   ) => Promise<CategoryProgressCount[]>
   getProgressCountsBySubject: (userId: string) => Promise<SubjectProgressCount[]>
+  findRecentTopics: (userId: string, limit: number) => Promise<RecentTopicRow[]>
+
+  // Check History
+  createCheckHistory: (history: CreateCheckHistory) => Promise<CheckHistoryRecord>
+  findCheckHistoryByTopic: (
+    userId: string,
+    topicId: string
+  ) => Promise<CheckHistoryRecord[]>
+
+  // Filter
+  findFilteredTopics: (
+    userId: string,
+    filters: TopicFilterParams
+  ) => Promise<FilteredTopicRow[]>
 }
 
 type SubjectProgressCount = {
@@ -104,6 +130,41 @@ type UpsertProgress = {
   understood?: boolean
   incrementQuestionCount?: boolean
   incrementGoodQuestionCount?: boolean
+}
+
+type CheckHistoryRecord = {
+  id: string
+  topicId: string
+  userId: string
+  action: "checked" | "unchecked"
+  checkedAt: Date
+}
+
+type CreateCheckHistory = {
+  userId: string
+  topicId: string
+  action: "checked" | "unchecked"
+}
+
+export type TopicFilterParams = {
+  minSessionCount?: number
+  daysSinceLastChat?: number
+  understood?: boolean
+  hasPostCheckChat?: boolean
+  minGoodQuestionCount?: number
+}
+
+export type FilteredTopicRow = {
+  id: string
+  name: string
+  categoryId: string
+  subjectId: string
+  subjectName: string
+  sessionCount: number
+  lastChatAt: Date | null
+  understood: boolean
+  goodQuestionCount: number
+  lastCheckedAt: Date | null
 }
 
 export const createTopicRepository = (db: Db): TopicRepository => ({
@@ -301,5 +362,202 @@ export const createTopicRepository = (db: Db): TopicRepository => ({
       .groupBy(categories.subjectId)
 
     return result
+  },
+
+  findRecentTopics: async (userId, limit) => {
+    const result = await db
+      .select({
+        topicId: topics.id,
+        topicName: topics.name,
+        subjectId: subjects.id,
+        subjectName: subjects.name,
+        categoryId: categories.id,
+        lastAccessedAt: userTopicProgress.lastAccessedAt,
+      })
+      .from(userTopicProgress)
+      .innerJoin(topics, eq(userTopicProgress.topicId, topics.id))
+      .innerJoin(categories, eq(topics.categoryId, categories.id))
+      .innerJoin(subjects, eq(categories.subjectId, subjects.id))
+      .where(
+        and(
+          eq(userTopicProgress.userId, userId),
+          gt(userTopicProgress.lastAccessedAt, new Date(0))
+        )
+      )
+      .orderBy(desc(userTopicProgress.lastAccessedAt))
+      .limit(limit)
+
+    return result.filter((r) => r.lastAccessedAt !== null) as {
+      topicId: string
+      topicName: string
+      subjectId: string
+      subjectName: string
+      categoryId: string
+      lastAccessedAt: Date
+    }[]
+  },
+
+  createCheckHistory: async (history) => {
+    const id = crypto.randomUUID()
+    const now = new Date()
+
+    const record = {
+      id,
+      topicId: history.topicId,
+      userId: history.userId,
+      action: history.action,
+      checkedAt: now,
+    }
+
+    await db.insert(topicCheckHistory).values(record)
+
+    return record
+  },
+
+  findCheckHistoryByTopic: async (userId, topicId) => {
+    const result = await db
+      .select()
+      .from(topicCheckHistory)
+      .where(
+        and(
+          eq(topicCheckHistory.userId, userId),
+          eq(topicCheckHistory.topicId, topicId)
+        )
+      )
+      .orderBy(desc(topicCheckHistory.checkedAt))
+
+    return result
+  },
+
+  findFilteredTopics: async (userId, filters) => {
+    // セッション数と最終チャット日時のサブクエリ
+    const sessionStatsSubquery = db
+      .select({
+        topicId: chatSessions.topicId,
+        sessionCount: sql<number>`count(distinct ${chatSessions.id})`.as("session_count"),
+        lastChatAt: sql<Date | null>`max(${chatSessions.updatedAt})`.as("last_chat_at"),
+      })
+      .from(chatSessions)
+      .where(eq(chatSessions.userId, userId))
+      .groupBy(chatSessions.topicId)
+      .as("session_stats")
+
+    // 最終チェック日時のサブクエリ（action = 'checked' のもの）
+    const lastCheckedSubquery = db
+      .select({
+        topicId: topicCheckHistory.topicId,
+        lastCheckedAt: sql<Date | null>`max(${topicCheckHistory.checkedAt})`.as("last_checked_at"),
+      })
+      .from(topicCheckHistory)
+      .where(
+        and(
+          eq(topicCheckHistory.userId, userId),
+          eq(topicCheckHistory.action, "checked")
+        )
+      )
+      .groupBy(topicCheckHistory.topicId)
+      .as("last_checked")
+
+    // goodQuestion の集計サブクエリ
+    const goodQuestionSubquery = db
+      .select({
+        topicId: chatSessions.topicId,
+        chatGoodQuestionCount: sql<number>`count(case when ${chatMessages.questionQuality} = 'good' then 1 end)`.as("chat_good_question_count"),
+      })
+      .from(chatSessions)
+      .innerJoin(chatMessages, eq(chatSessions.id, chatMessages.sessionId))
+      .where(eq(chatSessions.userId, userId))
+      .groupBy(chatSessions.topicId)
+      .as("good_questions")
+
+    // メインクエリ
+    const baseQuery = db
+      .select({
+        id: topics.id,
+        name: topics.name,
+        categoryId: topics.categoryId,
+        subjectId: categories.subjectId,
+        subjectName: subjects.name,
+        sessionCount: sql<number>`coalesce(${sessionStatsSubquery.sessionCount}, 0)`,
+        lastChatAt: sessionStatsSubquery.lastChatAt,
+        understood: sql<boolean>`coalesce(${userTopicProgress.understood}, 0)`,
+        goodQuestionCount: sql<number>`coalesce(${goodQuestionSubquery.chatGoodQuestionCount}, 0)`,
+        lastCheckedAt: lastCheckedSubquery.lastCheckedAt,
+      })
+      .from(topics)
+      .innerJoin(categories, eq(topics.categoryId, categories.id))
+      .innerJoin(subjects, eq(categories.subjectId, subjects.id))
+      .leftJoin(
+        userTopicProgress,
+        and(
+          eq(userTopicProgress.topicId, topics.id),
+          eq(userTopicProgress.userId, userId)
+        )
+      )
+      .leftJoin(sessionStatsSubquery, eq(sessionStatsSubquery.topicId, topics.id))
+      .leftJoin(goodQuestionSubquery, eq(goodQuestionSubquery.topicId, topics.id))
+      .leftJoin(lastCheckedSubquery, eq(lastCheckedSubquery.topicId, topics.id))
+
+    // 結果を取得
+    const results = await baseQuery
+
+    // アプリケーションレベルでフィルタリング
+    return results.filter((row) => {
+      // minSessionCount フィルタ
+      if (
+        filters.minSessionCount !== undefined &&
+        row.sessionCount < filters.minSessionCount
+      ) {
+        return false
+      }
+
+      // daysSinceLastChat フィルタ
+      if (filters.daysSinceLastChat !== undefined && row.lastChatAt) {
+        const daysSince = Math.floor(
+          (Date.now() - new Date(row.lastChatAt).getTime()) / (1000 * 60 * 60 * 24)
+        )
+        if (daysSince < filters.daysSinceLastChat) {
+          return false
+        }
+      }
+
+      // daysSinceLastChat フィルタ: チャットがない場合はスキップ（チャットが必要）
+      if (filters.daysSinceLastChat !== undefined && !row.lastChatAt) {
+        return false
+      }
+
+      // understood フィルタ
+      if (filters.understood !== undefined) {
+        const isUnderstood = Boolean(row.understood)
+        if (isUnderstood !== filters.understood) {
+          return false
+        }
+      }
+
+      // hasPostCheckChat フィルタ: チェック後にチャットがあるか
+      if (filters.hasPostCheckChat !== undefined) {
+        const hasChat =
+          row.lastCheckedAt &&
+          row.lastChatAt &&
+          new Date(row.lastChatAt) > new Date(row.lastCheckedAt)
+
+        if (filters.hasPostCheckChat && !hasChat) {
+          return false
+        }
+        if (!filters.hasPostCheckChat && hasChat) {
+          return false
+        }
+      }
+
+      // minGoodQuestionCount フィルタ
+      if (
+        filters.minGoodQuestionCount !== undefined &&
+        row.goodQuestionCount < filters.minGoodQuestionCount
+      ) {
+        return false
+      }
+
+      return true
+    })
   },
 })
