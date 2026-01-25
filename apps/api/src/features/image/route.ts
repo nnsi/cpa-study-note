@@ -11,6 +11,7 @@ import {
   uploadImage,
   performOCR,
   getImage,
+  getImageFile,
 } from "./usecase"
 
 // 10MB制限
@@ -103,6 +104,29 @@ export const imageRoutes = ({ env, db }: ImageDeps) => {
       }
 
       return c.json({ image: result.image })
+    })
+
+    // 画像ファイル取得（バイナリ）
+    .get("/:imageId/file", authMiddleware, async (c) => {
+      const user = c.get("user")
+      const imageId = c.req.param("imageId")
+
+      const result = await getImageFile(
+        { imageRepo, r2: env.R2 },
+        user.id,
+        imageId
+      )
+
+      if (!result.ok) {
+        return c.json({ error: result.error }, result.status as 404 | 403)
+      }
+
+      return new Response(result.body, {
+        headers: {
+          "Content-Type": result.mimeType,
+          "Cache-Control": "private, max-age=3600",
+        },
+      })
     })
 
   return app

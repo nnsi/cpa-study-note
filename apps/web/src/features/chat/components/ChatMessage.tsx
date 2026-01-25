@@ -1,5 +1,8 @@
+import { useState } from "react"
 import Markdown, { type Components } from "react-markdown"
 import type { DisplayMessage } from "../logic"
+
+const API_URL = import.meta.env.VITE_API_URL || ""
 
 // マークダウンコンポーネントのカスタム設定
 const markdownComponents: Components = {
@@ -45,8 +48,46 @@ type Props = {
   isStreaming?: boolean
 }
 
+// 画像プレビューモーダル
+const ImagePreviewModal = ({
+  imageUrl,
+  onClose,
+}: {
+  imageUrl: string
+  onClose: () => void
+}) => (
+  <div
+    className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+    onClick={onClose}
+  >
+    <div className="relative max-w-4xl max-h-[90vh]">
+      <img
+        src={imageUrl}
+        alt="プレビュー"
+        className="max-w-full max-h-[90vh] object-contain rounded-lg"
+        crossOrigin="use-credentials"
+        onClick={(e) => e.stopPropagation()}
+      />
+      <button
+        onClick={onClose}
+        className="absolute -top-3 -right-3 size-8 bg-white rounded-full shadow-lg flex items-center justify-center text-ink-600 hover:text-ink-800 transition-colors"
+      >
+        <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+  </div>
+)
+
 export const ChatMessageView = ({ message, isStreaming }: Props) => {
   const isUser = message.isUser
+  const [showPreview, setShowPreview] = useState(false)
+
+  // 画像URLを生成
+  const imageUrl = message.imageId
+    ? `${API_URL}/api/images/${message.imageId}/file`
+    : null
 
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} animate-fade-in-up`}>
@@ -69,6 +110,22 @@ export const ChatMessageView = ({ message, isStreaming }: Props) => {
             : "chat-bubble-ai"
         }`}
       >
+        {/* 添付画像 */}
+        {imageUrl && isUser && (
+          <button
+            type="button"
+            onClick={() => setShowPreview(true)}
+            className="mb-2 block rounded-lg overflow-hidden border border-white/20 hover:opacity-90 transition-opacity"
+          >
+            <img
+              src={imageUrl}
+              alt="添付画像"
+              className="max-w-full max-h-48 object-contain bg-white/10"
+              crossOrigin="use-credentials"
+            />
+          </button>
+        )}
+
         {/* メッセージ本文 */}
         {isUser ? (
           <div className="whitespace-pre-wrap break-words leading-relaxed text-white">
@@ -122,6 +179,14 @@ export const ChatMessageView = ({ message, isStreaming }: Props) => {
             </svg>
           </div>
         </div>
+      )}
+
+      {/* 画像プレビューモーダル */}
+      {showPreview && imageUrl && (
+        <ImagePreviewModal
+          imageUrl={imageUrl}
+          onClose={() => setShowPreview(false)}
+        />
       )}
     </div>
   )

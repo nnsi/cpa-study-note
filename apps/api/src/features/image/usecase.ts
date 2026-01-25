@@ -25,6 +25,18 @@ export const validateMagicBytes = (buffer: ArrayBuffer, mimeType: string): boole
   return expected.every((b, i) => bytes[i] === b)
 }
 
+// ArrayBufferをBase64に変換（チャンク処理でスタックオーバーフロー防止）
+const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
+  const bytes = new Uint8Array(buffer)
+  let binary = ""
+  const chunkSize = 0x8000 // 32KB chunks
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize)
+    binary += String.fromCharCode.apply(null, Array.from(chunk))
+  }
+  return btoa(binary)
+}
+
 type ImageDeps = {
   imageRepo: ImageRepository
   aiAdapter: AIAdapter
@@ -155,7 +167,7 @@ export const performOCR = async (
   }
 
   const arrayBuffer = await object.arrayBuffer()
-  const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
+  const base64 = arrayBufferToBase64(arrayBuffer)
   const imageUrl = `data:${image.mimeType};base64,${base64}`
 
   // OCR AI呼び出し
@@ -200,4 +212,33 @@ export const getImage = async (
   }
 
   return { ok: true, image: toImageResponse(image) }
+}
+
+// 画像ファイル取得（バイナリ）
+export const getImageFile = async (
+  deps: Pick<ImageDeps, "imageRepo" | "r2">,
+  userId: string,
+  imageId: string
+): Promise<
+  | { ok: true; body: ArrayBuffer; mimeType: string }
+  | { ok: false; error: string; status: number }
+> => {
+  const { imageRepo, r2 } = deps
+
+  const image = await imageRepo.findById(imageId)
+  if (!image) {
+    return { ok: false, error: "Image not found", status: 404 }
+  }
+
+  if (image.userId !== userId) {
+    return { ok: false, error: "Unauthorized", status: 403 }
+  }
+
+  const object = await r2.get(image.r2Key)
+  if (!object) {
+    return { ok: false, error: "Image file not found", status: 404 }
+  }
+
+  const body = await object.arrayBuffer()
+  return { ok: true, body, mimeType: image.mimeType }
 }
