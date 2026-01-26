@@ -1,9 +1,10 @@
+/// <reference types="@cloudflare/workers-types" />
 import { describe, it, expect, beforeEach, vi } from "vitest"
 import { createTestDatabase, seedTestData, type TestDatabase } from "../../test/mocks/db"
 import { createChatRepository, type ChatRepository } from "./repository"
 import { createTopicRepository, type TopicRepository } from "../topic/repository"
 import { createMockAIAdapter } from "../../test/mocks/ai"
-import type { AIAdapter, StreamChunk } from "@/shared/lib/ai"
+import type { AIAdapter, StreamChunk } from "../../shared/lib/ai"
 import {
   createSession,
   listSessionsByTopic,
@@ -531,13 +532,13 @@ describe("Chat UseCase", () => {
         questionQuality: null,
       })
 
-      const quality = await evaluateQuestion(
+      const result = await evaluateQuestion(
         { chatRepo, topicRepo, aiAdapter: goodAdapter },
         message.id,
         message.content
       )
 
-      expect(quality).toBe("good")
+      expect(result.quality).toBe("good")
 
       // Verify message was updated
       const updated = await chatRepo.findMessageById(message.id)
@@ -563,13 +564,13 @@ describe("Chat UseCase", () => {
         questionQuality: null,
       })
 
-      const quality = await evaluateQuestion(
+      const result = await evaluateQuestion(
         { chatRepo, topicRepo, aiAdapter: surfaceAdapter },
         message.id,
         message.content
       )
 
-      expect(quality).toBe("surface")
+      expect(result.quality).toBe("surface")
 
       // Verify message was updated
       const updated = await chatRepo.findMessageById(message.id)
@@ -595,13 +596,13 @@ describe("Chat UseCase", () => {
         questionQuality: null,
       })
 
-      const quality = await evaluateQuestion(
+      const result = await evaluateQuestion(
         { chatRepo, topicRepo, aiAdapter: ambiguousAdapter },
         message.id,
         message.content
       )
 
-      expect(quality).toBe("surface")
+      expect(result.quality).toBe("surface")
     })
   })
 })

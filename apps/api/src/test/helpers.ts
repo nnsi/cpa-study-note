@@ -1,17 +1,30 @@
+/// <reference types="@cloudflare/workers-types" />
 /**
  * テスト用ヘルパー関数
  */
 import { Hono } from "hono"
+import { z } from "zod"
 import type { Env, Variables } from "@/shared/types/env"
 import { createTestDatabase, TestDatabase, seedTestData } from "./mocks/db"
 import { createMockR2Bucket } from "./mocks/r2"
 import * as schema from "@cpa-study/db/schema"
 
-// レスポンスを型付きでパースするヘルパー
-export const parseJsonResponse = async <T>(res: Response): Promise<T> => {
-  const json = await res.json()
-  return json as T
+// レスポンスをZodスキーマで検証してパースするヘルパー
+export const parseJson = async <T>(res: Response, zodSchema: z.ZodType<T>): Promise<T> => {
+  const json: unknown = await res.json()
+  return zodSchema.parse(json)
 }
+
+// よく使うレスポンススキーマ
+export const errorResponseSchema = z.object({
+  error: z.string(),
+})
+export type ErrorResponse = z.infer<typeof errorResponseSchema>
+
+export const successResponseSchema = z.object({
+  success: z.boolean(),
+})
+export type SuccessResponse = z.infer<typeof successResponseSchema>
 
 // テスト用の環境変数
 export const createTestEnv = (): Env => ({

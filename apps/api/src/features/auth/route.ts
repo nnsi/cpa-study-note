@@ -24,6 +24,7 @@ const generateAccessToken = async (user: User, secret: Uint8Array) => {
     email: user.email,
     name: user.name,
     avatarUrl: user.avatarUrl,
+    timezone: user.timezone,
   })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
@@ -134,6 +135,7 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
           email: user.email,
           name: user.name,
           avatarUrl: user.avatarUrl,
+          timezone: user.timezone,
         },
         jwtSecret
       )
@@ -222,6 +224,7 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
         email: `${devUserId}@example.com`,
         name: "テストユーザー",
         avatarUrl: null,
+        timezone: "Asia/Tokyo",
       }
 
       // Generate tokens (本番と同じフロー)

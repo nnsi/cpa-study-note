@@ -62,32 +62,19 @@ type SessionWithStats = SessionResponse & {
 }
 
 // セッション一覧取得（メッセージが1件以上あるセッションのみ）
+// N+1問題を解消: 1クエリでセッションと統計を取得
 export const listSessionsByTopic = async (
   deps: Pick<ChatDeps, "chatRepo">,
   userId: string,
   topicId: string
 ): Promise<SessionWithStats[]> => {
-  const sessions = await deps.chatRepo.findSessionsByTopic(userId, topicId)
+  const sessions = await deps.chatRepo.findSessionsWithStatsByTopic(userId, topicId)
 
-  const sessionsWithStats = await Promise.all(
-    sessions.map(async (session) => {
-      const [messageCount, qualityStats] = await Promise.all([
-        deps.chatRepo.getSessionMessageCount(session.id),
-        deps.chatRepo.getSessionQualityStats(session.id),
-      ])
-      return {
-        ...session,
-        createdAt: session.createdAt.toISOString(),
-        updatedAt: session.updatedAt.toISOString(),
-        messageCount,
-        goodCount: qualityStats.goodCount,
-        surfaceCount: qualityStats.surfaceCount,
-      }
-    })
-  )
-
-  // メッセージが0件のセッションは除外
-  return sessionsWithStats.filter((s) => s.messageCount > 0)
+  return sessions.map((session) => ({
+    ...session,
+    createdAt: session.createdAt.toISOString(),
+    updatedAt: session.updatedAt.toISOString(),
+  }))
 }
 
 // セッション取得
@@ -402,12 +389,17 @@ export async function* sendMessageWithNewSession(
   yield { type: "done" as const, messageId: userMessage.id }
 }
 
+type QuestionEvaluation = {
+  quality: "good" | "surface"
+  reason: string
+}
+
 export const evaluateQuestion = async (
   deps: ChatDeps,
   messageId: string,
   content: string
-): Promise<"good" | "surface"> => {
-  const evaluationPrompt = `以下のユーザーの質問を評価してください。
+): Promise<QuestionEvaluation> => {
+  const evaluationPrompt = `以下のユーザーの質問を評価し、JSON形式で回答してください。
 
 質問: ${content}
 
@@ -415,18 +407,34 @@ export const evaluateQuestion = async (
 - "good": 因果関係を問う質問、前提を明示している、仮説が含まれている
 - "surface": 単純な確認、表層的な質問
 
-回答は "good" または "surface" のみを返してください。`
+以下のJSON形式で回答してください（JSONのみ、他の文字は不要）:
+{"quality": "good" または "surface", "reason": "判定理由（日本語で簡潔に）"}`
 
   const result = await deps.aiAdapter.generateText({
     model: AI_MODEL,
     messages: [{ role: "user", content: evaluationPrompt }],
     temperature: 0,
-    maxTokens: 10,
+    maxTokens: 100,
   })
 
-  const quality = result.content.toLowerCase().includes("good") ? "good" : "surface"
+  // JSONパース（コードブロックの除去も対応）
+  let quality: "good" | "surface" = "surface"
+  let reason = ""
+  try {
+    const jsonStr = result.content
+      .replace(/```json\s*/g, "")
+      .replace(/```\s*/g, "")
+      .trim()
+    const parsed = JSON.parse(jsonStr) as { quality?: string; reason?: string }
+    quality = parsed.quality?.toLowerCase().includes("good") ? "good" : "surface"
+    reason = parsed.reason ?? ""
+  } catch {
+    // パースに失敗した場合はシンプルな判定にフォールバック
+    quality = result.content.toLowerCase().includes("good") ? "good" : "surface"
+    reason = ""
+  }
 
-  await deps.chatRepo.updateMessageQuality(messageId, quality)
+  await deps.chatRepo.updateMessageQuality(messageId, quality, reason)
 
-  return quality
+  return { quality, reason }
 }

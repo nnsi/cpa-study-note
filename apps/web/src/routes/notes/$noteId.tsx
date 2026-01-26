@@ -13,7 +13,11 @@ function NoteDetailPage() {
   const { noteId } = Route.useParams()
   const queryClient = useQueryClient()
   const [userMemo, setUserMemo] = useState("")
-  const [isEditing, setIsEditing] = useState(false)
+  const [keyPoints, setKeyPoints] = useState<string[]>([])
+  const [stumbledPoints, setStumbledPoints] = useState<string[]>([])
+  const [isEditingMemo, setIsEditingMemo] = useState(false)
+  const [isEditingKeyPoints, setIsEditingKeyPoints] = useState(false)
+  const [isEditingStumbledPoints, setIsEditingStumbledPoints] = useState(false)
 
   const { data, isLoading } = useQuery({
     queryKey: ["notes", noteId],
@@ -26,25 +30,29 @@ function NoteDetailPage() {
     },
   })
 
-  // データ取得時にメモを初期化
+  // データ取得時に状態を初期化
   useEffect(() => {
     if (data?.note) {
       setUserMemo(data.note.userMemo || "")
+      setKeyPoints(data.note.keyPoints || [])
+      setStumbledPoints(data.note.stumbledPoints || [])
     }
   }, [data])
 
   const { mutate: updateNote, isPending } = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (updates: { userMemo?: string; keyPoints?: string[]; stumbledPoints?: string[] }) => {
       const res = await api.api.notes[":noteId"].$put({
         param: { noteId },
-        json: { userMemo },
+        json: updates,
       })
       if (!res.ok) throw new Error(`ノートの更新に失敗しました (${res.status})`)
       return res.json()
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notes", noteId] })
-      setIsEditing(false)
+      setIsEditingMemo(false)
+      setIsEditingKeyPoints(false)
+      setIsEditingStumbledPoints(false)
     },
   })
 
@@ -101,44 +109,12 @@ function NoteDetailPage() {
           </div>
         </section>
 
-        {note.keyPoints.length > 0 && (
-          <section>
-            <h2 className="text-sm font-semibold text-ink-600 mb-2">
-              重要ポイント
-            </h2>
-            <ul className="space-y-2">
-              {note.keyPoints.map((point, i) => (
-                <li key={i} className="flex items-start gap-2">
-                  <span className="text-indigo-600">•</span>
-                  <span className="text-ink-800">{point}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-
-        {note.stumbledPoints.length > 0 && (
-          <section>
-            <h2 className="text-sm font-semibold text-ink-600 mb-2">
-              つまずきポイント
-            </h2>
-            <ul className="space-y-2">
-              {note.stumbledPoints.map((point, i) => (
-                <li key={i} className="flex items-start gap-2">
-                  <span className="text-amber-500">!</span>
-                  <span className="text-ink-800">{point}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-
         <section>
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-sm font-semibold text-ink-600">自分のメモ</h2>
-            {!isEditing && (
+            <h2 className="text-sm font-semibold text-ink-600">重要ポイント</h2>
+            {!isEditingKeyPoints && (
               <button
-                onClick={() => setIsEditing(true)}
+                onClick={() => setIsEditingKeyPoints(true)}
                 className="text-sm text-indigo-600 hover:underline"
               >
                 編集
@@ -146,7 +122,161 @@ function NoteDetailPage() {
             )}
           </div>
 
-          {isEditing ? (
+          {isEditingKeyPoints ? (
+            <div className="space-y-2">
+              {keyPoints.map((point, i) => (
+                <div key={i} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={point}
+                    onChange={(e) => {
+                      const newPoints = [...keyPoints]
+                      newPoints[i] = e.target.value
+                      setKeyPoints(newPoints)
+                    }}
+                    className="input-field flex-1"
+                    placeholder="重要ポイント"
+                  />
+                  <button
+                    onClick={() => setKeyPoints(keyPoints.filter((_, idx) => idx !== i))}
+                    className="text-crimson-500 hover:text-crimson-600 px-2"
+                    type="button"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              <button
+                onClick={() => setKeyPoints([...keyPoints, ""])}
+                className="text-sm text-indigo-600 hover:underline"
+                type="button"
+              >
+                + 追加
+              </button>
+              <div className="flex gap-2 justify-end pt-2">
+                <button
+                  onClick={() => {
+                    setKeyPoints(note.keyPoints || [])
+                    setIsEditingKeyPoints(false)
+                  }}
+                  className="btn-secondary text-sm"
+                >
+                  キャンセル
+                </button>
+                <button
+                  onClick={() => updateNote({ keyPoints: keyPoints.filter((p) => p.trim()) })}
+                  disabled={isPending}
+                  className="btn-primary text-sm"
+                >
+                  保存
+                </button>
+              </div>
+            </div>
+          ) : keyPoints.length > 0 ? (
+            <ul className="space-y-2">
+              {keyPoints.map((point, i) => (
+                <li key={i} className="flex items-start gap-2">
+                  <span className="text-indigo-600">•</span>
+                  <span className="text-ink-800">{point}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-ink-500 italic">重要ポイントはありません</p>
+          )}
+        </section>
+
+        <section>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-sm font-semibold text-ink-600">つまずきポイント</h2>
+            {!isEditingStumbledPoints && (
+              <button
+                onClick={() => setIsEditingStumbledPoints(true)}
+                className="text-sm text-indigo-600 hover:underline"
+              >
+                編集
+              </button>
+            )}
+          </div>
+
+          {isEditingStumbledPoints ? (
+            <div className="space-y-2">
+              {stumbledPoints.map((point, i) => (
+                <div key={i} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={point}
+                    onChange={(e) => {
+                      const newPoints = [...stumbledPoints]
+                      newPoints[i] = e.target.value
+                      setStumbledPoints(newPoints)
+                    }}
+                    className="input-field flex-1"
+                    placeholder="つまずきポイント"
+                  />
+                  <button
+                    onClick={() => setStumbledPoints(stumbledPoints.filter((_, idx) => idx !== i))}
+                    className="text-crimson-500 hover:text-crimson-600 px-2"
+                    type="button"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              <button
+                onClick={() => setStumbledPoints([...stumbledPoints, ""])}
+                className="text-sm text-indigo-600 hover:underline"
+                type="button"
+              >
+                + 追加
+              </button>
+              <div className="flex gap-2 justify-end pt-2">
+                <button
+                  onClick={() => {
+                    setStumbledPoints(note.stumbledPoints || [])
+                    setIsEditingStumbledPoints(false)
+                  }}
+                  className="btn-secondary text-sm"
+                >
+                  キャンセル
+                </button>
+                <button
+                  onClick={() => updateNote({ stumbledPoints: stumbledPoints.filter((p) => p.trim()) })}
+                  disabled={isPending}
+                  className="btn-primary text-sm"
+                >
+                  保存
+                </button>
+              </div>
+            </div>
+          ) : stumbledPoints.length > 0 ? (
+            <ul className="space-y-2">
+              {stumbledPoints.map((point, i) => (
+                <li key={i} className="flex items-start gap-2">
+                  <span className="text-amber-500">!</span>
+                  <span className="text-ink-800">{point}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-ink-500 italic">つまずきポイントはありません</p>
+          )}
+        </section>
+
+        <section>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-sm font-semibold text-ink-600">自分のメモ</h2>
+            {!isEditingMemo && (
+              <button
+                onClick={() => setIsEditingMemo(true)}
+                className="text-sm text-indigo-600 hover:underline"
+              >
+                編集
+              </button>
+            )}
+          </div>
+
+          {isEditingMemo ? (
             <div className="space-y-2">
               <textarea
                 value={userMemo}
@@ -158,14 +288,14 @@ function NoteDetailPage() {
                 <button
                   onClick={() => {
                     setUserMemo(note.userMemo || "")
-                    setIsEditing(false)
+                    setIsEditingMemo(false)
                   }}
                   className="btn-secondary text-sm"
                 >
                   キャンセル
                 </button>
                 <button
-                  onClick={() => updateNote()}
+                  onClick={() => updateNote({ userMemo })}
                   disabled={isPending}
                   className="btn-primary text-sm"
                 >
@@ -175,9 +305,9 @@ function NoteDetailPage() {
             </div>
           ) : (
             <div className="card p-4">
-              {note.userMemo ? (
+              {userMemo ? (
                 <p className="text-ink-800 whitespace-pre-wrap">
-                  {note.userMemo}
+                  {userMemo}
                 </p>
               ) : (
                 <p className="text-ink-500 italic">メモはありません</p>

@@ -22,6 +22,7 @@ export const createTestDatabase = (): {
       email TEXT NOT NULL UNIQUE,
       name TEXT NOT NULL,
       avatar_url TEXT,
+      timezone TEXT NOT NULL DEFAULT 'Asia/Tokyo',
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL
     );
@@ -105,6 +106,7 @@ export const createTestDatabase = (): {
       image_id TEXT,
       ocr_result TEXT,
       question_quality TEXT,
+      question_quality_reason TEXT,
       created_at INTEGER NOT NULL
     );
 

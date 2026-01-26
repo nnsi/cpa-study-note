@@ -24,5 +24,6 @@ export const chatMessages = sqliteTable("chat_messages", {
   imageId: text("image_id"),
   ocrResult: text("ocr_result"),
   questionQuality: text("question_quality"),
+  questionQualityReason: text("question_quality_reason"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
 })

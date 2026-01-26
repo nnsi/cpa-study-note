@@ -32,6 +32,14 @@ export type TodayMetrics = {
   checkedTopicCount: number
 }
 
+export type DailyMetric = {
+  date: string
+  checkedTopicCount: number
+  sessionCount: number
+  messageCount: number
+  goodQuestionCount: number
+}
+
 export type MetricsRepository = {
   findByDateRange: (
     userId: string,
@@ -48,7 +56,61 @@ export type MetricsRepository = {
     userId: string,
     date: string
   ) => Promise<DailyAggregation>
-  aggregateToday: (userId: string) => Promise<TodayMetrics>
+  aggregateToday: (userId: string, timezone: string) => Promise<TodayMetrics>
+  aggregateDateRange: (
+    userId: string,
+    from: string,
+    to: string,
+    timezone: string
+  ) => Promise<DailyMetric[]>
+}
+
+// タイムゾーンのオフセット（分）を取得
+// 例: "Asia/Tokyo" -> -540 (UTCから9時間進んでいるので、UTCに戻すには540分引く)
+const getTimezoneOffsetMinutes = (timezone: string): number => {
+  try {
+    const now = new Date()
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone,
+      hour: "numeric",
+      minute: "numeric",
+      hour12: false,
+    })
+    const parts = formatter.formatToParts(now)
+    const hour = Number(parts.find((p) => p.type === "hour")?.value ?? 0)
+    const minute = Number(parts.find((p) => p.type === "minute")?.value ?? 0)
+
+    const utcHour = now.getUTCHours()
+    const utcMinute = now.getUTCMinutes()
+
+    let offsetMinutes = (hour * 60 + minute) - (utcHour * 60 + utcMinute)
+    // 日付をまたぐ場合の補正
+    if (offsetMinutes > 12 * 60) offsetMinutes -= 24 * 60
+    if (offsetMinutes < -12 * 60) offsetMinutes += 24 * 60
+
+    return offsetMinutes
+  } catch {
+    // 無効なタイムゾーンの場合は Asia/Tokyo (UTC+9) のオフセットを使用
+    return 9 * 60
+  }
+}
+
+// タイムゾーンを考慮した日付の開始時刻（UTC）を取得
+const getLocalDayStartUtc = (dateStr: string, timezone: string): Date => {
+  const [year, month, day] = dateStr.split("-").map(Number)
+  const offsetMinutes = getTimezoneOffsetMinutes(timezone)
+  // ローカルの0時0分をUTCに変換
+  const utcMs = Date.UTC(year, month - 1, day, 0, 0, 0, 0) - offsetMinutes * 60 * 1000
+  return new Date(utcMs)
+}
+
+// タイムゾーンを考慮した日付の終了時刻（翌日の開始時刻）を取得
+const getLocalDayEndUtc = (dateStr: string, timezone: string): Date => {
+  const [year, month, day] = dateStr.split("-").map(Number)
+  const offsetMinutes = getTimezoneOffsetMinutes(timezone)
+  // ローカルの翌日0時0分をUTCに変換
+  const utcMs = Date.UTC(year, month - 1, day + 1, 0, 0, 0, 0) - offsetMinutes * 60 * 1000
+  return new Date(utcMs)
 }
 
 // 日付文字列を Date オブジェクトに変換（UTCの0時0分0秒）
@@ -142,37 +204,17 @@ export const createMetricsRepository = (db: Db): MetricsRepository => ({
     const dayEnd = getNextDay(date)
 
     // チェック済み論点数: その日の終わり時点でcheckedになっているトピック数
-    // topicCheckHistory から最新のアクション（checked/unchecked）を取得
-    const checkedTopicsResult = await db
-      .select({
-        count: sql<number>`COUNT(DISTINCT ${topicCheckHistory.topicId})`,
-      })
-      .from(topicCheckHistory)
-      .where(
-        and(
-          eq(topicCheckHistory.userId, userId),
-          eq(topicCheckHistory.action, "checked"),
-          lte(topicCheckHistory.checkedAt, dayEnd)
-        )
-      )
-
-    // その日のunchecked数を引く必要があるが、シンプルにするため
-    // userTopicProgressのunderstoodフラグから取得する方法に変更
-    // ただし、日次スナップショットとして正確にするには、
-    // その日のチェック履歴から計算する必要がある
-
-    // 簡略化: その日の終わり時点で understood=true の数を取得
-    const checkedCountResult = await db
-      .select({
-        count: sql<number>`COUNT(*)`,
-      })
-      .from(userTopicProgress)
-      .where(
-        and(
-          eq(userTopicProgress.userId, userId),
-          eq(userTopicProgress.understood, true)
-        )
-      )
+    // topicCheckHistory から各トピックの最新状態を計算
+    // SQLite の WINDOW関数を使って、その日の終わりまでの最新アクションを取得
+    const checkedCountResult = await db.all<{ count: number }>(sql`
+      SELECT COUNT(*) as count FROM (
+        SELECT topic_id, action,
+          ROW_NUMBER() OVER (PARTITION BY topic_id ORDER BY checked_at DESC) as rn
+        FROM topic_check_history
+        WHERE user_id = ${userId} AND checked_at <= ${dayEnd.getTime()}
+      ) AS latest
+      WHERE rn = 1 AND action = 'checked'
+    `)
     const checkedTopicCount = checkedCountResult[0]?.count ?? 0
 
     // その日に作成されたセッション数
@@ -232,14 +274,18 @@ export const createMetricsRepository = (db: Db): MetricsRepository => ({
     }
   },
 
-  aggregateToday: async (userId) => {
-    // 今日の開始と終了（UTCベース）
+  aggregateToday: async (userId, timezone) => {
+    // タイムゾーンを考慮した今日の日付を取得
     const now = new Date()
-    const year = now.getUTCFullYear()
-    const month = now.getUTCMonth()
-    const day = now.getUTCDate()
-    const dayStart = new Date(Date.UTC(year, month, day, 0, 0, 0, 0))
-    const dayEnd = new Date(Date.UTC(year, month, day + 1, 0, 0, 0, 0))
+    const formatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    })
+    const todayStr = formatter.format(now) // "YYYY-MM-DD" format
+    const dayStart = getLocalDayStartUtc(todayStr, timezone)
+    const dayEnd = getLocalDayEndUtc(todayStr, timezone)
 
     // 今日のセッション数
     const sessionCountResult = await db
@@ -294,5 +340,105 @@ export const createMetricsRepository = (db: Db): MetricsRepository => ({
       messageCount,
       checkedTopicCount,
     }
+  },
+
+  aggregateDateRange: async (userId, from, to, timezone) => {
+    // 日付範囲の配列を生成
+    const dates: string[] = []
+    const current = parseDate(from)
+    const end = parseDate(to)
+
+    while (current <= end) {
+      const year = current.getUTCFullYear()
+      const month = String(current.getUTCMonth() + 1).padStart(2, "0")
+      const day = String(current.getUTCDate()).padStart(2, "0")
+      dates.push(`${year}-${month}-${day}`)
+      current.setUTCDate(current.getUTCDate() + 1)
+    }
+
+    // タイムゾーンを考慮した日付範囲（UTC）
+    const fromDateUtc = getLocalDayStartUtc(from, timezone)
+    const toDateUtc = getLocalDayEndUtc(to, timezone)
+    const offsetMinutes = getTimezoneOffsetMinutes(timezone)
+    const offsetSeconds = offsetMinutes * 60
+
+    // 一括でセッション数を日別に集計（タイムゾーン考慮）
+    const sessionsByDate = await db.all<{ date: string; count: number }>(sql`
+      SELECT date((created_at / 1000) + ${offsetSeconds}, 'unixepoch') as date, COUNT(*) as count
+      FROM chat_sessions
+      WHERE user_id = ${userId}
+        AND created_at >= ${fromDateUtc.getTime()}
+        AND created_at < ${toDateUtc.getTime()}
+      GROUP BY date((created_at / 1000) + ${offsetSeconds}, 'unixepoch')
+    `)
+    const sessionMap = new Map(sessionsByDate.map((r) => [r.date, r.count]))
+
+    // 一括でメッセージ数を日別に集計（ユーザーのみ、タイムゾーン考慮）
+    const messagesByDate = await db.all<{ date: string; count: number }>(sql`
+      SELECT date((m.created_at / 1000) + ${offsetSeconds}, 'unixepoch') as date, COUNT(*) as count
+      FROM chat_messages m
+      INNER JOIN chat_sessions s ON m.session_id = s.id
+      WHERE s.user_id = ${userId}
+        AND m.role = 'user'
+        AND m.created_at >= ${fromDateUtc.getTime()}
+        AND m.created_at < ${toDateUtc.getTime()}
+      GROUP BY date((m.created_at / 1000) + ${offsetSeconds}, 'unixepoch')
+    `)
+    const messageMap = new Map(messagesByDate.map((r) => [r.date, r.count]))
+
+    // 一括で good 質問数を日別に集計（タイムゾーン考慮）
+    const goodQuestionsByDate = await db.all<{ date: string; count: number }>(sql`
+      SELECT date((m.created_at / 1000) + ${offsetSeconds}, 'unixepoch') as date, COUNT(*) as count
+      FROM chat_messages m
+      INNER JOIN chat_sessions s ON m.session_id = s.id
+      WHERE s.user_id = ${userId}
+        AND m.question_quality = 'good'
+        AND m.created_at >= ${fromDateUtc.getTime()}
+        AND m.created_at < ${toDateUtc.getTime()}
+      GROUP BY date((m.created_at / 1000) + ${offsetSeconds}, 'unixepoch')
+    `)
+    const goodQuestionMap = new Map(goodQuestionsByDate.map((r) => [r.date, r.count]))
+
+    // チェック済み論点数は各日の終わり時点での状態を計算する必要がある
+    // 効率化のため、全てのチェック履歴を取得して日付ごとに計算
+    const allHistory = await db.all<{ topicId: string; action: string; checkedAt: number }>(sql`
+      SELECT topic_id as topicId, action, checked_at as checkedAt
+      FROM topic_check_history
+      WHERE user_id = ${userId}
+        AND checked_at <= ${toDateUtc.getTime()}
+      ORDER BY checked_at ASC
+    `)
+
+    // 各日の終わり時点でのチェック状態を計算（タイムゾーン考慮）
+    const checkedByDate = new Map<string, number>()
+    const topicState = new Map<string, boolean>() // topicId -> isChecked
+
+    let historyIndex = 0
+    for (const date of dates) {
+      const dayEndUtc = getLocalDayEndUtc(date, timezone)
+
+      // この日の終わりまでの履歴を処理
+      while (historyIndex < allHistory.length && allHistory[historyIndex].checkedAt <= dayEndUtc.getTime()) {
+        const h = allHistory[historyIndex]
+        topicState.set(h.topicId, h.action === "checked")
+        historyIndex++
+      }
+
+      // チェック済みトピック数をカウント
+      let checkedCount = 0
+      for (const isChecked of topicState.values()) {
+        if (isChecked) checkedCount++
+      }
+      checkedByDate.set(date, checkedCount)
+    }
+
+    // 結果を組み立て
+    return dates.map((date) => ({
+      date,
+      checkedTopicCount: checkedByDate.get(date) ?? 0,
+      sessionCount: sessionMap.get(date) ?? 0,
+      messageCount: messageMap.get(date) ?? 0,
+      goodQuestionCount: goodQuestionMap.get(date) ?? 0,
+    }))
   },
 })

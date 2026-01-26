@@ -431,13 +431,15 @@ export const createTopicRepository = (db: Db): TopicRepository => ({
 
   findFilteredTopics: async (userId, filters) => {
     // セッション数と最終チャット日時のサブクエリ
+    // lastChatAt は最後のメッセージ送信時刻（事実ベースの思想に合致）
     const sessionStatsSubquery = db
       .select({
         topicId: chatSessions.topicId,
         sessionCount: sql<number>`count(distinct ${chatSessions.id})`.as("session_count"),
-        lastChatAt: sql<Date | null>`max(${chatSessions.updatedAt})`.as("last_chat_at"),
+        lastChatAt: sql<Date | null>`max(${chatMessages.createdAt})`.as("last_chat_at"),
       })
       .from(chatSessions)
+      .leftJoin(chatMessages, eq(chatSessions.id, chatMessages.sessionId))
       .where(eq(chatSessions.userId, userId))
       .groupBy(chatSessions.topicId)
       .as("session_stats")

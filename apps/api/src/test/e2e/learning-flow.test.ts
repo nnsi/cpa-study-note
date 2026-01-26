@@ -1,3 +1,4 @@
+/// <reference types="@cloudflare/workers-types" />
 /**
  * E2E: 学習フロー
  *
@@ -7,6 +8,7 @@
  * - 進捗統計の正確性確認
  */
 import { describe, it, expect, beforeAll, afterAll } from "vitest"
+import { z } from "zod"
 import * as schema from "@cpa-study/db/schema"
 import {
   setupTestEnv,
@@ -15,59 +17,59 @@ import {
   type TestContext,
 } from "./helpers"
 
-// Response types for learning endpoints
-type Subject = {
-  id: string
-  name: string
-}
+// Zod schemas for response validation
+const subjectSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+})
 
-type SubjectsResponse = {
-  subjects: Subject[]
-}
+const subjectsResponseSchema = z.object({
+  subjects: z.array(subjectSchema),
+})
 
-type SubjectResponse = {
-  subject: Subject
-}
+const subjectResponseSchema = z.object({
+  subject: subjectSchema,
+})
 
-type Category = {
-  id: string
-  name: string
-}
+const categorySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+})
 
-type CategoriesResponse = {
-  categories: Category[]
-}
+const categoriesResponseSchema = z.object({
+  categories: z.array(categorySchema),
+})
 
-type Topic = {
-  id: string
-  name: string
-  description: string
-}
+const topicSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string(),
+})
 
-type TopicsResponse = {
-  topics: Topic[]
-}
+const topicsResponseSchema = z.object({
+  topics: z.array(topicSchema),
+})
 
-type TopicResponse = {
-  topic: Topic
-}
+const topicResponseSchema = z.object({
+  topic: topicSchema,
+})
 
-type Progress = {
-  topicId: string
-  understood: boolean
-}
+const progressSchema = z.object({
+  topicId: z.string(),
+  understood: z.boolean(),
+})
 
-type ProgressResponse = {
-  progress: Progress
-}
+const progressResponseSchema = z.object({
+  progress: progressSchema,
+})
 
-type UserProgressResponse = {
-  progress: Progress[]
-}
+const userProgressResponseSchema = z.object({
+  progress: z.array(progressSchema),
+})
 
-type StatsResponse = {
-  stats: unknown
-}
+const statsResponseSchema = z.object({
+  stats: z.unknown(),
+})
 
 describe("E2E: Learning Flow", () => {
   let ctx: TestContext
@@ -131,11 +133,11 @@ describe("E2E: Learning Flow", () => {
       const res = await req.get("/api/subjects")
 
       expect(res.status).toBe(200)
-      const data = await res.json<SubjectsResponse>()
+      const data = subjectsResponseSchema.parse(await res.json())
       expect(data.subjects).toBeDefined()
       expect(data.subjects.length).toBeGreaterThanOrEqual(1)
 
-      const subject = data.subjects.find((s) => s.id === ctx.testData.subjectId)
+      const subject = data.subjects.find((s: { id: string; name: string }) => s.id === ctx.testData.subjectId)
       expect(subject).toBeDefined()
       expect(subject!.name).toBe("財務会計論")
     })
@@ -144,7 +146,7 @@ describe("E2E: Learning Flow", () => {
       const res = await req.get(`/api/subjects/${ctx.testData.subjectId}`)
 
       expect(res.status).toBe(200)
-      const data = await res.json<SubjectResponse>()
+      const data = subjectResponseSchema.parse(await res.json())
       expect(data.subject).toBeDefined()
       expect(data.subject.id).toBe(ctx.testData.subjectId)
       expect(data.subject.name).toBe("財務会計論")
@@ -160,11 +162,11 @@ describe("E2E: Learning Flow", () => {
       const res = await req.get(`/api/subjects/${ctx.testData.subjectId}/categories`)
 
       expect(res.status).toBe(200)
-      const data = await res.json<CategoriesResponse>()
+      const data = categoriesResponseSchema.parse(await res.json())
       expect(data.categories).toBeDefined()
       expect(data.categories.length).toBeGreaterThanOrEqual(1)
 
-      const category = data.categories.find((c) => c.id === ctx.testData.categoryId)
+      const category = data.categories.find((c: { id: string; name: string }) => c.id === ctx.testData.categoryId)
       expect(category).toBeDefined()
       expect(category!.name).toBe("計算")
     })
@@ -175,11 +177,11 @@ describe("E2E: Learning Flow", () => {
       )
 
       expect(res.status).toBe(200)
-      const data = await res.json<TopicsResponse>()
+      const data = topicsResponseSchema.parse(await res.json())
       expect(data.topics).toBeDefined()
       expect(data.topics.length).toBeGreaterThanOrEqual(1)
 
-      const topic = data.topics.find((t) => t.id === ctx.testData.topicId)
+      const topic = data.topics.find((t: { id: string; name: string; description: string }) => t.id === ctx.testData.topicId)
       expect(topic).toBeDefined()
       expect(topic!.name).toBe("有価証券")
     })
@@ -192,7 +194,7 @@ describe("E2E: Learning Flow", () => {
       )
 
       expect(res.status).toBe(200)
-      const data = await res.json<TopicResponse>()
+      const data = topicResponseSchema.parse(await res.json())
       expect(data.topic).toBeDefined()
       expect(data.topic.id).toBe(ctx.testData.topicId)
       expect(data.topic.name).toBe("有価証券")
@@ -215,7 +217,7 @@ describe("E2E: Learning Flow", () => {
       )
 
       expect(res.status).toBe(200)
-      const data = await res.json<ProgressResponse>()
+      const data = progressResponseSchema.parse(await res.json())
       expect(data.progress).toBeDefined()
       // Progress.understood is boolean in the new schema
       expect(data.progress.understood).toBe(true)
@@ -228,7 +230,7 @@ describe("E2E: Learning Flow", () => {
       )
 
       expect(res.status).toBe(200)
-      const data = await res.json<ProgressResponse>()
+      const data = progressResponseSchema.parse(await res.json())
       expect(data.progress).toBeDefined()
       expect(data.progress.understood).toBe(false)
     })
@@ -247,7 +249,7 @@ describe("E2E: Learning Flow", () => {
       )
 
       expect(res.status).toBe(200)
-      const data = await res.json<ProgressResponse>()
+      const data = progressResponseSchema.parse(await res.json())
       // understood should remain true
       expect(data.progress.understood).toBe(true)
     })
@@ -258,7 +260,7 @@ describe("E2E: Learning Flow", () => {
       const res = await req.get("/api/subjects/progress/me")
 
       expect(res.status).toBe(200)
-      const data = await res.json<UserProgressResponse>()
+      const data = userProgressResponseSchema.parse(await res.json())
       expect(data.progress).toBeDefined()
       expect(Array.isArray(data.progress)).toBe(true)
     })
@@ -267,7 +269,7 @@ describe("E2E: Learning Flow", () => {
       const res = await req.get("/api/subjects/progress/subjects")
 
       expect(res.status).toBe(200)
-      const data = await res.json<StatsResponse>()
+      const data = statsResponseSchema.parse(await res.json())
       expect(data.stats).toBeDefined()
     })
   })
@@ -277,14 +279,14 @@ describe("E2E: Learning Flow", () => {
       // Step 1: Get subjects
       const subjectsRes = await req.get("/api/subjects")
       expect(subjectsRes.status).toBe(200)
-      const { subjects } = await subjectsRes.json<SubjectsResponse>()
+      const { subjects } = subjectsResponseSchema.parse(await subjectsRes.json())
       expect(subjects.length).toBeGreaterThan(0)
 
       // Step 2: Select a subject and get categories
       const selectedSubject = subjects[0]
       const categoriesRes = await req.get(`/api/subjects/${selectedSubject.id}/categories`)
       expect(categoriesRes.status).toBe(200)
-      const { categories } = await categoriesRes.json<CategoriesResponse>()
+      const { categories } = categoriesResponseSchema.parse(await categoriesRes.json())
       expect(categories.length).toBeGreaterThan(0)
 
       // Step 3: Select a category and get topics
@@ -293,7 +295,7 @@ describe("E2E: Learning Flow", () => {
         `/api/subjects/${selectedSubject.id}/categories/${selectedCategory.id}/topics`
       )
       expect(topicsRes.status).toBe(200)
-      const { topics } = await topicsRes.json<TopicsResponse>()
+      const { topics } = topicsResponseSchema.parse(await topicsRes.json())
       expect(topics.length).toBeGreaterThan(0)
 
       // Step 4: View topic details
@@ -302,7 +304,7 @@ describe("E2E: Learning Flow", () => {
         `/api/subjects/${selectedSubject.id}/topics/${selectedTopic.id}`
       )
       expect(topicRes.status).toBe(200)
-      const { topic } = await topicRes.json<TopicResponse>()
+      const { topic } = topicResponseSchema.parse(await topicRes.json())
       expect(topic.id).toBe(selectedTopic.id)
 
       // Step 5: Update progress
@@ -311,14 +313,14 @@ describe("E2E: Learning Flow", () => {
         { understood: true }
       )
       expect(progressRes.status).toBe(200)
-      const { progress } = await progressRes.json<ProgressResponse>()
+      const { progress } = progressResponseSchema.parse(await progressRes.json())
       expect(progress.understood).toBe(true)
 
       // Step 6: Verify progress in statistics
       const statsRes = await req.get("/api/subjects/progress/me")
       expect(statsRes.status).toBe(200)
-      const { progress: allProgress } = await statsRes.json<UserProgressResponse>()
-      const topicProgress = allProgress.find((p) => p.topicId === selectedTopic.id)
+      const { progress: allProgress } = userProgressResponseSchema.parse(await statsRes.json())
+      const topicProgress = allProgress.find((p: { topicId: string; understood: boolean }) => p.topicId === selectedTopic.id)
       expect(topicProgress).toBeDefined()
       expect(topicProgress!.understood).toBe(true)
     })

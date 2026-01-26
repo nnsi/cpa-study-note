@@ -86,14 +86,11 @@ describe("logic", () => {
     it("should transform metrics to chart data with missing dates filled with zeros", () => {
       const metrics: DailyMetric[] = [
         {
-          id: "1",
           date: "2024-01-02",
-          userId: "user1",
           checkedTopicCount: 5,
           sessionCount: 2,
           messageCount: 10,
           goodQuestionCount: 1,
-          createdAt: "2024-01-02T00:00:00Z",
         },
       ]
 

@@ -26,16 +26,28 @@ export type QuestionQualityStats = {
   surfaceCount: number
 }
 
+export type SessionWithStats = {
+  id: string
+  userId: string
+  topicId: string
+  createdAt: Date
+  updatedAt: Date
+  messageCount: number
+  goodCount: number
+  surfaceCount: number
+}
+
 export type ChatRepository = {
   createSession: (data: { userId: string; topicId: string }) => Promise<ChatSession>
   findSessionById: (id: string) => Promise<ChatSession | null>
   findSessionsByTopic: (userId: string, topicId: string) => Promise<ChatSession[]>
+  findSessionsWithStatsByTopic: (userId: string, topicId: string) => Promise<SessionWithStats[]>
   getSessionMessageCount: (sessionId: string) => Promise<number>
   getSessionQualityStats: (sessionId: string) => Promise<QuestionQualityStats>
   createMessage: (data: Omit<ChatMessage, "id" | "createdAt">) => Promise<ChatMessage>
   findMessageById: (id: string) => Promise<ChatMessage | null>
   findMessagesBySession: (sessionId: string) => Promise<ChatMessage[]>
-  updateMessageQuality: (id: string, quality: string) => Promise<void>
+  updateMessageQuality: (id: string, quality: string, reason?: string) => Promise<void>
 }
 
 export const createChatRepository = (db: Db): ChatRepository => ({
@@ -71,6 +83,47 @@ export const createChatRepository = (db: Db): ChatRepository => ({
         and(eq(chatSessions.userId, userId), eq(chatSessions.topicId, topicId))
       )
       .orderBy(desc(chatSessions.createdAt))
+  },
+
+  // N+1問題を解消: セッション一覧と統計を1クエリで取得
+  findSessionsWithStatsByTopic: async (userId, topicId) => {
+    const result = await db.all<{
+      id: string
+      userId: string
+      topicId: string
+      createdAt: number
+      updatedAt: number
+      messageCount: number
+      goodCount: number
+      surfaceCount: number
+    }>(sql`
+      SELECT
+        s.id,
+        s.user_id as userId,
+        s.topic_id as topicId,
+        s.created_at as createdAt,
+        s.updated_at as updatedAt,
+        COUNT(m.id) as messageCount,
+        SUM(CASE WHEN m.question_quality = 'good' AND m.role = 'user' THEN 1 ELSE 0 END) as goodCount,
+        SUM(CASE WHEN m.question_quality = 'surface' AND m.role = 'user' THEN 1 ELSE 0 END) as surfaceCount
+      FROM chat_sessions s
+      LEFT JOIN chat_messages m ON s.id = m.session_id
+      WHERE s.user_id = ${userId} AND s.topic_id = ${topicId}
+      GROUP BY s.id
+      HAVING COUNT(m.id) > 0
+      ORDER BY s.created_at DESC
+    `)
+
+    return result.map((row) => ({
+      id: row.id,
+      userId: row.userId,
+      topicId: row.topicId,
+      createdAt: new Date(row.createdAt),
+      updatedAt: new Date(row.updatedAt),
+      messageCount: row.messageCount,
+      goodCount: row.goodCount,
+      surfaceCount: row.surfaceCount,
+    }))
   },
 
   getSessionMessageCount: async (sessionId) => {
@@ -145,10 +198,13 @@ export const createChatRepository = (db: Db): ChatRepository => ({
       .orderBy(chatMessages.createdAt)
   },
 
-  updateMessageQuality: async (id, quality) => {
+  updateMessageQuality: async (id, quality, reason) => {
     await db
       .update(chatMessages)
-      .set({ questionQuality: quality })
+      .set({
+        questionQuality: quality,
+        questionQualityReason: reason ?? null,
+      })
       .where(eq(chatMessages.id, id))
   },
 })

@@ -1,54 +1,64 @@
+/// <reference types="@cloudflare/workers-types" />
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
 import { Hono } from "hono"
 import { SignJWT } from "jose"
+import { z } from "zod"
 import * as schema from "@cpa-study/db/schema"
 import { chatRoutes } from "./route"
 import {
   createTestDatabase,
   seedTestData,
   type TestDatabase,
-} from "@/test/mocks/db"
-import { createMockAIAdapter } from "@/test/mocks/ai"
-import type { Env, Variables } from "@/shared/types/env"
+} from "../../test/mocks/db"
+import { createMockAIAdapter } from "../../test/mocks/ai"
+import type { Env, Variables } from "../../shared/types/env"
+import { parseJson, errorResponseSchema } from "../../test/helpers"
 import Database from "better-sqlite3"
 
-// Response types for test assertions
-type ErrorResponse = { error: string }
+// Response schemas for test assertions using Zod
+const sessionSchema = z.object({
+  id: z.string(),
+  topicId: z.string(),
+  userId: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+})
 
-type SessionResponse = {
-  session: {
-    id: string
-    topicId: string
-    userId: string
-    createdAt: string
-    updatedAt: string
-  }
-}
+const sessionResponseSchema = z.object({
+  session: sessionSchema,
+})
 
-type SessionListResponse = {
-  sessions: Array<{
-    id: string
-    topicId: string
-    userId: string
-    messageCount: number
-    createdAt: string
-    updatedAt: string
-  }>
-}
+const sessionListResponseSchema = z.object({
+  sessions: z.array(
+    z.object({
+      id: z.string(),
+      topicId: z.string(),
+      userId: z.string(),
+      messageCount: z.number(),
+      createdAt: z.string(),
+      updatedAt: z.string(),
+    })
+  ),
+})
 
-type MessageListResponse = {
-  messages: Array<{
-    id: string
-    sessionId: string
-    role: string
-    content: string
-    createdAt: string
-  }>
-}
+const messageListResponseSchema = z.object({
+  messages: z.array(
+    z.object({
+      id: z.string(),
+      sessionId: z.string(),
+      role: z.string(),
+      content: z.string(),
+      createdAt: z.string(),
+    })
+  ),
+})
 
-type EvaluateResponse = {
-  quality: string
-}
+const evaluateResponseSchema = z.object({
+  quality: z.object({
+    quality: z.string(),
+    reason: z.string(),
+  }),
+})
 
 // Test environment
 const createTestEnv = (): Env => ({
@@ -144,7 +154,7 @@ describe("Chat Routes", () => {
       )
 
       expect(res.status).toBe(201)
-      const body = await res.json<SessionResponse>()
+      const body = await parseJson(res, sessionResponseSchema)
       expect(body).toHaveProperty("session")
       expect(body.session.topicId).toBe(testData.topicId)
       expect(body.session.userId).toBe(testData.userId)
@@ -162,7 +172,7 @@ describe("Chat Routes", () => {
       )
 
       expect(res.status).toBe(404)
-      const body = await res.json<ErrorResponse>()
+      const body = await parseJson(res, errorResponseSchema)
       expect(body.error).toBe("Topic not found")
     })
 
@@ -194,7 +204,7 @@ describe("Chat Routes", () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await res.json<SessionListResponse>()
+      const body = await parseJson(res, sessionListResponseSchema)
       expect(body.sessions).toEqual([])
     })
 
@@ -231,7 +241,7 @@ describe("Chat Routes", () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await res.json<SessionListResponse>()
+      const body = await parseJson(res, sessionListResponseSchema)
       expect(body.sessions.length).toBe(1)
       expect(body.sessions[0].id).toBe(sessionId)
       expect(body.sessions[0].messageCount).toBe(1)
@@ -259,7 +269,7 @@ describe("Chat Routes", () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await res.json<SessionListResponse>()
+      const body = await parseJson(res, sessionListResponseSchema)
       expect(body.sessions.length).toBe(0)
     })
   })
@@ -287,7 +297,7 @@ describe("Chat Routes", () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await res.json<SessionResponse>()
+      const body = await parseJson(res, sessionResponseSchema)
       expect(body.session.id).toBe(sessionId)
       expect(body.session.topicId).toBe(testData.topicId)
     })
@@ -300,7 +310,7 @@ describe("Chat Routes", () => {
       )
 
       expect(res.status).toBe(404)
-      const body = await res.json<ErrorResponse>()
+      const body = await parseJson(res, errorResponseSchema)
       expect(body.error).toBe("Session not found")
     })
 
@@ -338,7 +348,7 @@ describe("Chat Routes", () => {
       )
 
       expect(res.status).toBe(403)
-      const body = await res.json<ErrorResponse>()
+      const body = await parseJson(res, errorResponseSchema)
       expect(body.error).toBe("Unauthorized")
     })
   })
@@ -386,7 +396,7 @@ describe("Chat Routes", () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await res.json<MessageListResponse>()
+      const body = await parseJson(res, messageListResponseSchema)
       expect(body.messages.length).toBe(2)
       expect(body.messages[0].role).toBe("user")
       expect(body.messages[1].role).toBe("assistant")
@@ -649,9 +659,9 @@ describe("Chat Routes", () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await res.json<EvaluateResponse>()
+      const body = await parseJson(res, evaluateResponseSchema)
       expect(body).toHaveProperty("quality")
-      expect(["good", "surface"]).toContain(body.quality)
+      expect(["good", "surface"]).toContain(body.quality.quality)
     })
 
     it("should return 404 for non-existent message", async () => {
@@ -662,7 +672,7 @@ describe("Chat Routes", () => {
       )
 
       expect(res.status).toBe(404)
-      const body = await res.json<ErrorResponse>()
+      const body = await parseJson(res, errorResponseSchema)
       expect(body.error).toBe("Message not found")
     })
 
@@ -712,7 +722,7 @@ describe("Chat Routes", () => {
       )
 
       expect(res.status).toBe(403)
-      const body = await res.json<ErrorResponse>()
+      const body = await parseJson(res, errorResponseSchema)
       expect(body.error).toBe("Forbidden")
     })
   })

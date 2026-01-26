@@ -16,14 +16,14 @@ export const metricsRoutes = ({ env, db }: MetricsDeps) => {
   const metricsRepo = createMetricsRepository(db)
 
   const app = new Hono<{ Bindings: Env; Variables: Variables }>()
-    // 今日の活動メトリクス取得（リアルタイム）
+    // 今日の活動メトリクス取得（リアルタイム、タイムゾーン考慮）
     .get("/today", authMiddleware, async (c) => {
       const user = c.get("user")
-      const metrics = await getTodayMetrics({ metricsRepo }, user.id)
+      const metrics = await getTodayMetrics({ metricsRepo }, user.id, user.timezone)
       return c.json({ metrics })
     })
 
-    // 日次メトリクス取得
+    // 日次メトリクス取得（タイムゾーン考慮）
     .get(
       "/daily",
       authMiddleware,
@@ -38,7 +38,7 @@ export const metricsRoutes = ({ env, db }: MetricsDeps) => {
         const user = c.get("user")
         const { from, to } = c.req.valid("query")
 
-        const result = await getDailyMetrics({ metricsRepo }, user.id, from, to)
+        const result = await getDailyMetrics({ metricsRepo }, user.id, from, to, user.timezone)
 
         if (!result.ok) {
           return c.json({ error: result.error }, result.status as 400)

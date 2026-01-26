@@ -61,11 +61,12 @@ export const handleOAuthCallback = async (
     return ok({ user: existingUserByEmail, isNewUser: false })
   }
 
-  // 新規ユーザー作成
+  // 新規ユーザー作成（タイムゾーンはデフォルト Asia/Tokyo）
   const newUser = await deps.repo.createUser({
     email: oauthUser.email,
     name: oauthUser.name,
     avatarUrl: oauthUser.avatarUrl,
+    timezone: "Asia/Tokyo",
   })
 
   await deps.repo.createConnection({
@@ -121,6 +122,7 @@ export const refreshAccessToken = async (
     email: user.email,
     name: user.name,
     avatarUrl: user.avatarUrl,
+    timezone: user.timezone,
   }
   const accessToken = await generateAccessToken(envUser, jwtSecret)
 

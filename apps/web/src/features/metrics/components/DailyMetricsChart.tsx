@@ -60,6 +60,7 @@ const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
     checkedTopicCount: "チェック済み論点",
     sessionCount: "セッション数",
     messageCount: "メッセージ数",
+    goodQuestionCount: "深掘り質問数",
   }
 
   return (
@@ -126,6 +127,7 @@ const Chart = ({ data, range }: ChartProps) => {
               checkedTopicCount: "チェック済み論点",
               sessionCount: "セッション数",
               messageCount: "メッセージ数",
+              goodQuestionCount: "深掘り質問数",
             }
             return (
               <span className="text-sm text-ink-700">
@@ -162,6 +164,16 @@ const Chart = ({ data, range }: ChartProps) => {
           stroke="#f59e0b"
           strokeWidth={2}
           dot={{ r: 3, fill: "#f59e0b" }}
+          activeDot={{ r: 5 }}
+        />
+        <Line
+          yAxisId="right"
+          type="monotone"
+          dataKey="goodQuestionCount"
+          name="goodQuestionCount"
+          stroke="#ec4899"
+          strokeWidth={2}
+          dot={{ r: 3, fill: "#ec4899" }}
           activeDot={{ r: 5 }}
         />
       </LineChart>
@@ -216,7 +228,7 @@ export const DailyMetricsChart = () => {
   }
 
   const hasData = chartData.some(
-    (d) => d.checkedTopicCount > 0 || d.sessionCount > 0 || d.messageCount > 0
+    (d) => d.checkedTopicCount > 0 || d.sessionCount > 0 || d.messageCount > 0 || d.goodQuestionCount > 0
   )
 
   return (

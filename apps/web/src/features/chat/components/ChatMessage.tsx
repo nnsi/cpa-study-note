@@ -83,6 +83,7 @@ const ImagePreviewModal = ({
 export const ChatMessageView = ({ message, isStreaming }: Props) => {
   const isUser = message.isUser
   const [showPreview, setShowPreview] = useState(false)
+  const [showOcrText, setShowOcrText] = useState(false)
 
   // 画像URLを生成
   const imageUrl = message.imageId
@@ -124,6 +125,33 @@ export const ChatMessageView = ({ message, isStreaming }: Props) => {
               crossOrigin="use-credentials"
             />
           </button>
+        )}
+
+        {/* OCR抽出テキスト（折りたたみ） */}
+        {message.ocrResult && isUser && (
+          <div className="mb-2">
+            <button
+              type="button"
+              onClick={() => setShowOcrText(!showOcrText)}
+              className="flex items-center gap-1.5 text-2xs text-indigo-200 hover:text-white transition-colors"
+            >
+              <svg
+                className={`size-3 transition-transform ${showOcrText ? "rotate-90" : ""}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+              </svg>
+              抽出テキストを{showOcrText ? "非表示" : "表示"}
+            </button>
+            {showOcrText && (
+              <div className="mt-2 p-2 bg-white/10 rounded-lg text-2xs text-indigo-100 whitespace-pre-wrap max-h-40 overflow-y-auto">
+                {message.ocrResult}
+              </div>
+            )}
+          </div>
         )}
 
         {/* メッセージ本文 */}

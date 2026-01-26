@@ -1,102 +1,147 @@
+/// <reference types="@cloudflare/workers-types" />
 /**
  * Topic Routes の統合テスト
  */
 import { describe, it, expect, beforeEach } from "vitest"
 import { Hono } from "hono"
-import type { Env, Variables } from "@/shared/types/env"
+import { z } from "zod"
+import type { Env, Variables } from "../../shared/types/env"
 import { topicRoutes } from "./route"
 import {
   setupTestContext,
   createAuthHeaders,
   createAdditionalTestData,
   createProgressTestData,
+  parseJson,
+  errorResponseSchema,
   type TestContext,
-} from "@/test/helpers"
+} from "../../test/helpers"
 
-// レスポンス型定義
-type SubjectsListResponse = {
-  subjects: Array<{
-    id: string
-    name: string
-    categoryCount: number
-    topicCount: number
-  }>
-}
+// レスポンススキーマ定義
+const subjectsListSchema = z.object({
+  subjects: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      categoryCount: z.number(),
+      topicCount: z.number(),
+    })
+  ),
+})
 
-type SubjectDetailResponse = {
-  subject: {
-    id: string
-    name: string
-    categoryCount: number
-  }
-}
+const subjectDetailSchema = z.object({
+  subject: z.object({
+    id: z.string(),
+    name: z.string(),
+    categoryCount: z.number(),
+  }),
+})
 
-type CategoriesResponse = {
-  categories: Array<{
-    id: string
-    name: string
-    depth: number
-    children: Array<{
-      id: string
-      name: string
-      depth: number
-    }>
-    understoodCount?: number
-  }>
-}
+const categoriesSchema = z.object({
+  categories: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      depth: z.number(),
+      children: z.array(
+        z.object({
+          id: z.string(),
+          name: z.string(),
+          depth: z.number(),
+        })
+      ),
+      understoodCount: z.number().optional(),
+    })
+  ),
+})
 
-type TopicsListResponse = {
-  topics: Array<{
-    id: string
-    name: string
-  }>
-}
+const topicsListSchema = z.object({
+  topics: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+    })
+  ),
+})
 
-type TopicDetailResponse = {
-  topic: {
-    id: string
-    name: string
-    progress?: {
-      understood: boolean
-    }
-  }
-}
+const topicDetailSchema = z.object({
+  topic: z.object({
+    id: z.string(),
+    name: z.string(),
+    progress: z
+      .object({
+        understood: z.boolean(),
+      })
+      .optional()
+      .nullable(),
+  }),
+})
 
-type ProgressResponse = {
-  progress: {
-    topicId: string
-    understood: boolean
-    lastAccessedAt: string
-  }
-}
+const progressSchema = z.object({
+  progress: z.object({
+    topicId: z.string(),
+    understood: z.boolean(),
+    lastAccessedAt: z.string(),
+  }),
+})
 
-type ProgressListResponse = {
-  progress: Array<{
-    topicId: string
-    understood: boolean
-  }>
-}
+const progressListSchema = z.object({
+  progress: z.array(
+    z.object({
+      topicId: z.string(),
+      understood: z.boolean(),
+    })
+  ),
+})
 
-type ProgressStatsResponse = {
-  stats: Array<{
-    subjectId: string
-    subjectName: string
-    totalTopics: number
-    understoodTopics: number
-  }>
-}
+const progressStatsSchema = z.object({
+  stats: z.array(
+    z.object({
+      subjectId: z.string(),
+      subjectName: z.string(),
+      totalTopics: z.number(),
+      understoodTopics: z.number(),
+    })
+  ),
+})
 
-type CheckHistoryResponse = {
-  history: Array<{
-    id: string
-    action: "checked" | "unchecked"
-    checkedAt: string
-  }>
-}
+const checkHistorySchema = z.object({
+  history: z.array(
+    z.object({
+      id: z.string(),
+      action: z.enum(["checked", "unchecked"]),
+      checkedAt: z.string(),
+    })
+  ),
+})
 
-type ErrorResponse = {
-  error: string
-}
+const filterResponseSchema = z.object({
+  topics: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      subjectId: z.string(),
+      subjectName: z.string(),
+      sessionCount: z.number(),
+      lastChatAt: z.string().nullable(),
+      understood: z.boolean(),
+      goodQuestionCount: z.number(),
+    })
+  ),
+})
+
+const recentTopicsSchema = z.object({
+  topics: z.array(
+    z.object({
+      topicId: z.string(),
+      topicName: z.string(),
+      subjectId: z.string(),
+      subjectName: z.string(),
+      categoryId: z.string(),
+      lastAccessedAt: z.string(),
+    })
+  ),
+})
 
 describe("Topic Routes", () => {
   let ctx: TestContext
@@ -128,11 +173,11 @@ describe("Topic Routes", () => {
       const res = await app.request("/subjects")
 
       expect(res.status).toBe(200)
-      const body = await res.json<SubjectsListResponse>()
+      const body = await parseJson(res, subjectsListSchema)
       expect(body.subjects).toBeDefined()
       expect(body.subjects.length).toBeGreaterThanOrEqual(2)
 
-      const subject1 = body.subjects.find((s) => s.id === ctx.testData.subjectId)
+      const subject1 = body.subjects.find((s: { id: string }) => s.id === ctx.testData.subjectId)
       expect(subject1).toBeDefined()
       expect(subject1!.name).toBe("財務会計論")
       expect(subject1!.categoryCount).toBeGreaterThanOrEqual(1)
@@ -145,7 +190,7 @@ describe("Topic Routes", () => {
       const res = await app.request(`/subjects/${ctx.testData.subjectId}`)
 
       expect(res.status).toBe(200)
-      const body = await res.json<SubjectDetailResponse>()
+      const body = await parseJson(res, subjectDetailSchema)
       expect(body.subject).toBeDefined()
       expect(body.subject.id).toBe(ctx.testData.subjectId)
       expect(body.subject.name).toBe("財務会計論")
@@ -156,7 +201,7 @@ describe("Topic Routes", () => {
       const res = await app.request("/subjects/non-existent-subject")
 
       expect(res.status).toBe(404)
-      const body = await res.json<ErrorResponse>()
+      const body = await parseJson(res, errorResponseSchema)
       expect(body.error).toBe("Subject not found")
     })
   })
@@ -166,12 +211,12 @@ describe("Topic Routes", () => {
       const res = await app.request(`/subjects/${ctx.testData.subjectId}/categories`)
 
       expect(res.status).toBe(200)
-      const body = await res.json<CategoriesResponse>()
+      const body = await parseJson(res, categoriesSchema)
       expect(body.categories).toBeDefined()
       expect(Array.isArray(body.categories)).toBe(true)
 
       // ルートカテゴリを確認
-      const rootCategory = body.categories.find((c) => c.id === ctx.testData.categoryId)
+      const rootCategory = body.categories.find((c: { id: string }) => c.id === ctx.testData.categoryId)
       expect(rootCategory).toBeDefined()
       expect(rootCategory!.name).toBe("計算")
       expect(rootCategory!.depth).toBe(0)
@@ -186,10 +231,10 @@ describe("Topic Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json<CategoriesResponse>()
+      const body = await parseJson(res, categoriesSchema)
 
       // 進捗情報が含まれていることを確認
-      const category = body.categories.find((c) => c.id === ctx.testData.categoryId)
+      const category = body.categories.find((c: { id: string }) => c.id === ctx.testData.categoryId)
       expect(category!.understoodCount).toBeGreaterThanOrEqual(0)
     })
 
@@ -197,13 +242,13 @@ describe("Topic Routes", () => {
       const res = await app.request(`/subjects/${ctx.testData.subjectId}/categories`)
 
       expect(res.status).toBe(200)
-      const body = await res.json<CategoriesResponse>()
+      const body = await parseJson(res, categoriesSchema)
 
-      const rootCategory = body.categories.find((c) => c.id === ctx.testData.categoryId)
+      const rootCategory = body.categories.find((c: { id: string }) => c.id === ctx.testData.categoryId)
       expect(rootCategory!.children).toBeDefined()
       expect(Array.isArray(rootCategory!.children)).toBe(true)
 
-      const childCategory = rootCategory!.children.find((c) => c.id === additionalData.childCategoryId)
+      const childCategory = rootCategory!.children.find((c: { id: string }) => c.id === additionalData.childCategoryId)
       expect(childCategory).toBeDefined()
       expect(childCategory!.name).toBe("子カテゴリ")
       expect(childCategory!.depth).toBe(1)
@@ -217,11 +262,11 @@ describe("Topic Routes", () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await res.json<TopicsListResponse>()
+      const body = await parseJson(res, topicsListSchema)
       expect(body.topics).toBeDefined()
       expect(body.topics.length).toBeGreaterThanOrEqual(2)
 
-      const topic1 = body.topics.find((t) => t.id === ctx.testData.topicId)
+      const topic1 = body.topics.find((t: { id: string }) => t.id === ctx.testData.topicId)
       expect(topic1).toBeDefined()
       expect(topic1!.name).toBe("有価証券")
     })
@@ -237,7 +282,7 @@ describe("Topic Routes", () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await res.json<TopicDetailResponse>()
+      const body = await parseJson(res, topicDetailSchema)
       expect(body.topic).toBeDefined()
       expect(body.topic.id).toBe(ctx.testData.topicId)
       expect(body.topic.name).toBe("有価証券")
@@ -254,7 +299,7 @@ describe("Topic Routes", () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await res.json<TopicDetailResponse>()
+      const body = await parseJson(res, topicDetailSchema)
       expect(body.topic.progress).toBeDefined()
       expect(body.topic.progress!.understood).toBe(true)
     })
@@ -268,7 +313,7 @@ describe("Topic Routes", () => {
       )
 
       expect(res.status).toBe(404)
-      const body = await res.json<ErrorResponse>()
+      const body = await parseJson(res, errorResponseSchema)
       expect(body.error).toBe("Topic not found")
     })
 
@@ -291,7 +336,7 @@ describe("Topic Routes", () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await res.json<ProgressResponse>()
+      const body = await parseJson(res, progressSchema)
       expect(body.progress).toBeDefined()
       expect(body.progress.understood).toBe(true)
       expect(body.progress.topicId).toBe(ctx.testData.topicId)
@@ -319,7 +364,7 @@ describe("Topic Routes", () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await res.json<ProgressResponse>()
+      const body = await parseJson(res, progressSchema)
       expect(body.progress.understood).toBe(false)
     })
 
@@ -334,7 +379,7 @@ describe("Topic Routes", () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await res.json<ProgressResponse>()
+      const body = await parseJson(res, progressSchema)
       expect(body.progress).toBeDefined()
       expect(body.progress.lastAccessedAt).toBeDefined()
     })
@@ -351,7 +396,7 @@ describe("Topic Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json<ProgressListResponse>()
+      const body = await parseJson(res, progressListSchema)
       expect(body.progress).toBeDefined()
       expect(Array.isArray(body.progress)).toBe(true)
       expect(body.progress.length).toBeGreaterThanOrEqual(2)
@@ -363,7 +408,7 @@ describe("Topic Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json<ProgressListResponse>()
+      const body = await parseJson(res, progressListSchema)
       expect(body.progress).toEqual([])
     })
   })
@@ -377,11 +422,11 @@ describe("Topic Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json<ProgressStatsResponse>()
+      const body = await parseJson(res, progressStatsSchema)
       expect(body.stats).toBeDefined()
       expect(Array.isArray(body.stats)).toBe(true)
 
-      const subjectStats = body.stats.find((s) => s.subjectId === ctx.testData.subjectId)
+      const subjectStats = body.stats.find((s: { subjectId: string }) => s.subjectId === ctx.testData.subjectId)
       expect(subjectStats).toBeDefined()
       expect(subjectStats!.subjectName).toBe("財務会計論")
       expect(subjectStats!.totalTopics).toBeGreaterThanOrEqual(1)
@@ -409,7 +454,7 @@ describe("Topic Routes", () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await res.json<CheckHistoryResponse>()
+      const body = await parseJson(res, checkHistorySchema)
       expect(body.history).toBeDefined()
       expect(Array.isArray(body.history)).toBe(true)
       expect(body.history.length).toBeGreaterThanOrEqual(1)
@@ -446,11 +491,11 @@ describe("Topic Routes", () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await res.json<CheckHistoryResponse>()
+      const body = await parseJson(res, checkHistorySchema)
       expect(body.history.length).toBeGreaterThanOrEqual(2)
 
       // 時系列で並んでいる（最新が先）
-      const actions = body.history.map((h) => h.action)
+      const actions = body.history.map((h: { action: string }) => h.action)
       expect(actions).toContain("checked")
       expect(actions).toContain("unchecked")
     })
@@ -464,7 +509,7 @@ describe("Topic Routes", () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await res.json<CheckHistoryResponse>()
+      const body = await parseJson(res, checkHistorySchema)
       expect(body.history).toEqual([])
     })
 
@@ -488,32 +533,19 @@ describe("Topic Routes", () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await res.json<CheckHistoryResponse>()
+      const body = await parseJson(res, checkHistorySchema)
       expect(body.history).toEqual([])
     })
   })
 
   describe("GET /subjects/filter - 論点フィルタ", () => {
-    type FilterResponse = {
-      topics: Array<{
-        id: string
-        name: string
-        subjectId: string
-        subjectName: string
-        sessionCount: number
-        lastChatAt: string | null
-        understood: boolean
-        goodQuestionCount: number
-      }>
-    }
-
     it("認証済みユーザーがフィルタ結果を取得できる", async () => {
       const res = await app.request("/subjects/filter", {
         headers: createAuthHeaders(ctx.testData.userId),
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json<FilterResponse>()
+      const body = await parseJson(res, filterResponseSchema)
       expect(body.topics).toBeDefined()
       expect(Array.isArray(body.topics)).toBe(true)
     })
@@ -528,7 +560,7 @@ describe("Topic Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json<FilterResponse>()
+      const body = await parseJson(res, filterResponseSchema)
 
       // understood=true の論点のみ
       for (const topic of body.topics) {
@@ -545,7 +577,7 @@ describe("Topic Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json<FilterResponse>()
+      const body = await parseJson(res, filterResponseSchema)
 
       // understood=false の論点のみ（進捗がないものも含む）
       for (const topic of body.topics) {
@@ -560,7 +592,7 @@ describe("Topic Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json<FilterResponse>()
+      const body = await parseJson(res, filterResponseSchema)
 
       // セッションが1件以上の論点のみ
       for (const topic of body.topics) {
@@ -574,7 +606,7 @@ describe("Topic Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json<FilterResponse>()
+      const body = await parseJson(res, filterResponseSchema)
 
       // goodQuestionCount が1以上の論点のみ
       for (const topic of body.topics) {
@@ -590,7 +622,7 @@ describe("Topic Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json<FilterResponse>()
+      const body = await parseJson(res, filterResponseSchema)
 
       for (const topic of body.topics) {
         expect(topic.understood).toBe(true)
@@ -604,7 +636,7 @@ describe("Topic Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json<FilterResponse>()
+      const body = await parseJson(res, filterResponseSchema)
 
       if (body.topics.length > 0) {
         const topic = body.topics[0]
@@ -621,24 +653,13 @@ describe("Topic Routes", () => {
   })
 
   describe("GET /subjects/progress/recent - 最近触った論点", () => {
-    type RecentTopicsResponse = {
-      topics: Array<{
-        topicId: string
-        topicName: string
-        subjectId: string
-        subjectName: string
-        categoryId: string
-        lastAccessedAt: string
-      }>
-    }
-
     it("認証済みユーザーが最近の論点リストを取得できる", async () => {
       const res = await app.request("/subjects/progress/recent", {
         headers: createAuthHeaders(ctx.testData.userId),
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json<RecentTopicsResponse>()
+      const body = await parseJson(res, recentTopicsSchema)
       expect(body.topics).toBeDefined()
       expect(Array.isArray(body.topics)).toBe(true)
     })
@@ -666,7 +687,7 @@ describe("Topic Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json<RecentTopicsResponse>()
+      const body = await parseJson(res, recentTopicsSchema)
       expect(body.topics.length).toBeGreaterThanOrEqual(2)
 
       // lastAccessedAt が降順になっているか確認
@@ -691,7 +712,7 @@ describe("Topic Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json<RecentTopicsResponse>()
+      const body = await parseJson(res, recentTopicsSchema)
 
       if (body.topics.length > 0) {
         const topic = body.topics[0]
@@ -712,7 +733,7 @@ describe("Topic Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json<RecentTopicsResponse>()
+      const body = await parseJson(res, recentTopicsSchema)
       expect(body.topics).toEqual([])
     })
 

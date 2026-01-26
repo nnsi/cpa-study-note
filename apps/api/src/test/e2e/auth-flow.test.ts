@@ -1,3 +1,4 @@
+/// <reference types="@cloudflare/workers-types" />
 /**
  * E2E: 認証フロー
  *
@@ -7,33 +8,34 @@
  * - ログアウト -> トークン無効化確認
  */
 import { describe, it, expect, beforeAll, afterAll } from "vitest"
+import { z } from "zod"
 import { setupTestEnv, cleanupTestEnv, type TestContext } from "./helpers"
 
-// Response types for auth endpoints
-type ProvidersResponse = {
-  providers: string[]
-}
+// Zod schemas for response validation
+const providersResponseSchema = z.object({
+  providers: z.array(z.string()),
+})
 
-type ErrorResponse = {
-  error: string
-}
+const errorResponseSchema = z.object({
+  error: z.string(),
+})
 
-type AuthUser = {
-  id: string
-}
+const authUserSchema = z.object({
+  id: z.string(),
+})
 
-type LoginResponse = {
-  accessToken: string
-  user: AuthUser
-}
+const loginResponseSchema = z.object({
+  accessToken: z.string(),
+  user: authUserSchema,
+})
 
-type MeResponse = {
-  user: AuthUser
-}
+const meResponseSchema = z.object({
+  user: authUserSchema,
+})
 
-type LogoutResponse = {
-  success: boolean
-}
+const logoutResponseSchema = z.object({
+  success: z.boolean(),
+})
 
 describe("E2E: Auth Flow", () => {
   let ctx: TestContext
@@ -53,7 +55,7 @@ describe("E2E: Auth Flow", () => {
       }, ctx.env)
 
       expect(res.status).toBe(200)
-      const data = await res.json<ProvidersResponse>()
+      const data = providersResponseSchema.parse(await res.json())
       expect(data.providers).toContain("google")
     })
 
@@ -75,7 +77,7 @@ describe("E2E: Auth Flow", () => {
       }, ctx.env)
 
       expect(res.status).toBe(400)
-      const data = await res.json<ErrorResponse>()
+      const data = errorResponseSchema.parse(await res.json())
       expect(data.error).toBe("Missing code")
     })
 
@@ -85,7 +87,7 @@ describe("E2E: Auth Flow", () => {
       }, ctx.env)
 
       expect(res.status).toBe(400)
-      const data = await res.json<ErrorResponse>()
+      const data = errorResponseSchema.parse(await res.json())
       expect(data.error).toBe("Invalid state")
     })
 
@@ -100,7 +102,7 @@ describe("E2E: Auth Flow", () => {
       }, ctx.env)
 
       expect(loginRes.status).toBe(200)
-      const loginData = await loginRes.json<LoginResponse>()
+      const loginData = loginResponseSchema.parse(await loginRes.json())
       expect(loginData.accessToken).toBeDefined()
       expect(loginData.user).toBeDefined()
 
@@ -119,7 +121,7 @@ describe("E2E: Auth Flow", () => {
       }, ctx.env)
 
       expect(meRes.status).toBe(200)
-      const meData = await meRes.json<MeResponse>()
+      const meData = meResponseSchema.parse(await meRes.json())
       expect(meData.user.id).toBe(loginData.user.id)
 
       // Step 4: Refresh token flow (part of complete auth cycle)
@@ -132,7 +134,7 @@ describe("E2E: Auth Flow", () => {
       }, ctx.env)
 
       expect(refreshRes.status).toBe(200)
-      const refreshData = await refreshRes.json<LoginResponse>()
+      const refreshData = loginResponseSchema.parse(await refreshRes.json())
       expect(refreshData.accessToken).toBeDefined()
       expect(refreshData.user.id).toBe(loginData.user.id)
     })
@@ -146,7 +148,7 @@ describe("E2E: Auth Flow", () => {
       }, ctx.env)
 
       expect(res.status).toBe(200)
-      const data = await res.json<LoginResponse>()
+      const data = loginResponseSchema.parse(await res.json())
       expect(data.accessToken).toBeDefined()
       expect(data.user).toBeDefined()
       expect(data.user.id).toBe(ctx.testData.userId)
@@ -196,7 +198,7 @@ describe("E2E: Auth Flow", () => {
       }, ctx.env)
 
       expect(res.status).toBe(200)
-      const data = await res.json<LoginResponse>()
+      const data = loginResponseSchema.parse(await res.json())
       expect(data.accessToken).toBeDefined()
       expect(data.user).toBeDefined()
     })
@@ -208,7 +210,7 @@ describe("E2E: Auth Flow", () => {
       }, ctx.env)
 
       expect(res.status).toBe(401)
-      const data = await res.json<ErrorResponse>()
+      const data = errorResponseSchema.parse(await res.json())
       expect(data.error).toBe("No refresh token")
     })
 
@@ -254,7 +256,7 @@ describe("E2E: Auth Flow", () => {
       }, ctx.env)
 
       expect(res.status).toBe(200)
-      const data = await res.json<LogoutResponse>()
+      const data = logoutResponseSchema.parse(await res.json())
       expect(data.success).toBe(true)
 
       // Cookie should be cleared
@@ -289,7 +291,7 @@ describe("E2E: Auth Flow", () => {
       }, ctx.env)
 
       expect(res.status).toBe(200)
-      const data = await res.json<MeResponse>()
+      const data = meResponseSchema.parse(await res.json())
       expect(data.user).toBeDefined()
       expect(data.user.id).toBe(ctx.testData.userId)
     })

@@ -1,0 +1,1 @@
+ALTER TABLE `chat_messages` ADD `question_quality_reason` text;

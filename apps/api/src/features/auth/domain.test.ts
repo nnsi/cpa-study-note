@@ -16,6 +16,7 @@ describe("Auth Domain Types", () => {
         email: "test@example.com",
         name: "Test User",
         avatarUrl: "https://example.com/avatar.png",
+        timezone: "Asia/Tokyo",
         createdAt: new Date(),
         updatedAt: new Date(),
       }
@@ -24,6 +25,7 @@ describe("Auth Domain Types", () => {
       expect(user.email).toBe("test@example.com")
       expect(user.name).toBe("Test User")
       expect(user.avatarUrl).toBe("https://example.com/avatar.png")
+      expect(user.timezone).toBe("Asia/Tokyo")
       expect(user.createdAt).toBeInstanceOf(Date)
       expect(user.updatedAt).toBeInstanceOf(Date)
     })
@@ -34,6 +36,7 @@ describe("Auth Domain Types", () => {
         email: "test@example.com",
         name: "Test User",
         avatarUrl: null,
+        timezone: "Asia/Tokyo",
         createdAt: new Date(),
         updatedAt: new Date(),
       }

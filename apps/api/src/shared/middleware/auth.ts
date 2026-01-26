@@ -30,6 +30,7 @@ export const authMiddleware = createMiddleware<AuthContext>(async (c, next) => {
       email: payload.email as string,
       name: payload.name as string,
       avatarUrl: (payload.avatarUrl as string) || null,
+      timezone: (payload.timezone as string) || "Asia/Tokyo",
     }
 
     c.set("user", user)
@@ -48,6 +49,7 @@ const getDevUser = (c: { req: { header: (name: string) => string | undefined }; 
     email: `${userId}@example.com`,
     name: userName,
     avatarUrl: null,
+    timezone: "Asia/Tokyo",
   }
 }
 
@@ -76,6 +78,7 @@ export const optionalAuthMiddleware = createMiddleware<AuthContext>(
         email: payload.email as string,
         name: payload.name as string,
         avatarUrl: (payload.avatarUrl as string) || null,
+        timezone: (payload.timezone as string) || "Asia/Tokyo",
       }
 
       c.set("user", user)

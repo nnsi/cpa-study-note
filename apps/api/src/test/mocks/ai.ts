@@ -2,7 +2,7 @@
  * AIAdapter のモック
  * テスト用に固定レスポンスを返す
  */
-import type { AIAdapter, GenerateTextInput, StreamTextInput, StreamChunk } from "@/shared/lib/ai"
+import type { AIAdapter, GenerateTextInput, StreamTextInput, StreamChunk } from "../../shared/lib/ai"
 
 export type MockAIOptions = {
   textResponse?: string

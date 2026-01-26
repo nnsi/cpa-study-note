@@ -1,4 +1,4 @@
-import type { MetricsRepository, MetricSnapshot, TodayMetrics } from "./repository"
+import type { MetricsRepository, MetricSnapshot, TodayMetrics, DailyMetric } from "./repository"
 
 type MetricsDeps = {
   metricsRepo: MetricsRepository
@@ -15,9 +15,21 @@ type MetricSnapshotResponse = {
   createdAt: string
 }
 
+type DailyMetricResponse = {
+  date: string
+  checkedTopicCount: number
+  sessionCount: number
+  messageCount: number
+  goodQuestionCount: number
+}
+
 const toResponse = (snapshot: MetricSnapshot): MetricSnapshotResponse => ({
   ...snapshot,
   createdAt: snapshot.createdAt.toISOString(),
+})
+
+const toDailyMetricResponse = (metric: DailyMetric): DailyMetricResponse => ({
+  ...metric,
 })
 
 // 日付形式バリデーション
@@ -30,14 +42,15 @@ const isValidDateRange = (from: string, to: string): boolean => {
   return from <= to
 }
 
-// 日次メトリクス取得
+// 日次メトリクス取得（オンザフライ集計）
 export const getDailyMetrics = async (
   deps: MetricsDeps,
   userId: string,
   from: string,
-  to: string
+  to: string,
+  timezone: string
 ): Promise<
-  | { ok: true; metrics: MetricSnapshotResponse[] }
+  | { ok: true; metrics: DailyMetricResponse[] }
   | { ok: false; error: string; status: number }
 > => {
   if (!isValidDateFormat(from) || !isValidDateFormat(to)) {
@@ -56,11 +69,12 @@ export const getDailyMetrics = async (
     }
   }
 
-  const snapshots = await deps.metricsRepo.findByDateRange(userId, from, to)
+  // オンザフライで集計（タイムゾーン考慮）
+  const metrics = await deps.metricsRepo.aggregateDateRange(userId, from, to, timezone)
 
   return {
     ok: true,
-    metrics: snapshots.map(toResponse),
+    metrics: metrics.map(toDailyMetricResponse),
   }
 }
 
@@ -104,10 +118,11 @@ export const createSnapshot = async (
   }
 }
 
-// 今日の活動メトリクス取得（リアルタイム集計）
+// 今日の活動メトリクス取得（リアルタイム集計、タイムゾーン考慮）
 export const getTodayMetrics = async (
   deps: MetricsDeps,
-  userId: string
+  userId: string,
+  timezone: string
 ): Promise<TodayMetrics> => {
-  return deps.metricsRepo.aggregateToday(userId)
+  return deps.metricsRepo.aggregateToday(userId, timezone)
 }

@@ -1,56 +1,60 @@
+/// <reference types="@cloudflare/workers-types" />
 /**
  * Note Routes の統合テスト
  */
 import { describe, it, expect, beforeEach, vi } from "vitest"
 import { Hono } from "hono"
-import type { Env, Variables } from "@/shared/types/env"
+import { z } from "zod"
+import type { Env, Variables } from "../../shared/types/env"
 import { noteRoutes } from "./route"
 import {
   setupTestContext,
   createAuthHeaders,
   createAdditionalTestData,
   createNoteTestData,
+  parseJson,
+  errorResponseSchema,
   type TestContext,
-} from "@/test/helpers"
-import { createMockAIAdapter, mockAIPresets } from "@/test/mocks/ai"
+} from "../../test/helpers"
+import { createMockAIAdapter, mockAIPresets } from "../../test/mocks/ai"
 
-// レスポンス型定義
-type NoteResponse = {
-  note: {
-    id: string
-    topicId: string
-    sessionId: string
-    userId: string
-    userMemo: string | null
-    keyPoints: string[] | null
-    stumbledPoints: string[] | null
-    topicName?: string
-    subjectName?: string
-    categoryId?: string
-    subjectId?: string
-    createdAt: string
-    updatedAt: string
-  }
-}
+// レスポンススキーマ定義
+const noteSchema = z.object({
+  id: z.string(),
+  topicId: z.string(),
+  sessionId: z.string().nullable(),
+  userId: z.string(),
+  userMemo: z.string().nullable(),
+  keyPoints: z.array(z.string()).nullable(),
+  stumbledPoints: z.array(z.string()).nullable(),
+  topicName: z.string().optional(),
+  subjectName: z.string().optional(),
+  categoryId: z.string().optional(),
+  subjectId: z.string().optional(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+})
 
-type NotesListResponse = {
-  notes: Array<{
-    id: string
-    topicId: string
-    userId: string
-    topicName?: string
-    subjectName?: string
-    createdAt: string
-    updatedAt: string
-  }>
-}
+const noteResponseSchema = z.object({
+  note: noteSchema,
+})
 
-type ErrorResponse = {
-  error: string
-}
+const notesListSchema = z.object({
+  notes: z.array(
+    z.object({
+      id: z.string(),
+      topicId: z.string(),
+      userId: z.string(),
+      topicName: z.string().optional(),
+      subjectName: z.string().optional(),
+      createdAt: z.string(),
+      updatedAt: z.string(),
+    })
+  ),
+})
 
 // AI Adapterをモック
-vi.mock("@/shared/lib/ai", () => ({
+vi.mock("../../shared/lib/ai", () => ({
   createAIAdapter: () => mockAIPresets.noteSummary,
 }))
 
@@ -87,7 +91,7 @@ describe("Note Routes", () => {
       })
 
       expect(res.status).toBe(201)
-      const body = await res.json<NoteResponse>()
+      const body = await parseJson(res, noteResponseSchema)
       expect(body.note).toBeDefined()
       expect(body.note.topicId).toBe(ctx.testData.topicId)
       expect(body.note.sessionId).toBe(additionalData.sessionId)
@@ -102,7 +106,7 @@ describe("Note Routes", () => {
       })
 
       expect(res.status).toBe(404)
-      const body = await res.json<ErrorResponse>()
+      const body = await parseJson(res, errorResponseSchema)
       expect(body.error).toBe("Session not found")
     })
 
@@ -114,7 +118,7 @@ describe("Note Routes", () => {
       })
 
       expect(res.status).toBe(403)
-      const body = await res.json<ErrorResponse>()
+      const body = await parseJson(res, errorResponseSchema)
       expect(body.error).toBe("Unauthorized")
     })
 
@@ -140,7 +144,7 @@ describe("Note Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json<NotesListResponse>()
+      const body = await parseJson(res, notesListSchema)
       expect(body.notes).toBeDefined()
       expect(Array.isArray(body.notes)).toBe(true)
       expect(body.notes.length).toBe(2)
@@ -156,7 +160,7 @@ describe("Note Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json<NotesListResponse>()
+      const body = await parseJson(res, notesListSchema)
       expect(body.notes).toEqual([])
     })
 
@@ -169,7 +173,7 @@ describe("Note Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json<NotesListResponse>()
+      const body = await parseJson(res, notesListSchema)
       expect(body.notes.length).toBe(1)
       expect(body.notes[0].userId).toBe(ctx.testData.userId)
     })
@@ -186,10 +190,10 @@ describe("Note Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json<NotesListResponse>()
+      const body = await parseJson(res, notesListSchema)
       expect(body.notes).toBeDefined()
       expect(body.notes.length).toBe(2)
-      body.notes.forEach((note) => {
+      body.notes.forEach((note: { topicId: string }) => {
         expect(note.topicId).toBe(ctx.testData.topicId)
       })
     })
@@ -200,7 +204,7 @@ describe("Note Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json<NotesListResponse>()
+      const body = await parseJson(res, notesListSchema)
       expect(body.notes).toEqual([])
     })
   })
@@ -214,7 +218,7 @@ describe("Note Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json<NoteResponse>()
+      const body = await parseJson(res, noteResponseSchema)
       expect(body.note).toBeDefined()
       expect(body.note.id).toBe(noteId)
       expect(body.note.topicName).toBeDefined()
@@ -229,7 +233,7 @@ describe("Note Routes", () => {
       })
 
       expect(res.status).toBe(404)
-      const body = await res.json<ErrorResponse>()
+      const body = await parseJson(res, errorResponseSchema)
       expect(body.error).toBe("Note not found")
     })
 
@@ -241,7 +245,7 @@ describe("Note Routes", () => {
       })
 
       expect(res.status).toBe(403)
-      const body = await res.json<ErrorResponse>()
+      const body = await parseJson(res, errorResponseSchema)
       expect(body.error).toBe("Unauthorized")
     })
   })
@@ -260,7 +264,7 @@ describe("Note Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json<NoteResponse>()
+      const body = await parseJson(res, noteResponseSchema)
       expect(body.note).toBeDefined()
       expect(body.note.userMemo).toBe("更新されたメモ")
       expect(body.note.keyPoints).toEqual(["新しいポイント1", "新しいポイント2"])
@@ -278,7 +282,7 @@ describe("Note Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json<NoteResponse>()
+      const body = await parseJson(res, noteResponseSchema)
       expect(body.note.stumbledPoints).toEqual(["つまずきA", "つまずきB"])
     })
 
@@ -290,7 +294,7 @@ describe("Note Routes", () => {
       })
 
       expect(res.status).toBe(404)
-      const body = await res.json<ErrorResponse>()
+      const body = await parseJson(res, errorResponseSchema)
       expect(body.error).toBe("Note not found")
     })
 
@@ -304,7 +308,7 @@ describe("Note Routes", () => {
       })
 
       expect(res.status).toBe(403)
-      const body = await res.json<ErrorResponse>()
+      const body = await parseJson(res, errorResponseSchema)
       expect(body.error).toBe("Unauthorized")
     })
 
@@ -318,7 +322,7 @@ describe("Note Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json<NoteResponse>()
+      const body = await parseJson(res, noteResponseSchema)
       expect(body.note).toBeDefined()
     })
   })
@@ -348,7 +352,7 @@ describe("Note Routes", () => {
       })
 
       expect(res.status).toBe(401)
-      const body = await res.json<ErrorResponse>()
+      const body = await parseJson(res, errorResponseSchema)
       expect(body.error).toBe("Unauthorized")
     })
 
@@ -373,7 +377,7 @@ describe("Note Routes", () => {
       })
 
       expect(res.status).toBe(401)
-      const body = await res.json<ErrorResponse>()
+      const body = await parseJson(res, errorResponseSchema)
       expect(body.error).toBe("Unauthorized")
     })
 
@@ -398,7 +402,7 @@ describe("Note Routes", () => {
       })
 
       expect(res.status).toBe(401)
-      const body = await res.json<ErrorResponse>()
+      const body = await parseJson(res, errorResponseSchema)
       expect(body.error).toBe("Unauthorized")
     })
   })

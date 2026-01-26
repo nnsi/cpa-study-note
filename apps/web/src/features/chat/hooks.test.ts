@@ -48,7 +48,7 @@ describe("useSendMessage", () => {
       { type: "done" as const, messageId: "msg-1" },
     ]
     vi.mocked(api.streamMessage).mockReturnValue(createAsyncIterable(chunks))
-    vi.mocked(api.evaluateMessage).mockResolvedValue({ quality: "good" })
+    vi.mocked(api.evaluateMessage).mockResolvedValue({ quality: { quality: "good", reason: "Good question" } })
 
     const { result } = renderHook(
       () =>
@@ -115,7 +115,7 @@ describe("useSendMessage", () => {
     vi.mocked(api.streamMessageWithNewSession).mockReturnValue(
       createAsyncIterable(chunks)
     )
-    vi.mocked(api.evaluateMessage).mockResolvedValue({ quality: "good" })
+    vi.mocked(api.evaluateMessage).mockResolvedValue({ quality: { quality: "good", reason: "Good question" } })
 
     const { result } = renderHook(
       () =>

@@ -11,6 +11,7 @@ export type User = {
   email: string
   name: string
   avatarUrl: string | null
+  timezone: string
 }
 
 export type Variables = {

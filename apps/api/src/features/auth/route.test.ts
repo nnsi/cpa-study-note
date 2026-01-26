@@ -1,22 +1,43 @@
+/// <reference types="@cloudflare/workers-types" />
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
 import { Hono } from "hono"
 import { SignJWT, jwtVerify } from "jose"
+import { z } from "zod"
 import * as schema from "@cpa-study/db/schema"
 import { authRoutes } from "./route"
 import {
   createTestDatabase,
   seedTestData,
   type TestDatabase,
-} from "@/test/mocks/db"
-import type { Env, Variables } from "@/shared/types/env"
+} from "../../test/mocks/db"
+import { parseJson, errorResponseSchema } from "../../test/helpers"
+import type { Env, Variables } from "../../shared/types/env"
 import Database from "better-sqlite3"
 
-// Response types for type-safe json parsing
-type ProvidersResponse = { providers: string[] }
-type UserResponse = { user: { id: string; email: string; name: string; avatarUrl: string | null } }
-type ErrorResponse = { error: string }
-type TokenResponse = { accessToken: string; user: { id: string; email: string; name: string; avatarUrl: string | null } }
-type LogoutResponse = { success: boolean }
+// Response schemas for type-safe json parsing
+const providersResponseSchema = z.object({
+  providers: z.array(z.string()),
+})
+
+const userInResponseSchema = z.object({
+  id: z.string(),
+  email: z.string(),
+  name: z.string(),
+  avatarUrl: z.string().nullable(),
+})
+
+const userResponseSchema = z.object({
+  user: userInResponseSchema,
+})
+
+const tokenResponseSchema = z.object({
+  accessToken: z.string(),
+  user: userInResponseSchema,
+})
+
+const logoutResponseSchema = z.object({
+  success: z.boolean(),
+})
 
 // Test environment
 const createTestEnv = (): Env => ({
@@ -89,7 +110,7 @@ describe("Auth Routes", () => {
       const res = await app.request("/auth/providers", {}, testEnv)
       expect(res.status).toBe(200)
 
-      const body = await res.json<ProvidersResponse>()
+      const body = await parseJson(res, providersResponseSchema)
       expect(body).toHaveProperty("providers")
       expect(Array.isArray(body.providers)).toBe(true)
       expect(body.providers).toContain("google")
@@ -102,7 +123,7 @@ describe("Auth Routes", () => {
       const res = await app.request("/auth/me", {}, testEnv)
       expect(res.status).toBe(200)
 
-      const body = await res.json<UserResponse>()
+      const body = await parseJson(res, userResponseSchema)
       expect(body).toHaveProperty("user")
       expect(body.user.id).toBe("test-user-1")
     })
@@ -140,7 +161,7 @@ describe("Auth Routes", () => {
       )
       expect(res.status).toBe(200)
 
-      const body = await res.json<UserResponse>()
+      const body = await parseJson(res, userResponseSchema)
       expect(body.user.id).toBe(testData.userId)
     })
 
@@ -174,7 +195,7 @@ describe("Auth Routes", () => {
       const res = await app.request("/auth/unknown-provider", {}, testEnv)
       expect(res.status).toBe(404)
 
-      const body = await res.json<ErrorResponse>()
+      const body = await parseJson(res, errorResponseSchema)
       expect(body.error).toBe("Provider not found")
     })
 
@@ -197,7 +218,7 @@ describe("Auth Routes", () => {
       )
 
       expect(res.status).toBe(400)
-      const body = await res.json<ErrorResponse>()
+      const body = await parseJson(res, errorResponseSchema)
       expect(body.error).toBe("Missing code")
     })
 
@@ -211,7 +232,7 @@ describe("Auth Routes", () => {
       )
 
       expect(res.status).toBe(400)
-      const body = await res.json<ErrorResponse>()
+      const body = await parseJson(res, errorResponseSchema)
       expect(body.error).toBe("Invalid state")
     })
 
@@ -250,7 +271,7 @@ describe("Auth Routes", () => {
       const { Hono } = await import("hono")
       const { setCookie, getCookie } = await import("hono/cookie")
       const { SignJWT } = await import("jose")
-      const { authMiddleware } = await import("@/shared/middleware/auth")
+      const { authMiddleware } = await import("../../shared/middleware/auth")
       const { createAuthRepository } = await import("./repository")
 
       const repo = createAuthRepository(db as any)
@@ -336,7 +357,7 @@ describe("Auth Routes", () => {
 
       // Verify refresh token was saved to DB
       const tokens = db.select().from(schema.refreshTokens).all()
-      const oauthUserTokens = tokens.filter((t) => t.userId === oauthUserId)
+      const oauthUserTokens = tokens.filter((t: typeof tokens[number]) => t.userId === oauthUserId)
       expect(oauthUserTokens.length).toBeGreaterThan(0)
     })
 
@@ -432,7 +453,7 @@ describe("Auth Routes", () => {
 
       // Verify new user was created
       const users = db.select().from(schema.users).all()
-      const newUser = users.find((u) => u.email === newUserEmail)
+      const newUser = users.find((u: typeof users[number]) => u.email === newUserEmail)
       expect(newUser).toBeDefined()
       expect(newUser?.name).toBe(newUserName)
 
@@ -455,7 +476,7 @@ describe("Auth Routes", () => {
       )
 
       expect(res.status).toBe(401)
-      const body = await res.json<ErrorResponse>()
+      const body = await parseJson(res, errorResponseSchema)
       expect(body.error).toBe("No refresh token")
     })
 
@@ -470,7 +491,7 @@ describe("Auth Routes", () => {
       )
 
       expect(res.status).toBe(401)
-      const body = await res.json<ErrorResponse>()
+      const body = await parseJson(res, errorResponseSchema)
       expect(body.error).toBe("INVALID_REFRESH_TOKEN")
     })
 
@@ -501,7 +522,7 @@ describe("Auth Routes", () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await res.json<TokenResponse>()
+      const body = await parseJson(res, tokenResponseSchema)
       expect(body).toHaveProperty("accessToken")
       expect(body).toHaveProperty("user")
       expect(body.user.id).toBe(testData.userId)
@@ -534,7 +555,7 @@ describe("Auth Routes", () => {
       )
 
       expect(res.status).toBe(401)
-      const body = await res.json<ErrorResponse>()
+      const body = await parseJson(res, errorResponseSchema)
       expect(body.error).toBe("REFRESH_TOKEN_EXPIRED")
     })
   })
@@ -548,7 +569,7 @@ describe("Auth Routes", () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await res.json<TokenResponse>()
+      const body = await parseJson(res, tokenResponseSchema)
       expect(body).toHaveProperty("accessToken")
       expect(body).toHaveProperty("user")
       expect(body.user.id).toBe("test-user-1")
@@ -577,7 +598,7 @@ describe("Auth Routes", () => {
       )
 
       expect(res.status).toBe(404)
-      const body = await res.json<ErrorResponse>()
+      const body = await parseJson(res, errorResponseSchema)
       expect(body.error).toBe("Not available")
     })
   })
@@ -591,7 +612,7 @@ describe("Auth Routes", () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await res.json<LogoutResponse>()
+      const body = await parseJson(res, logoutResponseSchema)
       expect(body.success).toBe(true)
     })
 

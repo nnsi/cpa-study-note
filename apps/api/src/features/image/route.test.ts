@@ -1,18 +1,22 @@
+/// <reference types="@cloudflare/workers-types" />
 /**
  * Image Routes の統合テスト
  */
 import { describe, it, expect, beforeEach, vi } from "vitest"
 import { Hono } from "hono"
-import type { Env, Variables } from "@/shared/types/env"
+import { z } from "zod"
+import type { Env, Variables } from "../../shared/types/env"
 import { imageRoutes } from "./route"
 import {
   setupTestContext,
   createAuthHeaders,
   createAdditionalTestData,
   createImageTestData,
+  parseJson,
+  errorResponseSchema,
   type TestContext,
-} from "@/test/helpers"
-import { createMockAIAdapter, mockAIPresets } from "@/test/mocks/ai"
+} from "../../test/helpers"
+import { createMockAIAdapter, mockAIPresets } from "../../test/mocks/ai"
 import { MAGIC_BYTES } from "./usecase"
 import type {
   Image,
@@ -20,13 +24,35 @@ import type {
   OcrResultResponse,
 } from "@cpa-study/shared/schemas"
 
-// レスポンス型定義
-type UploadResponse = { success: boolean }
-type ErrorResponse = { error: string }
-type ImageMetadataResponse = { image: Image }
+// レスポンススキーマ定義
+const uploadUrlResponseSchema = z.object({
+  uploadUrl: z.string(),
+  imageId: z.string(),
+})
+
+const uploadResponseSchema = z.object({
+  success: z.boolean(),
+})
+
+const imageMetadataResponseSchema = z.object({
+  image: z.object({
+    id: z.string(),
+    filename: z.string(),
+    mimeType: z.string(),
+    size: z.number(),
+    r2Key: z.string(),
+    ocrText: z.string().nullable(),
+    createdAt: z.string(),
+  }),
+})
+
+const ocrResultResponseSchema = z.object({
+  imageId: z.string(),
+  ocrText: z.string(),
+})
 
 // AI Adapterをモック
-vi.mock("@/shared/lib/ai", () => ({
+vi.mock("../../shared/lib/ai", () => ({
   createAIAdapter: () => mockAIPresets.ocr,
 }))
 
@@ -66,7 +92,7 @@ describe("Image Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json<UploadUrlResponse>()
+      const body = await parseJson(res, uploadUrlResponseSchema)
       expect(body.uploadUrl).toBeDefined()
       expect(body.imageId).toBeDefined()
       expect(body.uploadUrl).toContain(body.imageId)
@@ -96,7 +122,7 @@ describe("Image Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json<UploadUrlResponse>()
+      const body = await parseJson(res, uploadUrlResponseSchema)
       expect(body.uploadUrl).toBeDefined()
     })
 
@@ -177,7 +203,7 @@ describe("Image Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json<UploadResponse>()
+      const body = await parseJson(res, uploadResponseSchema)
       expect(body.success).toBe(true)
     })
 
@@ -192,7 +218,7 @@ describe("Image Routes", () => {
       })
 
       expect(res.status).toBe(404)
-      const body = await res.json<ErrorResponse>()
+      const body = await parseJson(res, errorResponseSchema)
       expect(body.error).toBe("Image not found")
     })
 
@@ -209,7 +235,7 @@ describe("Image Routes", () => {
       })
 
       expect(res.status).toBe(403)
-      const body = await res.json<ErrorResponse>()
+      const body = await parseJson(res, errorResponseSchema)
       expect(body.error).toBe("Unauthorized")
     })
 
@@ -231,7 +257,7 @@ describe("Image Routes", () => {
       })
 
       expect(res.status).toBe(400)
-      const body = await res.json<ErrorResponse>()
+      const body = await parseJson(res, errorResponseSchema)
       expect(body.error).toBe("Invalid file format")
     })
 
@@ -257,7 +283,7 @@ describe("Image Routes", () => {
       })
 
       expect(res.status).toBe(413)
-      const body = await res.json<ErrorResponse>()
+      const body = await parseJson(res, errorResponseSchema)
       expect(body.error).toContain("10MB")
     })
   })
@@ -281,7 +307,7 @@ describe("Image Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json<OcrResultResponse>()
+      const body = await parseJson(res, ocrResultResponseSchema)
       expect(body.imageId).toBe(imageId)
       expect(body.ocrText).toBeDefined()
     })
@@ -293,7 +319,7 @@ describe("Image Routes", () => {
       })
 
       expect(res.status).toBe(404)
-      const body = await res.json<ErrorResponse>()
+      const body = await parseJson(res, errorResponseSchema)
       expect(body.error).toBe("Image not found")
     })
 
@@ -306,7 +332,7 @@ describe("Image Routes", () => {
       })
 
       expect(res.status).toBe(403)
-      const body = await res.json<ErrorResponse>()
+      const body = await parseJson(res, errorResponseSchema)
       expect(body.error).toBe("Unauthorized")
     })
 
@@ -320,7 +346,7 @@ describe("Image Routes", () => {
       })
 
       expect(res.status).toBe(404)
-      const body = await res.json<ErrorResponse>()
+      const body = await parseJson(res, errorResponseSchema)
       expect(body.error).toBe("Image file not found")
     })
   })
@@ -334,7 +360,7 @@ describe("Image Routes", () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json<ImageMetadataResponse>()
+      const body = await parseJson(res, imageMetadataResponseSchema)
       expect(body.image).toBeDefined()
       expect(body.image.id).toBe(imageId)
       expect(body.image.filename).toBe("test.png")
@@ -348,7 +374,7 @@ describe("Image Routes", () => {
       })
 
       expect(res.status).toBe(404)
-      const body = await res.json<ErrorResponse>()
+      const body = await parseJson(res, errorResponseSchema)
       expect(body.error).toBe("Image not found")
     })
 
@@ -360,7 +386,7 @@ describe("Image Routes", () => {
       })
 
       expect(res.status).toBe(403)
-      const body = await res.json<ErrorResponse>()
+      const body = await parseJson(res, errorResponseSchema)
       expect(body.error).toBe("Unauthorized")
     })
   })
@@ -390,7 +416,7 @@ describe("Image Routes", () => {
       })
 
       expect(res.status).toBe(401)
-      const body = await res.json<ErrorResponse>()
+      const body = await parseJson(res, errorResponseSchema)
       expect(body.error).toBe("Unauthorized")
     })
 
@@ -413,7 +439,7 @@ describe("Image Routes", () => {
       })
 
       expect(res.status).toBe(401)
-      const body = await res.json<ErrorResponse>()
+      const body = await parseJson(res, errorResponseSchema)
       expect(body.error).toBe("Unauthorized")
     })
 
@@ -445,7 +471,7 @@ describe("Image Routes", () => {
       })
 
       expect(res.status).toBe(401)
-      const body = await res.json<ErrorResponse>()
+      const body = await parseJson(res, errorResponseSchema)
       expect(body.error).toBe("Unauthorized")
     })
 
@@ -469,7 +495,7 @@ describe("Image Routes", () => {
       })
 
       expect(res.status).toBe(401)
-      const body = await res.json<ErrorResponse>()
+      const body = await parseJson(res, errorResponseSchema)
       expect(body.error).toBe("Unauthorized")
     })
   })

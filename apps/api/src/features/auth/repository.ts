@@ -3,10 +3,17 @@ import type { Db } from "@cpa-study/db"
 import { users, userOAuthConnections, refreshTokens } from "@cpa-study/db/schema"
 import type { User, UserOAuthConnection, RefreshToken } from "./domain"
 
+type CreateUserInput = {
+  email: string
+  name: string
+  avatarUrl: string | null
+  timezone?: string
+}
+
 export type AuthRepository = {
   findUserById: (id: string) => Promise<User | null>
   findUserByEmail: (email: string) => Promise<User | null>
-  createUser: (user: Omit<User, "id" | "createdAt" | "updatedAt">) => Promise<User>
+  createUser: (user: CreateUserInput) => Promise<User>
   findConnectionByProviderAndId: (
     provider: string,
     providerId: string
@@ -39,12 +46,14 @@ export const createAuthRepository = (db: Db): AuthRepository => ({
   createUser: async (user) => {
     const id = crypto.randomUUID()
     const now = new Date()
+    const timezone = user.timezone ?? "Asia/Tokyo"
 
     await db.insert(users).values({
       id,
       email: user.email,
       name: user.name,
       avatarUrl: user.avatarUrl,
+      timezone,
       createdAt: now,
       updatedAt: now,
     })
@@ -54,6 +63,7 @@ export const createAuthRepository = (db: Db): AuthRepository => ({
       email: user.email,
       name: user.name,
       avatarUrl: user.avatarUrl,
+      timezone,
       createdAt: now,
       updatedAt: now,
     }

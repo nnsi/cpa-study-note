@@ -1,14 +1,12 @@
 import { api } from "@/lib/api-client"
 
+// オンザフライ集計の日次メトリクス
 export type DailyMetric = {
-  id: string
   date: string
-  userId: string
   checkedTopicCount: number
   sessionCount: number
   messageCount: number
   goodQuestionCount: number
-  createdAt: string
 }
 
 export type DailyMetricsResponse = {
