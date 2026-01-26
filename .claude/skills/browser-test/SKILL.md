@@ -29,17 +29,21 @@ curlでは検出できない問題を発見するため、実際のブラウザ�
 pnpm dev
 ```
 
-### 2. Playwright MCPでブラウザ操作
+### 2. Chromeで動作確認
 
-**注意**: Playwright MCPは出力が大きいため、サブエージェントに委譲してコンテキストを節約すること。
+ユーザーに http://localhost:5173 を開いてもらい、以下を確認する。
 
+**DevToolsの活用:**
+- **Network**: リクエスト/レスポンス、ステータスコード、Cookie送信
+- **Console**: CORSエラー、JavaScriptエラー
+- **Application**: Cookie、LocalStorage の状態
+
+**確認の依頼例:**
 ```
-サブエージェントに依頼:
-「Playwright MCPを使って以下の動作確認を行ってください:
-1. http://localhost:5173 にアクセス
-2. [具体的な操作手順]
-3. 期待される結果を確認
-4. スクリーンショットで状態を記録」
+「Chromeで http://localhost:5173 を開いて、以下を確認してもらえますか:
+1. [具体的な操作]
+2. DevToolsのNetworkタブで [確認したいこと]
+3. 結果を教えてください」
 ```
 
 ### 3. 確認すべきフロー
