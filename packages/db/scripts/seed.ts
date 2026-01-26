@@ -57,16 +57,28 @@ const devUsers = [
   },
 ]
 
-const subjectSlugMap: Record<string, string> = {
-  財務会計論: "financial",
-  管理会計論: "management",
-  監査論: "audit",
-  企業法: "corporate",
-  租税法: "tax",
-  経営学: "business",
-  経済学: "economics",
-  民法: "civil",
-}
+// 科目の定義（表示順序順）
+// 短答式: 財務会計論、管理会計論、監査論、企業法
+// 論文式選択: 租税法、経営学、経済学、民法、統計学
+const subjectDefinitions: { name: string; slug: string }[] = [
+  { name: "財務会計論", slug: "financial" },
+  { name: "管理会計論", slug: "management" },
+  { name: "監査論", slug: "audit" },
+  { name: "企業法", slug: "corporate" },
+  { name: "租税法", slug: "tax" },
+  { name: "経営学", slug: "business" },
+  { name: "経済学", slug: "economics" },
+  { name: "民法", slug: "civil" },
+  { name: "統計学", slug: "statistics" },
+]
+
+const subjectSlugMap = Object.fromEntries(
+  subjectDefinitions.map((s) => [s.name, s.slug])
+)
+
+const subjectOrderMap = Object.fromEntries(
+  subjectDefinitions.map((s, i) => [s.name, i])
+)
 
 type SubjectData = {
   id: string
@@ -112,8 +124,6 @@ const generateSeedData = () => {
 
   const csvFiles = readdirSync(CSV_DIR).filter((f) => f.endsWith(".csv"))
 
-  let subjectOrder = 0
-
   for (const csvFile of csvFiles) {
     const content = readFileSync(join(CSV_DIR, csvFile), "utf-8")
     const rows = parseCsv(content)
@@ -134,7 +144,7 @@ const generateSeedData = () => {
           id: subjectId,
           name: row.subjectName,
           description: null,
-          display_order: subjectOrder++,
+          display_order: subjectOrderMap[row.subjectName] ?? 999,
           created_at: now,
           updated_at: now,
         })
