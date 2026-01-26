@@ -5,8 +5,10 @@ import { describe, it, expect, vi } from "vitest"
 import type { NoteRepository } from "./repository"
 import type { ChatRepository } from "../chat/repository"
 import type { AIAdapter } from "@/shared/lib/ai"
+import type { TopicRepository } from "../topic/repository"
 import {
   createNoteFromSession,
+  createManualNote,
   listNotes,
   listNotesByTopic,
   getNote,
@@ -86,6 +88,41 @@ const createMockAIAdapter = (overrides: Partial<AIAdapter> = {}): AIAdapter => (
     }),
   }),
   streamText: vi.fn(),
+  ...overrides,
+})
+
+const createMockTopic = (overrides = {}) => ({
+  id: "topic-1",
+  categoryId: "category-1",
+  name: "有価証券",
+  description: null,
+  difficulty: null,
+  topicType: null,
+  aiSystemPrompt: null,
+  displayOrder: 1,
+  createdAt: createMockDate(),
+  updatedAt: createMockDate(),
+  ...overrides,
+})
+
+const createMockTopicRepo = (overrides: Partial<TopicRepository> = {}): TopicRepository => ({
+  findAllSubjects: vi.fn().mockResolvedValue([]),
+  findSubjectById: vi.fn().mockResolvedValue(null),
+  getSubjectStats: vi.fn().mockResolvedValue({ categoryCount: 0, topicCount: 0 }),
+  findCategoriesBySubjectId: vi.fn().mockResolvedValue([]),
+  findCategoryById: vi.fn().mockResolvedValue(null),
+  getCategoryTopicCounts: vi.fn().mockResolvedValue([]),
+  findTopicsByCategoryId: vi.fn().mockResolvedValue([]),
+  findTopicById: vi.fn().mockResolvedValue(null),
+  findProgress: vi.fn().mockResolvedValue(null),
+  upsertProgress: vi.fn().mockResolvedValue({} as ReturnType<TopicRepository["upsertProgress"]> extends Promise<infer T> ? T : never),
+  findProgressByUser: vi.fn().mockResolvedValue([]),
+  getProgressCountsByCategory: vi.fn().mockResolvedValue([]),
+  getProgressCountsBySubject: vi.fn().mockResolvedValue([]),
+  findRecentTopics: vi.fn().mockResolvedValue([]),
+  createCheckHistory: vi.fn().mockResolvedValue({} as ReturnType<TopicRepository["createCheckHistory"]> extends Promise<infer T> ? T : never),
+  findCheckHistoryByTopic: vi.fn().mockResolvedValue([]),
+  findFilteredTopics: vi.fn().mockResolvedValue([]),
   ...overrides,
 })
 
@@ -444,6 +481,140 @@ describe("Note UseCase", () => {
       if (!result.ok) {
         expect(result.error).toBe("Unauthorized")
         expect(result.status).toBe(403)
+      }
+    })
+  })
+
+  describe("createManualNote", () => {
+    it("独立ノートを作成する", async () => {
+      const topic = createMockTopic()
+      const createdNote = createMockNote({
+        sessionId: null,
+        aiSummary: null,
+        userMemo: "手動で作成したノート",
+        keyPoints: ["ポイント1", "ポイント2"],
+        stumbledPoints: ["つまずき1"],
+      })
+
+      const noteRepo = createMockNoteRepo({
+        create: vi.fn().mockResolvedValue(createdNote),
+      })
+      const topicRepo = createMockTopicRepo({
+        findTopicById: vi.fn().mockResolvedValue(topic),
+      })
+
+      const result = await createManualNote(
+        { noteRepo, topicRepo },
+        {
+          userId: "user-1",
+          topicId: "topic-1",
+          userMemo: "手動で作成したノート",
+          keyPoints: ["ポイント1", "ポイント2"],
+          stumbledPoints: ["つまずき1"],
+        }
+      )
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.note.sessionId).toBeNull()
+        expect(result.note.aiSummary).toBeNull()
+        expect(result.note.userMemo).toBe("手動で作成したノート")
+        expect(result.note.keyPoints).toEqual(["ポイント1", "ポイント2"])
+        expect(result.note.stumbledPoints).toEqual(["つまずき1"])
+        expect(result.note.source).toBe("manual")
+      }
+      expect(noteRepo.create).toHaveBeenCalledWith({
+        userId: "user-1",
+        topicId: "topic-1",
+        sessionId: null,
+        aiSummary: null,
+        userMemo: "手動で作成したノート",
+        keyPoints: ["ポイント1", "ポイント2"],
+        stumbledPoints: ["つまずき1"],
+      })
+    })
+
+    it("キーポイントとつまずきポイントが空の場合", async () => {
+      const topic = createMockTopic()
+      const createdNote = createMockNote({
+        sessionId: null,
+        aiSummary: null,
+        userMemo: "シンプルなノート",
+        keyPoints: [],
+        stumbledPoints: [],
+      })
+
+      const noteRepo = createMockNoteRepo({
+        create: vi.fn().mockResolvedValue(createdNote),
+      })
+      const topicRepo = createMockTopicRepo({
+        findTopicById: vi.fn().mockResolvedValue(topic),
+      })
+
+      const result = await createManualNote(
+        { noteRepo, topicRepo },
+        {
+          userId: "user-1",
+          topicId: "topic-1",
+          userMemo: "シンプルなノート",
+        }
+      )
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.note.keyPoints).toEqual([])
+        expect(result.note.stumbledPoints).toEqual([])
+      }
+    })
+
+    it("存在しないトピックでエラーを返す", async () => {
+      const noteRepo = createMockNoteRepo()
+      const topicRepo = createMockTopicRepo({
+        findTopicById: vi.fn().mockResolvedValue(null),
+      })
+
+      const result = await createManualNote(
+        { noteRepo, topicRepo },
+        {
+          userId: "user-1",
+          topicId: "non-existent",
+          userMemo: "テストノート",
+        }
+      )
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error).toBe("Topic not found")
+        expect(result.status).toBe(404)
+      }
+      expect(noteRepo.create).not.toHaveBeenCalled()
+    })
+
+    it("チャットノートとしてsource=chatを返す", async () => {
+      const session = createMockSession()
+      const messages = [createMockMessage()]
+      const createdNote = createMockNote({
+        sessionId: "session-1",
+        aiSummary: "テスト要約",
+      })
+
+      const noteRepo = createMockNoteRepo({
+        create: vi.fn().mockResolvedValue(createdNote),
+      })
+      const chatRepo = createMockChatRepo({
+        findSessionById: vi.fn().mockResolvedValue(session),
+        findMessagesBySession: vi.fn().mockResolvedValue(messages),
+      })
+      const aiAdapter = createMockAIAdapter()
+
+      const result = await createNoteFromSession(
+        { noteRepo, chatRepo, aiAdapter },
+        { userId: "user-1", sessionId: "session-1" }
+      )
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.note.source).toBe("chat")
       }
     })
   })

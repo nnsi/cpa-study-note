@@ -1,6 +1,8 @@
 import type { NoteRepository } from "./repository"
 import type { ChatRepository } from "../chat/repository"
+import type { TopicRepository } from "../topic/repository"
 import type { AIAdapter } from "@/shared/lib/ai"
+import type { NoteSource } from "@cpa-study/shared/schemas"
 
 type NoteDeps = {
   noteRepo: NoteRepository
@@ -19,6 +21,7 @@ type NoteResponse = {
   stumbledPoints: string[]
   createdAt: string
   updatedAt: string
+  source: NoteSource
 }
 
 type NoteDetailResponse = NoteResponse & {
@@ -33,9 +36,17 @@ type NoteListResponse = NoteResponse & {
   subjectName: string
 }
 
-type CreateNoteInput = {
+type CreateNoteFromSessionInput = {
   userId: string
   sessionId: string
+}
+
+type CreateManualNoteInput = {
+  userId: string
+  topicId: string
+  userMemo: string
+  keyPoints?: string[]
+  stumbledPoints?: string[]
 }
 
 type UpdateNoteInput = {
@@ -43,6 +54,10 @@ type UpdateNoteInput = {
   keyPoints?: string[]
   stumbledPoints?: string[]
 }
+
+// sessionIdの有無からsourceを判定
+const deriveSource = (sessionId: string | null): NoteSource =>
+  sessionId ? "chat" : "manual"
 
 // ノートをレスポンス形式に変換
 const toNoteResponse = (note: {
@@ -60,12 +75,13 @@ const toNoteResponse = (note: {
   ...note,
   createdAt: note.createdAt.toISOString(),
   updatedAt: note.updatedAt.toISOString(),
+  source: deriveSource(note.sessionId),
 })
 
 // セッションからノート作成（AI要約生成）
 export const createNoteFromSession = async (
   deps: NoteDeps,
-  input: CreateNoteInput
+  input: CreateNoteFromSessionInput
 ): Promise<
   { ok: true; note: NoteResponse } | { ok: false; error: string; status: number }
 > => {
@@ -154,6 +170,36 @@ ${conversationText}${goodQuestionsSection}
     sessionId,
     aiSummary,
     userMemo: null,
+    keyPoints,
+    stumbledPoints,
+  })
+
+  return { ok: true, note: toNoteResponse(note) }
+}
+
+// 独立ノート作成（手動）
+export const createManualNote = async (
+  deps: { noteRepo: NoteRepository; topicRepo: TopicRepository },
+  input: CreateManualNoteInput
+): Promise<
+  { ok: true; note: NoteResponse } | { ok: false; error: string; status: number }
+> => {
+  const { noteRepo, topicRepo } = deps
+  const { userId, topicId, userMemo, keyPoints = [], stumbledPoints = [] } = input
+
+  // topicの存在確認
+  const topic = await topicRepo.findTopicById(topicId)
+  if (!topic) {
+    return { ok: false, error: "Topic not found", status: 404 }
+  }
+
+  // ノート作成
+  const note = await noteRepo.create({
+    userId,
+    topicId,
+    sessionId: null,
+    aiSummary: null,
+    userMemo,
     keyPoints,
     stumbledPoints,
   })

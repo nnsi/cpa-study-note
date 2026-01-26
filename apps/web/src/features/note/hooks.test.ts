@@ -41,9 +41,10 @@ const mockNotes = {
       aiSummary: "テスト要約",
       userMemo: null,
       keyPoints: ["ポイント1"],
-      stumbledPoints: [],
+      stumbledPoints: [] as string[],
       createdAt: "2024-01-15T10:30:00.000Z",
       updatedAt: "2024-01-15T10:30:00.000Z",
+      source: "chat" as const,
     },
     {
       id: "note-2",
@@ -56,6 +57,7 @@ const mockNotes = {
       stumbledPoints: ["つまずき1"],
       createdAt: "2024-01-16T10:30:00.000Z",
       updatedAt: "2024-01-16T10:30:00.000Z",
+      source: "chat" as const,
     },
   ],
 }
@@ -69,9 +71,10 @@ const mockCreatedNote = {
     aiSummary: "新しい要約",
     userMemo: null,
     keyPoints: ["新ポイント"],
-    stumbledPoints: [],
+    stumbledPoints: [] as string[],
     createdAt: "2024-01-17T10:30:00.000Z",
     updatedAt: "2024-01-17T10:30:00.000Z",
+    source: "chat" as const,
   },
 }
 

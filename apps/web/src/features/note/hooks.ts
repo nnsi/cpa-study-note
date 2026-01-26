@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import type { CreateManualNoteRequest } from "@cpa-study/shared/schemas"
 import * as api from "./api"
 
 export const useNotesByTopic = (topicId: string) => {
@@ -8,6 +9,7 @@ export const useNotesByTopic = (topicId: string) => {
   })
 }
 
+// セッションからノート作成
 export const useCreateNote = (topicId: string) => {
   const queryClient = useQueryClient()
 
@@ -17,6 +19,20 @@ export const useCreateNote = (topicId: string) => {
       queryClient.invalidateQueries({ queryKey: ["notes", "topic", topicId] })
       queryClient.invalidateQueries({ queryKey: ["notes"] })
       queryClient.invalidateQueries({ queryKey: ["notes", "session", sessionId] })
+    },
+  })
+}
+
+// 独立ノート作成（手動）
+export const useCreateManualNote = (topicId: string) => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: Omit<CreateManualNoteRequest, "topicId">) =>
+      api.createManualNote({ ...data, topicId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notes", "topic", topicId] })
+      queryClient.invalidateQueries({ queryKey: ["notes"] })
     },
   })
 }

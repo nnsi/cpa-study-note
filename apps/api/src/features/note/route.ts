@@ -7,8 +7,14 @@ import { authMiddleware } from "@/shared/middleware/auth"
 import { createAIAdapter } from "@/shared/lib/ai"
 import { createNoteRepository } from "./repository"
 import { createChatRepository } from "../chat/repository"
+import { createTopicRepository } from "../topic/repository"
+import {
+  createNoteFromSessionRequestSchema,
+  createManualNoteRequestSchema,
+} from "@cpa-study/shared/schemas"
 import {
   createNoteFromSession,
+  createManualNote,
   listNotes,
   listNotesByTopic,
   getNote,
@@ -25,13 +31,14 @@ type NoteDeps = {
 export const noteRoutes = ({ env, db }: NoteDeps) => {
   const noteRepo = createNoteRepository(db)
   const chatRepo = createChatRepository(db)
+  const topicRepo = createTopicRepository(db)
 
   const app = new Hono<{ Bindings: Env; Variables: Variables }>()
     // ノート作成（セッションから）
     .post(
       "/",
       authMiddleware,
-      zValidator("json", z.object({ sessionId: z.string() })),
+      zValidator("json", createNoteFromSessionRequestSchema),
       async (c) => {
         const user = c.get("user")
         const { sessionId } = c.req.valid("json")
@@ -48,6 +55,34 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
 
         if (!result.ok) {
           return c.json({ error: result.error }, result.status as 404 | 403)
+        }
+
+        return c.json({ note: result.note }, 201)
+      }
+    )
+
+    // 独立ノート作成（手動）
+    .post(
+      "/manual",
+      authMiddleware,
+      zValidator("json", createManualNoteRequestSchema),
+      async (c) => {
+        const user = c.get("user")
+        const body = c.req.valid("json")
+
+        const result = await createManualNote(
+          { noteRepo, topicRepo },
+          {
+            userId: user.id,
+            topicId: body.topicId,
+            userMemo: body.userMemo,
+            keyPoints: body.keyPoints,
+            stumbledPoints: body.stumbledPoints,
+          }
+        )
+
+        if (!result.ok) {
+          return c.json({ error: result.error }, result.status as 404)
         }
 
         return c.json({ note: result.note }, 201)

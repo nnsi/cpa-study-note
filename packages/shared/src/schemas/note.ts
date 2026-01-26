@@ -1,5 +1,9 @@
 import { z } from "zod"
 
+// Note source type for UI display
+export const noteSourceSchema = z.enum(["chat", "manual"])
+export type NoteSource = z.infer<typeof noteSourceSchema>
+
 export const noteSchema = z.object({
   id: z.string(),
   userId: z.string(),
@@ -15,10 +19,42 @@ export const noteSchema = z.object({
 
 export type Note = z.infer<typeof noteSchema>
 
+// Note with source (derived from sessionId)
+export const noteWithSourceSchema = noteSchema.extend({
+  source: noteSourceSchema,
+})
+
+export type NoteWithSource = z.infer<typeof noteWithSourceSchema>
+
 // Request schemas
-export const createNoteRequestSchema = z.object({
+
+// セッションからノート作成（既存）
+export const createNoteFromSessionRequestSchema = z.object({
   sessionId: z.string(),
 })
+
+export type CreateNoteFromSessionRequest = z.infer<typeof createNoteFromSessionRequestSchema>
+
+// 独立ノート作成（新規）
+export const createManualNoteRequestSchema = z.object({
+  topicId: z.string(),
+  userMemo: z.string().min(1, "本文は必須です").max(10000, "本文は10000文字以内で入力してください"),
+  keyPoints: z
+    .array(z.string().min(1).max(1000))
+    .max(50)
+    .optional()
+    .default([]),
+  stumbledPoints: z
+    .array(z.string().min(1).max(1000))
+    .max(50)
+    .optional()
+    .default([]),
+})
+
+export type CreateManualNoteRequest = z.infer<typeof createManualNoteRequestSchema>
+
+// 後方互換のためのエイリアス
+export const createNoteRequestSchema = createNoteFromSessionRequestSchema
 
 export type CreateNoteRequest = z.infer<typeof createNoteRequestSchema>
 
