@@ -145,7 +145,7 @@ cpa-study-note/
 |--------|------|
 | `/lookup-docs` | Context7を使って技術ドキュメントを参照 |
 | `/deploy-check` | デプロイ前のチェックリストを実行 |
-| `/write-diary` | /docs/diary/ に開発日記を記録（CLAUDE.md反映検討含む） |
+| `/write-diary` | /docs/diary/ に開発日記を記録 |
 
 ## 重要な設計詳細
 
