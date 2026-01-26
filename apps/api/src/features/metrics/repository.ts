@@ -1,8 +1,7 @@
-import { eq, and, between, sql, gte, lte } from "drizzle-orm"
+import { eq, and, gte, lte, count, countDistinct } from "drizzle-orm"
 import type { Db } from "@cpa-study/db"
 import {
   metricSnapshots,
-  userTopicProgress,
   chatSessions,
   chatMessages,
   topicCheckHistory,
@@ -66,7 +65,7 @@ export type MetricsRepository = {
 }
 
 // タイムゾーンのオフセット（分）を取得
-// 例: "Asia/Tokyo" -> -540 (UTCから9時間進んでいるので、UTCに戻すには540分引く)
+// 例: "Asia/Tokyo" -> 540 (UTCから9時間進んでいる)
 const getTimezoneOffsetMinutes = (timezone: string): number => {
   try {
     const now = new Date()
@@ -124,6 +123,36 @@ const getNextDay = (dateStr: string): Date => {
   const date = parseDate(dateStr)
   date.setUTCDate(date.getUTCDate() + 1)
   return date
+}
+
+// タイムスタンプからタイムゾーン考慮した日付文字列を取得
+const timestampToLocalDateStr = (timestamp: Date, offsetMinutes: number): string => {
+  const localMs = timestamp.getTime() + offsetMinutes * 60 * 1000
+  const localDate = new Date(localMs)
+  const year = localDate.getUTCFullYear()
+  const month = String(localDate.getUTCMonth() + 1).padStart(2, "0")
+  const day = String(localDate.getUTCDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
+// チェック履歴から各トピックの最新状態を計算してチェック済み数を返す
+const calculateCheckedCount = (
+  history: Array<{ topicId: string; action: string; checkedAt: Date }>,
+  endDate: Date
+): number => {
+  const topicState = new Map<string, boolean>()
+
+  for (const h of history) {
+    if (h.checkedAt <= endDate) {
+      topicState.set(h.topicId, h.action === "checked")
+    }
+  }
+
+  let checkedCount = 0
+  for (const isChecked of topicState.values()) {
+    if (isChecked) checkedCount++
+  }
+  return checkedCount
 }
 
 export const createMetricsRepository = (db: Db): MetricsRepository => ({
@@ -204,24 +233,27 @@ export const createMetricsRepository = (db: Db): MetricsRepository => ({
     const dayEnd = getNextDay(date)
 
     // チェック済み論点数: その日の終わり時点でcheckedになっているトピック数
-    // topicCheckHistory から各トピックの最新状態を計算
-    // SQLite の WINDOW関数を使って、その日の終わりまでの最新アクションを取得
-    const checkedCountResult = await db.all<{ count: number }>(sql`
-      SELECT COUNT(*) as count FROM (
-        SELECT topic_id, action,
-          ROW_NUMBER() OVER (PARTITION BY topic_id ORDER BY checked_at DESC) as rn
-        FROM topic_check_history
-        WHERE user_id = ${userId} AND checked_at <= ${dayEnd.getTime()}
-      ) AS latest
-      WHERE rn = 1 AND action = 'checked'
-    `)
-    const checkedTopicCount = checkedCountResult[0]?.count ?? 0
+    // 全履歴を取得してJSで最新状態を計算
+    const allHistory = await db
+      .select({
+        topicId: topicCheckHistory.topicId,
+        action: topicCheckHistory.action,
+        checkedAt: topicCheckHistory.checkedAt,
+      })
+      .from(topicCheckHistory)
+      .where(
+        and(
+          eq(topicCheckHistory.userId, userId),
+          lte(topicCheckHistory.checkedAt, dayEnd)
+        )
+      )
+      .orderBy(topicCheckHistory.checkedAt)
+
+    const checkedTopicCount = calculateCheckedCount(allHistory, dayEnd)
 
     // その日に作成されたセッション数
     const sessionCountResult = await db
-      .select({
-        count: sql<number>`COUNT(*)`,
-      })
+      .select({ count: count() })
       .from(chatSessions)
       .where(
         and(
@@ -234,9 +266,7 @@ export const createMetricsRepository = (db: Db): MetricsRepository => ({
 
     // その日に作成されたメッセージ数（ユーザーのみ）
     const messageCountResult = await db
-      .select({
-        count: sql<number>`COUNT(*)`,
-      })
+      .select({ count: count() })
       .from(chatMessages)
       .innerJoin(chatSessions, eq(chatMessages.sessionId, chatSessions.id))
       .where(
@@ -251,9 +281,7 @@ export const createMetricsRepository = (db: Db): MetricsRepository => ({
 
     // その日に評価された good 質問数
     const goodQuestionCountResult = await db
-      .select({
-        count: sql<number>`COUNT(*)`,
-      })
+      .select({ count: count() })
       .from(chatMessages)
       .innerJoin(chatSessions, eq(chatMessages.sessionId, chatSessions.id))
       .where(
@@ -289,9 +317,7 @@ export const createMetricsRepository = (db: Db): MetricsRepository => ({
 
     // 今日のセッション数
     const sessionCountResult = await db
-      .select({
-        count: sql<number>`COUNT(*)`,
-      })
+      .select({ count: count() })
       .from(chatSessions)
       .where(
         and(
@@ -304,9 +330,7 @@ export const createMetricsRepository = (db: Db): MetricsRepository => ({
 
     // 今日のメッセージ数（ユーザーのみ）
     const messageCountResult = await db
-      .select({
-        count: sql<number>`COUNT(*)`,
-      })
+      .select({ count: count() })
       .from(chatMessages)
       .innerJoin(chatSessions, eq(chatMessages.sessionId, chatSessions.id))
       .where(
@@ -321,9 +345,7 @@ export const createMetricsRepository = (db: Db): MetricsRepository => ({
 
     // 今日チェックした論点数（topicCheckHistoryから）
     const checkedCountResult = await db
-      .select({
-        count: sql<number>`COUNT(DISTINCT ${topicCheckHistory.topicId})`,
-      })
+      .select({ count: countDistinct(topicCheckHistory.topicId) })
       .from(topicCheckHistory)
       .where(
         and(
@@ -360,65 +382,78 @@ export const createMetricsRepository = (db: Db): MetricsRepository => ({
     const fromDateUtc = getLocalDayStartUtc(from, timezone)
     const toDateUtc = getLocalDayEndUtc(to, timezone)
     const offsetMinutes = getTimezoneOffsetMinutes(timezone)
-    const offsetSeconds = offsetMinutes * 60
 
-    // 一括でセッション数を日別に集計（タイムゾーン考慮）
-    const sessionsByDate = await db.all<{ date: string; count: number }>(sql`
-      SELECT date((created_at / 1000) + ${offsetSeconds}, 'unixepoch') as date, COUNT(*) as count
-      FROM chat_sessions
-      WHERE user_id = ${userId}
-        AND created_at >= ${fromDateUtc.getTime()}
-        AND created_at < ${toDateUtc.getTime()}
-      GROUP BY date((created_at / 1000) + ${offsetSeconds}, 'unixepoch')
-    `)
-    const sessionMap = new Map(sessionsByDate.map((r) => [r.date, r.count]))
+    // セッションを取得してJSで日別集計
+    const sessions = await db
+      .select({ createdAt: chatSessions.createdAt })
+      .from(chatSessions)
+      .where(
+        and(
+          eq(chatSessions.userId, userId),
+          gte(chatSessions.createdAt, fromDateUtc),
+          lte(chatSessions.createdAt, toDateUtc)
+        )
+      )
 
-    // 一括でメッセージ数を日別に集計（ユーザーのみ、タイムゾーン考慮）
-    const messagesByDate = await db.all<{ date: string; count: number }>(sql`
-      SELECT date((m.created_at / 1000) + ${offsetSeconds}, 'unixepoch') as date, COUNT(*) as count
-      FROM chat_messages m
-      INNER JOIN chat_sessions s ON m.session_id = s.id
-      WHERE s.user_id = ${userId}
-        AND m.role = 'user'
-        AND m.created_at >= ${fromDateUtc.getTime()}
-        AND m.created_at < ${toDateUtc.getTime()}
-      GROUP BY date((m.created_at / 1000) + ${offsetSeconds}, 'unixepoch')
-    `)
-    const messageMap = new Map(messagesByDate.map((r) => [r.date, r.count]))
+    const sessionMap = new Map<string, number>()
+    for (const s of sessions) {
+      const dateStr = timestampToLocalDateStr(s.createdAt, offsetMinutes)
+      sessionMap.set(dateStr, (sessionMap.get(dateStr) ?? 0) + 1)
+    }
 
-    // 一括で good 質問数を日別に集計（タイムゾーン考慮）
-    const goodQuestionsByDate = await db.all<{ date: string; count: number }>(sql`
-      SELECT date((m.created_at / 1000) + ${offsetSeconds}, 'unixepoch') as date, COUNT(*) as count
-      FROM chat_messages m
-      INNER JOIN chat_sessions s ON m.session_id = s.id
-      WHERE s.user_id = ${userId}
-        AND m.question_quality = 'good'
-        AND m.created_at >= ${fromDateUtc.getTime()}
-        AND m.created_at < ${toDateUtc.getTime()}
-      GROUP BY date((m.created_at / 1000) + ${offsetSeconds}, 'unixepoch')
-    `)
-    const goodQuestionMap = new Map(goodQuestionsByDate.map((r) => [r.date, r.count]))
+    // メッセージを取得してJSで日別集計（ユーザーのみ）
+    const messages = await db
+      .select({
+        createdAt: chatMessages.createdAt,
+        questionQuality: chatMessages.questionQuality,
+      })
+      .from(chatMessages)
+      .innerJoin(chatSessions, eq(chatMessages.sessionId, chatSessions.id))
+      .where(
+        and(
+          eq(chatSessions.userId, userId),
+          eq(chatMessages.role, "user"),
+          gte(chatMessages.createdAt, fromDateUtc),
+          lte(chatMessages.createdAt, toDateUtc)
+        )
+      )
 
-    // チェック済み論点数は各日の終わり時点での状態を計算する必要がある
-    // 効率化のため、全てのチェック履歴を取得して日付ごとに計算
-    const allHistory = await db.all<{ topicId: string; action: string; checkedAt: number }>(sql`
-      SELECT topic_id as topicId, action, checked_at as checkedAt
-      FROM topic_check_history
-      WHERE user_id = ${userId}
-        AND checked_at <= ${toDateUtc.getTime()}
-      ORDER BY checked_at ASC
-    `)
+    const messageMap = new Map<string, number>()
+    const goodQuestionMap = new Map<string, number>()
+    for (const m of messages) {
+      const dateStr = timestampToLocalDateStr(m.createdAt, offsetMinutes)
+      messageMap.set(dateStr, (messageMap.get(dateStr) ?? 0) + 1)
+      if (m.questionQuality === "good") {
+        goodQuestionMap.set(dateStr, (goodQuestionMap.get(dateStr) ?? 0) + 1)
+      }
+    }
+
+    // チェック履歴を取得
+    const allHistory = await db
+      .select({
+        topicId: topicCheckHistory.topicId,
+        action: topicCheckHistory.action,
+        checkedAt: topicCheckHistory.checkedAt,
+      })
+      .from(topicCheckHistory)
+      .where(
+        and(
+          eq(topicCheckHistory.userId, userId),
+          lte(topicCheckHistory.checkedAt, toDateUtc)
+        )
+      )
+      .orderBy(topicCheckHistory.checkedAt)
 
     // 各日の終わり時点でのチェック状態を計算（タイムゾーン考慮）
     const checkedByDate = new Map<string, number>()
-    const topicState = new Map<string, boolean>() // topicId -> isChecked
+    const topicState = new Map<string, boolean>()
 
     let historyIndex = 0
     for (const date of dates) {
       const dayEndUtc = getLocalDayEndUtc(date, timezone)
 
       // この日の終わりまでの履歴を処理
-      while (historyIndex < allHistory.length && allHistory[historyIndex].checkedAt <= dayEndUtc.getTime()) {
+      while (historyIndex < allHistory.length && allHistory[historyIndex].checkedAt <= dayEndUtc) {
         const h = allHistory[historyIndex]
         topicState.set(h.topicId, h.action === "checked")
         historyIndex++

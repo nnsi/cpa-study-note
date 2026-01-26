@@ -208,10 +208,7 @@ describe("Metrics Routes", () => {
       expect(body.metrics[0].messageCount).toBe(0)
     })
 
-    // Note: This test is skipped because db.all() raw SQL method
-    // behaves differently between D1 and better-sqlite3 Drizzle drivers.
-    // The aggregation logic is tested in E2E tests with real D1.
-    it.skip("should return aggregated metrics for the specified date range", async () => {
+    it("should return aggregated metrics for the specified date range", async () => {
       // Insert test data that will be aggregated
       // Use current date (within time range that aggregation will look at)
       const now = new Date()
