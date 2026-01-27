@@ -8,8 +8,8 @@ type AuthContext = {
 }
 
 export const authMiddleware = createMiddleware<AuthContext>(async (c, next) => {
-  // ローカル環境のみ: 認証スキップ
-  if (c.env.ENVIRONMENT === "local") {
+  // ローカル環境 + X-Dev-User-Id ヘッダーがある場合のみ認証スキップ（curl等からのテスト用）
+  if (c.env.ENVIRONMENT === "local" && c.req.header("X-Dev-User-Id")) {
     const devUser = getDevUser(c)
     c.set("user", devUser)
     return next()
@@ -56,8 +56,8 @@ const getDevUser = (c: { req: { header: (name: string) => string | undefined }; 
 // オプショナル認証: 認証があればユーザー情報をセット、なくても続行
 export const optionalAuthMiddleware = createMiddleware<AuthContext>(
   async (c, next) => {
-    // ローカル環境のみ: 認証スキップ
-    if (c.env.ENVIRONMENT === "local") {
+    // ローカル環境 + X-Dev-User-Id ヘッダーがある場合のみ認証スキップ（curl等からのテスト用）
+    if (c.env.ENVIRONMENT === "local" && c.req.header("X-Dev-User-Id")) {
       const devUser = getDevUser(c)
       c.set("user", devUser)
       return next()
