@@ -35,7 +35,7 @@ migrations_dir = "../../packages/db/migrations"
 
 [[env.staging.r2_buckets]]
 binding = "R2"
-bucket_name = "cpa-study-images-stg"
+bucket_name = "YOUR_STAGING_R2_BUCKET"
 
 [[env.staging.durable_objects.bindings]]
 name = "RATE_LIMITER"
@@ -65,7 +65,7 @@ migrations_dir = "../../packages/db/migrations"
 
 [[env.production.r2_buckets]]
 binding = "R2"
-bucket_name = "cpa-study-images-prod"
+bucket_name = "YOUR_PRODUCTION_R2_BUCKET"
 
 [[env.production.durable_objects.bindings]]
 name = "RATE_LIMITER"

@@ -16,6 +16,10 @@ on:
 env:
   TF_VERSION: '1.10'
 
+# Note: Environment Variables の自動更新には GH_PAT (Personal Access Token) が必要
+# GITHUB_TOKEN では environments の変数を更新する権限がない
+# GH_PAT には repo スコープが必要
+
 jobs:
   terraform:
     name: Terraform ${{ github.event.inputs.action }}
@@ -103,3 +107,46 @@ jobs:
           echo "Production Environment:"
           echo "  D1_DATABASE_ID: $(terraform output -raw d1_database_id_prod)"
           echo "  R2_BUCKET_NAME: $(terraform output -raw r2_bucket_name_prod)"
+
+      # GH_PATが設定されている場合は自動更新
+      - name: Update GitHub Environment Variables
+        if: github.event.inputs.action == 'apply'
+        continue-on-error: true
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_ENDPOINT_URL_S3: https://${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
+          TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          TF_VAR_cloudflare_account_id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          D1_STG=$(terraform output -raw d1_database_id_stg)
+          D1_PROD=$(terraform output -raw d1_database_id_prod)
+          R2_STG=$(terraform output -raw r2_bucket_name_stg)
+          R2_PROD=$(terraform output -raw r2_bucket_name_prod)
+
+          REPO="${{ github.repository }}"
+
+          echo "Updating staging environment variables..."
+          gh api --method PUT "repos/${REPO}/environments/staging/variables/D1_DATABASE_ID" \
+            -f name="D1_DATABASE_ID" -f value="${D1_STG}" 2>/dev/null || \
+          gh api --method POST "repos/${REPO}/environments/staging/variables" \
+            -f name="D1_DATABASE_ID" -f value="${D1_STG}"
+
+          gh api --method PUT "repos/${REPO}/environments/staging/variables/R2_BUCKET_NAME" \
+            -f name="R2_BUCKET_NAME" -f value="${R2_STG}" 2>/dev/null || \
+          gh api --method POST "repos/${REPO}/environments/staging/variables" \
+            -f name="R2_BUCKET_NAME" -f value="${R2_STG}"
+
+          echo "Updating production environment variables..."
+          gh api --method PUT "repos/${REPO}/environments/production/variables/D1_DATABASE_ID" \
+            -f name="D1_DATABASE_ID" -f value="${D1_PROD}" 2>/dev/null || \
+          gh api --method POST "repos/${REPO}/environments/production/variables" \
+            -f name="D1_DATABASE_ID" -f value="${D1_PROD}"
+
+          gh api --method PUT "repos/${REPO}/environments/production/variables/R2_BUCKET_NAME" \
+            -f name="R2_BUCKET_NAME" -f value="${R2_PROD}" 2>/dev/null || \
+          gh api --method POST "repos/${REPO}/environments/production/variables" \
+            -f name="R2_BUCKET_NAME" -f value="${R2_PROD}"
+
+          echo "✅ GitHub Environment Variables updated automatically"
