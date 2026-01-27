@@ -45,7 +45,7 @@ function LoginPage() {
   }, [isAuthenticated, navigate])
 
   const handleLogin = (providerId: string) => {
-    window.location.href = `/api/auth/${providerId}`
+    window.location.href = `${import.meta.env.VITE_API_URL}/api/auth/${providerId}`
   }
 
   const handleDevLogin = async () => {
