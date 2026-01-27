@@ -1,7 +1,142 @@
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import * as api from "./api"
 import * as logic from "./logic"
+
+// Web Speech API の型定義
+type SpeechRecognitionEvent = {
+  results: SpeechRecognitionResultList
+  resultIndex: number
+}
+
+type SpeechRecognitionErrorEvent = {
+  error: string
+  message?: string
+}
+
+type SpeechRecognitionInstance = {
+  continuous: boolean
+  interimResults: boolean
+  lang: string
+  start: () => void
+  stop: () => void
+  abort: () => void
+  onresult: ((event: SpeechRecognitionEvent) => void) | null
+  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null
+  onend: (() => void) | null
+  onstart: (() => void) | null
+}
+
+declare global {
+  interface Window {
+    SpeechRecognition?: new () => SpeechRecognitionInstance
+    webkitSpeechRecognition?: new () => SpeechRecognitionInstance
+  }
+}
+
+type UseSpeechRecognitionOptions = {
+  onResult: (transcript: string) => void
+  onError?: (error: string) => void
+}
+
+export const useSpeechRecognition = ({ onResult, onError }: UseSpeechRecognitionOptions) => {
+  const [isListening, setIsListening] = useState(false)
+  const [isSupported, setIsSupported] = useState(false)
+  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null)
+  const onResultRef = useRef(onResult)
+  const onErrorRef = useRef(onError)
+
+  // コールバックを最新の状態に保つ
+  useEffect(() => {
+    onResultRef.current = onResult
+    onErrorRef.current = onError
+  }, [onResult, onError])
+
+  useEffect(() => {
+    // ブラウザサポートチェック
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+    setIsSupported(!!SpeechRecognition)
+
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition()
+      recognition.continuous = true
+      recognition.interimResults = true
+      recognition.lang = "ja-JP"
+
+      recognition.onresult = (event) => {
+        // 最新の結果を取得
+        let finalTranscript = ""
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const result = event.results[i]
+          if (result?.isFinal && result[0]) {
+            finalTranscript += result[0].transcript
+          }
+        }
+        if (finalTranscript) {
+          onResultRef.current(finalTranscript)
+        }
+      }
+
+      recognition.onerror = (event) => {
+        const errorMessages: Record<string, string> = {
+          "no-speech": "音声が検出されませんでした",
+          "audio-capture": "マイクにアクセスできません",
+          "not-allowed": "マイクの使用が許可されていません",
+          "network": "ネットワークエラーが発生しました",
+        }
+        const message = errorMessages[event.error] || `音声認識エラー: ${event.error}`
+        onErrorRef.current?.(message)
+        setIsListening(false)
+      }
+
+      recognition.onend = () => {
+        setIsListening(false)
+      }
+
+      recognition.onstart = () => {
+        setIsListening(true)
+      }
+
+      recognitionRef.current = recognition
+    }
+
+    return () => {
+      recognitionRef.current?.abort()
+    }
+  }, [])
+
+  const startListening = useCallback(() => {
+    if (recognitionRef.current && !isListening) {
+      try {
+        recognitionRef.current.start()
+      } catch {
+        // 既に開始している場合のエラーを無視
+      }
+    }
+  }, [isListening])
+
+  const stopListening = useCallback(() => {
+    if (recognitionRef.current && isListening) {
+      recognitionRef.current.stop()
+    }
+  }, [isListening])
+
+  const toggleListening = useCallback(() => {
+    if (isListening) {
+      stopListening()
+    } else {
+      startListening()
+    }
+  }, [isListening, startListening, stopListening])
+
+  return {
+    isListening,
+    isSupported,
+    startListening,
+    stopListening,
+    toggleListening,
+  }
+}
 
 export const useChatMessages = (sessionId: string | null) => {
   const { data: messagesData, ...query } = useQuery({

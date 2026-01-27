@@ -6,10 +6,13 @@ type Props = {
   isSubmitting: boolean
   imageId?: string | null
   ocrText?: string | null
+  isListening?: boolean
+  isSpeechSupported?: boolean
   onContentChange: (value: string) => void
   onImageSelect: (id: string, ocrText: string | null) => void
   onImageClear: () => void
   onSubmit: () => void
+  onToggleListening?: () => void
 }
 
 export const ChatInputView = ({
@@ -17,10 +20,13 @@ export const ChatInputView = ({
   isSubmitting,
   imageId,
   ocrText,
+  isListening = false,
+  isSpeechSupported = false,
   onContentChange,
   onImageSelect,
   onImageClear,
   onSubmit,
+  onToggleListening,
 }: Props) => {
   const [showUploader, setShowUploader] = useState(false)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -83,6 +89,25 @@ export const ChatInputView = ({
               <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
             </svg>
           </button>
+
+          {/* 音声入力ボタン */}
+          {isSpeechSupported && (
+            <button
+              type="button"
+              onClick={onToggleListening}
+              disabled={isSubmitting}
+              className={`flex-shrink-0 p-2.5 rounded-xl transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed ${
+                isListening
+                  ? "text-crimson-600 bg-crimson-50 animate-pulse"
+                  : "text-ink-400 hover:text-indigo-600 hover:bg-indigo-50"
+              }`}
+              title={isListening ? "音声入力を停止" : "音声入力を開始"}
+            >
+              <svg className="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
+              </svg>
+            </button>
+          )}
 
           {/* テキスト入力 */}
           <div className="flex-1 relative">

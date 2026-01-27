@@ -1,5 +1,5 @@
-import { useRef, useEffect } from "react"
-import { useChat } from "../hooks"
+import { useRef, useEffect, useCallback, useState } from "react"
+import { useChat, useSpeechRecognition } from "../hooks"
 import { ChatMessageView } from "./ChatMessage"
 import { ChatInputView } from "./ChatInput"
 import { useCreateNote, useNoteBySession } from "@/features/note"
@@ -16,6 +16,23 @@ export const ChatContainer = ({ sessionId, topicId, onSessionCreated, onNavigate
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { mutate: createNote, isPending: isCreatingNote } = useCreateNote(topicId)
   const { data: existingNote } = useNoteBySession(sessionId)
+  const [speechError, setSpeechError] = useState<string | null>(null)
+
+  // 音声認識でテキストを取得したら入力欄に追加
+  const handleSpeechResult = useCallback((transcript: string) => {
+    input.handleContentChange(input.content + transcript)
+  }, [input])
+
+  const handleSpeechError = useCallback((error: string) => {
+    setSpeechError(error)
+    // 3秒後にエラーを消す
+    setTimeout(() => setSpeechError(null), 3000)
+  }, [])
+
+  const { isListening, isSupported, toggleListening } = useSpeechRecognition({
+    onResult: handleSpeechResult,
+    onError: handleSpeechError,
+  })
 
   // 新しいメッセージが追加されたら自動スクロール
   useEffect(() => {
@@ -151,15 +168,25 @@ export const ChatContainer = ({ sessionId, topicId, onSessionCreated, onNavigate
         </div>
       )}
 
+      {/* 音声認識エラー表示 */}
+      {speechError && (
+        <div className="mx-4 mb-2 px-4 py-2 bg-crimson-50 border border-crimson-200 text-crimson-700 text-sm rounded-xl animate-fade-in">
+          {speechError}
+        </div>
+      )}
+
       <ChatInputView
         content={input.content}
         isSubmitting={input.isStreaming}
         imageId={input.imageId}
         ocrText={input.ocrText}
+        isListening={isListening}
+        isSpeechSupported={isSupported}
         onContentChange={input.handleContentChange}
         onImageSelect={input.handleImageSelect}
         onImageClear={input.handleImageClear}
         onSubmit={input.handleSubmit}
+        onToggleListening={toggleListening}
       />
     </div>
   )
