@@ -75,7 +75,7 @@ function CategoryPage() {
       return res.json()
     },
     onSuccess: () => {
-      // 進捗とカテゴリを再取得
+      // 進捗と単元を再取得
       queryClient.invalidateQueries({ queryKey: ["progress", "me"] })
       queryClient.invalidateQueries({
         queryKey: ["subjects", subjectId, "categories"],
@@ -113,7 +113,7 @@ function CategoryPage() {
           params={{ subjectId }}
           className="text-indigo-600 hover:underline text-sm"
         >
-          ← カテゴリ一覧
+          ← 単元一覧
         </Link>
         <h1 className="text-xl font-bold text-ink-900 mt-2">論点一覧</h1>
       </div>
@@ -209,7 +209,7 @@ function CategoryPage() {
 
         {topics?.topics.length === 0 && (
           <p className="text-ink-500 text-center py-8">
-            このカテゴリには論点がありません
+            この単元には論点がありません
           </p>
         )}
       </div>

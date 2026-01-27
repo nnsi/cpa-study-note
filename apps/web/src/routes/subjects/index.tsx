@@ -71,7 +71,7 @@ function SubjectsPage() {
                   {subject.name}
                 </h2>
                 <p className="text-sm text-ink-500 mt-1">
-                  <span className="text-ink-600 font-medium">{subject.categoryCount}</span> カテゴリ /
+                  <span className="text-ink-600 font-medium">{subject.categoryCount}</span> 単元 /
                   <span className="text-ink-600 font-medium"> {subject.topicCount}</span> 論点
                 </p>
                 {subject.description && (

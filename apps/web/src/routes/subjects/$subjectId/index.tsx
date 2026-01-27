@@ -37,7 +37,7 @@ function SubjectDetailPage() {
       const res = await api.api.subjects[":subjectId"].categories.$get({
         param: { subjectId },
       })
-      if (!res.ok) throw new Error(`カテゴリの取得に失敗しました (${res.status})`)
+      if (!res.ok) throw new Error(`単元の取得に失敗しました (${res.status})`)
       return res.json()
     },
   })
@@ -78,7 +78,7 @@ function SubjectDetailPage() {
   )
 }
 
-// カテゴリと子カテゴリの合計を計算
+// 単元と子単元の合計を計算
 function getTotalCounts(category: CategoryNode): {
   topicCount: number
   understoodCount: number
@@ -106,7 +106,7 @@ function CategoryItem({
   const paddingLeft = category.depth * 16
   const totals = getTotalCounts(category)
 
-  // 子カテゴリがある場合はリンクにしない（クリックしても遷移しない）
+  // 子単元がある場合はリンクにしない（クリックしても遷移しない）
   const itemContent = (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-2">

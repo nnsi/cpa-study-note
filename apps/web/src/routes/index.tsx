@@ -28,26 +28,20 @@ function LandingPage() {
         <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-amber-200/20 rounded-full blur-3xl" />
       </div>
 
-      <div className="relative text-center max-w-lg animate-fade-in-up">
-        {/* ロゴマーク */}
-        <div className="mb-8 flex justify-center">
-          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-600 to-indigo-700 flex items-center justify-center shadow-soft-lg">
-            <span className="text-white font-serif font-bold text-3xl">会</span>
-          </div>
-        </div>
-
+      <div className="relative text-center max-w-xl animate-fade-in-up">
         {/* メインタイトル */}
-        <h1 className="heading-serif text-4xl lg:text-5xl text-ink-900 mb-6 leading-tight">
-          公認会計士試験
-          <br />
-          <span className="text-gradient">AI学習サポート</span>
+        <h1 className="heading-serif text-4xl lg:text-5xl text-ink-900 mb-4 leading-tight">
+          InkTopik
         </h1>
+        <p className="text-xl lg:text-2xl text-gradient font-medium mb-8">
+          学習の痕跡を、論点に残す
+        </p>
 
         {/* サブタイトル */}
         <p className="text-lg text-ink-600 mb-10 leading-relaxed">
-          AIとの対話で、論点ごとの理解を深めましょう。
+          分からなかったこと。聞いたこと。理解したこと。
           <br className="hidden sm:block" />
-          質問の質を高め、効率的な学習を実現します。
+          すべてが論点に紐づき、後から振り返れます。
         </p>
 
         {/* CTA */}
@@ -62,21 +56,58 @@ function LandingPage() {
         </Link>
 
         {/* 特徴 */}
-        <div className="mt-16 grid grid-cols-3 gap-6 text-center">
+        <div className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-8 text-left sm:text-center">
           {[
-            { icon: "📚", label: "体系的な論点整理" },
-            { icon: "💬", label: "AI対話で理解深化" },
-            { icon: "📝", label: "自動ノート作成" },
+            {
+              icon: (
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
+                </svg>
+              ),
+              label: "論点に集まる",
+              description: "質問もノートも迷いも、すべて論点に紐づく",
+            },
+            {
+              icon: (
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                </svg>
+              ),
+              label: "後から見える",
+              description: "どこに時間を使ったか、事実として残る",
+            },
+            {
+              icon: (
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+                </svg>
+              ),
+              label: "主教材と併用",
+              description: "テキストや問題集の学習を邪魔しない",
+            },
           ].map((feature, i) => (
             <div
               key={feature.label}
-              className={`animate-fade-in-up animation-delay-${(i + 1) * 100}`}
+              className={`flex sm:flex-col items-start sm:items-center gap-4 sm:gap-2 animate-fade-in-up animation-delay-${(i + 1) * 100}`}
             >
-              <div className="text-3xl mb-2">{feature.icon}</div>
-              <div className="text-sm text-ink-500">{feature.label}</div>
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
+                {feature.icon}
+              </div>
+              <div>
+                <div className="font-medium text-ink-800 mb-1">{feature.label}</div>
+                <div className="text-sm text-ink-500">{feature.description}</div>
+              </div>
             </div>
           ))}
         </div>
+
+        {/* 補足（思想の表明） */}
+        <p className="mt-16 text-sm text-ink-400 max-w-md mx-auto">
+          このアプリは学習を教えません。
+          <br />
+          代わりに、学習がうまくいっている状態を再現可能な形で残します。
+        </p>
       </div>
     </div>
   )

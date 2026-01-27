@@ -73,12 +73,7 @@ function LoginPage() {
         <div className="card p-8 lg:p-10">
           {/* ヘッダー */}
           <div className="text-center mb-8">
-            <div className="mb-6 flex justify-center">
-              <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-indigo-600 to-indigo-700 flex items-center justify-center shadow-soft">
-                <span className="text-white font-serif font-bold text-2xl">会</span>
-              </div>
-            </div>
-            <h1 className="heading-serif text-2xl mb-2">ログイン</h1>
+            <h1 className="heading-serif text-2xl mb-2">InkTopik にログイン</h1>
             <p className="text-ink-500">
               アカウントでログインして学習を始めましょう
             </p>
