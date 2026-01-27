@@ -251,10 +251,15 @@ describe("Topic UseCase", () => {
 
   describe("getTopicWithProgress", () => {
     it("論点詳細を取得する", async () => {
-      const mockTopic = createMockTopic()
+      const mockTopicWithHierarchy = {
+        ...createMockTopic(),
+        categoryName: "計算",
+        subjectId: "subject-1",
+        subjectName: "財務会計論",
+      }
       const mockProgress = createMockProgress({ understood: true })
       const repo = createMockRepo({
-        findTopicById: vi.fn().mockResolvedValue(mockTopic),
+        findTopicWithHierarchy: vi.fn().mockResolvedValue(mockTopicWithHierarchy),
         findProgress: vi.fn().mockResolvedValue(mockProgress),
         upsertProgress: vi.fn().mockResolvedValue(mockProgress),
       })
@@ -268,9 +273,14 @@ describe("Topic UseCase", () => {
     })
 
     it("アクセス記録を更新する", async () => {
-      const mockTopic = createMockTopic()
+      const mockTopicWithHierarchy = {
+        ...createMockTopic(),
+        categoryName: "計算",
+        subjectId: "subject-1",
+        subjectName: "財務会計論",
+      }
       const repo = createMockRepo({
-        findTopicById: vi.fn().mockResolvedValue(mockTopic),
+        findTopicWithHierarchy: vi.fn().mockResolvedValue(mockTopicWithHierarchy),
         findProgress: vi.fn().mockResolvedValue(null),
         upsertProgress: vi.fn().mockResolvedValue(createMockProgress()),
       })
