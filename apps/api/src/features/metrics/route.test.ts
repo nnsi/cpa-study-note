@@ -70,6 +70,9 @@ const createTestEnv = (): Env => ({
   RATE_LIMITER: {} as DurableObjectNamespace,
 })
 
+// Dev auth headers for local environment tests
+const devAuthHeaders = { "X-Dev-User-Id": "test-user-1" }
+
 // Test helper for JWT generation
 const generateTestToken = async (
   user: { id: string; email: string; name: string; avatarUrl: string | null },
@@ -114,7 +117,7 @@ describe("Metrics Routes", () => {
 
   describe("GET /metrics/today", () => {
     it("should return today's metrics", async () => {
-      const res = await app.request("/metrics/today", {}, testEnv)
+      const res = await app.request("/metrics/today", { headers: devAuthHeaders }, testEnv)
 
       expect(res.status).toBe(200)
       const body = todayMetricsResponseSchema.parse(await res.json())
@@ -171,7 +174,7 @@ describe("Metrics Routes", () => {
         })
         .run()
 
-      const res = await app.request("/metrics/today", {}, testEnv)
+      const res = await app.request("/metrics/today", { headers: devAuthHeaders }, testEnv)
 
       expect(res.status).toBe(200)
       const body = todayMetricsResponseSchema.parse(await res.json())
@@ -195,7 +198,7 @@ describe("Metrics Routes", () => {
     it("should return all dates in range with zero counts when no data exists", async () => {
       const res = await app.request(
         "/metrics/daily?from=2024-01-01&to=2024-01-03",
-        {},
+        { headers: devAuthHeaders },
         testEnv
       )
 
@@ -244,7 +247,7 @@ describe("Metrics Routes", () => {
 
       const res = await app.request(
         `/metrics/daily?from=${todayStr}&to=${tomorrowStr}`,
-        {},
+        { headers: devAuthHeaders },
         testEnv
       )
 
@@ -263,7 +266,7 @@ describe("Metrics Routes", () => {
     it("should return 400 for invalid date format", async () => {
       const res = await app.request(
         "/metrics/daily?from=invalid&to=2024-01-31",
-        {},
+        { headers: devAuthHeaders },
         testEnv
       )
 
@@ -289,7 +292,7 @@ describe("Metrics Routes", () => {
     it("should create a snapshot for today", async () => {
       const res = await app.request(
         "/metrics/snapshot",
-        { method: "POST" },
+        { method: "POST", headers: devAuthHeaders },
         testEnv
       )
 
@@ -303,7 +306,10 @@ describe("Metrics Routes", () => {
 
     it("should aggregate metrics correctly", async () => {
       // Create some test data
-      const now = new Date()
+      // getTodayDateString()はローカル日付を返し、aggregateForDate()はそれをUTC日付境界として解釈する
+      // ローカル日付のUTC正午にデータを作成して、UTC日付範囲内に収まるようにする
+      const today = new Date()
+      const todayNoonUTC = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate(), 12, 0, 0, 0))
       const sessionId = crypto.randomUUID()
 
       // チェック済み論点（topicCheckHistoryを使用）
@@ -313,7 +319,7 @@ describe("Metrics Routes", () => {
           userId: testData.userId,
           topicId: testData.topicId,
           action: "checked",
-          checkedAt: now,
+          checkedAt: todayNoonUTC,
         })
         .run()
 
@@ -323,8 +329,8 @@ describe("Metrics Routes", () => {
           id: sessionId,
           userId: testData.userId,
           topicId: testData.topicId,
-          createdAt: now,
-          updatedAt: now,
+          createdAt: todayNoonUTC,
+          updatedAt: todayNoonUTC,
         })
         .run()
 
@@ -335,7 +341,7 @@ describe("Metrics Routes", () => {
           role: "user",
           content: "Test question",
           questionQuality: "good",
-          createdAt: now,
+          createdAt: todayNoonUTC,
         })
         .run()
 
@@ -346,13 +352,13 @@ describe("Metrics Routes", () => {
           role: "user",
           content: "Another question",
           questionQuality: "surface",
-          createdAt: now,
+          createdAt: todayNoonUTC,
         })
         .run()
 
       const res = await app.request(
         "/metrics/snapshot",
-        { method: "POST" },
+        { method: "POST", headers: devAuthHeaders },
         testEnv
       )
 
@@ -368,7 +374,7 @@ describe("Metrics Routes", () => {
       // First snapshot
       const res1 = await app.request(
         "/metrics/snapshot",
-        { method: "POST" },
+        { method: "POST", headers: devAuthHeaders },
         testEnv
       )
       expect(res1.status).toBe(201)
@@ -389,7 +395,7 @@ describe("Metrics Routes", () => {
       // Second snapshot (should update)
       const res2 = await app.request(
         "/metrics/snapshot",
-        { method: "POST" },
+        { method: "POST", headers: devAuthHeaders },
         testEnv
       )
       expect(res2.status).toBe(201)
@@ -405,7 +411,7 @@ describe("Metrics Routes", () => {
     it("should create a snapshot for specified date", async () => {
       const res = await app.request(
         "/metrics/snapshot/2024-01-15",
-        { method: "POST" },
+        { method: "POST", headers: devAuthHeaders },
         testEnv
       )
 
@@ -417,7 +423,7 @@ describe("Metrics Routes", () => {
     it("should return 400 for invalid date format", async () => {
       const res = await app.request(
         "/metrics/snapshot/invalid-date",
-        { method: "POST" },
+        { method: "POST", headers: devAuthHeaders },
         testEnv
       )
 

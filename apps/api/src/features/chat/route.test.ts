@@ -76,6 +76,9 @@ const createTestEnv = (): Env => ({
   RATE_LIMITER: {} as DurableObjectNamespace,
 })
 
+// Dev auth headers for local environment tests
+const devAuthHeaders = { "X-Dev-User-Id": "test-user-1" }
+
 // Test helper for JWT generation
 const generateTestToken = async (
   user: { id: string; email: string; name: string; avatarUrl: string | null },
@@ -147,7 +150,7 @@ describe("Chat Routes", () => {
         "/chat/sessions",
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...devAuthHeaders },
           body: JSON.stringify({ topicId: testData.topicId }),
         },
         testEnv
@@ -165,7 +168,7 @@ describe("Chat Routes", () => {
         "/chat/sessions",
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...devAuthHeaders },
           body: JSON.stringify({ topicId: "non-existent-topic" }),
         },
         testEnv
@@ -199,7 +202,7 @@ describe("Chat Routes", () => {
     it("should return empty array when no sessions exist", async () => {
       const res = await app.request(
         `/chat/topics/${testData.topicId}/sessions`,
-        {},
+        { headers: devAuthHeaders },
         testEnv
       )
 
@@ -236,7 +239,7 @@ describe("Chat Routes", () => {
 
       const res = await app.request(
         `/chat/topics/${testData.topicId}/sessions`,
-        {},
+        { headers: devAuthHeaders },
         testEnv
       )
 
@@ -264,7 +267,7 @@ describe("Chat Routes", () => {
 
       const res = await app.request(
         `/chat/topics/${testData.topicId}/sessions`,
-        {},
+        { headers: devAuthHeaders },
         testEnv
       )
 
@@ -292,7 +295,7 @@ describe("Chat Routes", () => {
 
       const res = await app.request(
         `/chat/sessions/${sessionId}`,
-        {},
+        { headers: devAuthHeaders },
         testEnv
       )
 
@@ -305,7 +308,7 @@ describe("Chat Routes", () => {
     it("should return 404 for non-existent session", async () => {
       const res = await app.request(
         "/chat/sessions/non-existent-session",
-        {},
+        { headers: devAuthHeaders },
         testEnv
       )
 
@@ -343,7 +346,7 @@ describe("Chat Routes", () => {
 
       const res = await app.request(
         `/chat/sessions/${sessionId}`,
-        {},
+        { headers: devAuthHeaders },
         testEnv
       )
 
@@ -391,7 +394,7 @@ describe("Chat Routes", () => {
 
       const res = await app.request(
         `/chat/sessions/${sessionId}/messages`,
-        {},
+        { headers: devAuthHeaders },
         testEnv
       )
 
@@ -405,7 +408,7 @@ describe("Chat Routes", () => {
     it("should return 404 for non-existent session", async () => {
       const res = await app.request(
         "/chat/sessions/non-existent-session/messages",
-        {},
+        { headers: devAuthHeaders },
         testEnv
       )
 
@@ -441,7 +444,7 @@ describe("Chat Routes", () => {
 
       const res = await app.request(
         `/chat/sessions/${sessionId}/messages`,
-        {},
+        { headers: devAuthHeaders },
         testEnv
       )
 
@@ -469,7 +472,7 @@ describe("Chat Routes", () => {
         `/chat/sessions/${sessionId}/messages/stream`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...devAuthHeaders },
           body: JSON.stringify({ content: "What is securities?" }),
         },
         testEnv
@@ -491,7 +494,7 @@ describe("Chat Routes", () => {
         "/chat/sessions/non-existent/messages/stream",
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...devAuthHeaders },
           body: JSON.stringify({ content: "Test" }),
         },
         testEnv
@@ -535,7 +538,7 @@ describe("Chat Routes", () => {
         `/chat/sessions/${sessionId}/messages/stream`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...devAuthHeaders },
           body: JSON.stringify({ content: "Test" }),
         },
         testEnv
@@ -568,7 +571,7 @@ describe("Chat Routes", () => {
         `/chat/sessions/${sessionId}/messages/stream`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...devAuthHeaders },
           body: JSON.stringify({ content: "" }),
         },
         testEnv
@@ -585,7 +588,7 @@ describe("Chat Routes", () => {
         `/chat/topics/${testData.topicId}/messages/stream`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...devAuthHeaders },
           body: JSON.stringify({ content: "What is accounting?" }),
         },
         testEnv
@@ -611,7 +614,7 @@ describe("Chat Routes", () => {
         "/chat/topics/non-existent-topic/messages/stream",
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...devAuthHeaders },
           body: JSON.stringify({ content: "Test" }),
         },
         testEnv
@@ -654,7 +657,7 @@ describe("Chat Routes", () => {
 
       const res = await app.request(
         `/chat/messages/${messageId}/evaluate`,
-        { method: "POST" },
+        { method: "POST", headers: devAuthHeaders },
         testEnv
       )
 
@@ -667,7 +670,7 @@ describe("Chat Routes", () => {
     it("should return 404 for non-existent message", async () => {
       const res = await app.request(
         "/chat/messages/non-existent-message/evaluate",
-        { method: "POST" },
+        { method: "POST", headers: devAuthHeaders },
         testEnv
       )
 
@@ -717,7 +720,7 @@ describe("Chat Routes", () => {
 
       const res = await app.request(
         `/chat/messages/${messageId}/evaluate`,
-        { method: "POST" },
+        { method: "POST", headers: devAuthHeaders },
         testEnv
       )
 

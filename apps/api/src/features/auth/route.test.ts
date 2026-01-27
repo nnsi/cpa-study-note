@@ -118,9 +118,13 @@ describe("Auth Routes", () => {
   })
 
   describe("GET /auth/me", () => {
-    it("should return user info for authenticated user (local env)", async () => {
-      // In local environment, auth is skipped and dev user is used
-      const res = await app.request("/auth/me", {}, testEnv)
+    it("should return user info for authenticated user (local env with X-Dev-User-Id)", async () => {
+      // In local environment with X-Dev-User-Id header, auth is skipped and dev user is used
+      const res = await app.request(
+        "/auth/me",
+        { headers: { "X-Dev-User-Id": "test-user-1" } },
+        testEnv
+      )
       expect(res.status).toBe(200)
 
       const body = await parseJson(res, userResponseSchema)
