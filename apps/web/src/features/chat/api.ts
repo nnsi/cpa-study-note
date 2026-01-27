@@ -1,4 +1,5 @@
 import { api } from "@/lib/api-client"
+import { useAuthStore } from "@/lib/auth"
 
 export type StreamChunk =
   | { type: "text"; content: string }
@@ -22,13 +23,16 @@ export async function* streamMessage(
 ): AsyncIterable<StreamChunk> {
   // Hono RPCではなくfetchを直接使用（SSEストリーミング対応）
   const apiUrl = import.meta.env.VITE_API_URL || ""
+  const token = useAuthStore.getState().token
   const res = await fetch(
     `${apiUrl}/api/chat/sessions/${sessionId}/messages/stream`,
     {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
+      credentials: "include",
       body: JSON.stringify({ content, imageId, ocrResult }),
     }
   )
@@ -73,13 +77,16 @@ export async function* streamMessageWithNewSession(
   ocrResult?: string
 ): AsyncIterable<StreamChunk> {
   const apiUrl = import.meta.env.VITE_API_URL || ""
+  const token = useAuthStore.getState().token
   const res = await fetch(
     `${apiUrl}/api/chat/topics/${topicId}/messages/stream`,
     {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
+      credentials: "include",
       body: JSON.stringify({ content, imageId, ocrResult }),
     }
   )
