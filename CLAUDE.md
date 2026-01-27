@@ -122,6 +122,7 @@ cpa-study-note/
 | `/hono-feature` | Hono APIのFeatureモジュール作成（DI + Hono RPC対応） |
 | `/react-feature` | React Featureモジュール作成（3層分離 + Hono RPC + SSE対応） |
 | `/drizzle-schema` | Drizzleテーブルスキーマを作成 |
+| `/frontend-design` | 和モダンデザイン方針でUIコンポーネントを作成（カラーパレット: indigo, ink, jade, amber, crimson） |
 
 ### 開発・テスト
 | スキル | 説明 |
