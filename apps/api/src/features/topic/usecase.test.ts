@@ -87,6 +87,7 @@ const createMockRepo = (overrides: Partial<TopicRepository> = {}): TopicReposito
   getCategoryTopicCounts: vi.fn().mockResolvedValue([]),
   findTopicsByCategoryId: vi.fn().mockResolvedValue([]),
   findTopicById: vi.fn().mockResolvedValue(null),
+  findTopicWithHierarchy: vi.fn().mockResolvedValue(null),
   findProgress: vi.fn().mockResolvedValue(null),
   upsertProgress: vi.fn().mockResolvedValue(createMockProgress()),
   findProgressByUser: vi.fn().mockResolvedValue([]),

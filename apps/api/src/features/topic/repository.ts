@@ -33,6 +33,7 @@ export type TopicRepository = {
   // Topics
   findTopicsByCategoryId: (categoryId: string) => Promise<Topic[]>
   findTopicById: (id: string) => Promise<Topic | null>
+  findTopicWithHierarchy: (id: string) => Promise<TopicWithHierarchy | null>
 
   // Progress
   findProgress: (userId: string, topicId: string) => Promise<TopicProgress | null>
@@ -110,6 +111,12 @@ type Topic = {
   displayOrder: number
   createdAt: Date
   updatedAt: Date
+}
+
+type TopicWithHierarchy = Topic & {
+  categoryName: string
+  subjectId: string
+  subjectName: string
 }
 
 type TopicProgress = {
@@ -228,6 +235,31 @@ export const createTopicRepository = (db: Db): TopicRepository => ({
     const result = await db
       .select()
       .from(topics)
+      .where(eq(topics.id, id))
+      .limit(1)
+    return result[0] ?? null
+  },
+
+  findTopicWithHierarchy: async (id) => {
+    const result = await db
+      .select({
+        id: topics.id,
+        categoryId: topics.categoryId,
+        name: topics.name,
+        description: topics.description,
+        difficulty: topics.difficulty,
+        topicType: topics.topicType,
+        aiSystemPrompt: topics.aiSystemPrompt,
+        displayOrder: topics.displayOrder,
+        createdAt: topics.createdAt,
+        updatedAt: topics.updatedAt,
+        categoryName: categories.name,
+        subjectId: subjects.id,
+        subjectName: subjects.name,
+      })
+      .from(topics)
+      .innerJoin(categories, eq(topics.categoryId, categories.id))
+      .innerJoin(subjects, eq(categories.subjectId, subjects.id))
       .where(eq(topics.id, id))
       .limit(1)
     return result[0] ?? null

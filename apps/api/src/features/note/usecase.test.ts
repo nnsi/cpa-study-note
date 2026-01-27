@@ -114,6 +114,7 @@ const createMockTopicRepo = (overrides: Partial<TopicRepository> = {}): TopicRep
   getCategoryTopicCounts: vi.fn().mockResolvedValue([]),
   findTopicsByCategoryId: vi.fn().mockResolvedValue([]),
   findTopicById: vi.fn().mockResolvedValue(null),
+  findTopicWithHierarchy: vi.fn().mockResolvedValue(null),
   findProgress: vi.fn().mockResolvedValue(null),
   upsertProgress: vi.fn().mockResolvedValue({} as ReturnType<TopicRepository["upsertProgress"]> extends Promise<infer T> ? T : never),
   findProgressByUser: vi.fn().mockResolvedValue([]),

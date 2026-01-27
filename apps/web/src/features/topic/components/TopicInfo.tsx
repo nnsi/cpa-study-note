@@ -21,12 +21,20 @@ type Topic = {
   } | null
 }
 
+type Session = {
+  id: string
+  messageCount: number
+  goodCount: number
+  surfaceCount: number
+}
+
 type Props = {
   topic: Topic
   subjectId: string
+  sessions?: Session[]
 }
 
-export const TopicInfo = ({ topic, subjectId }: Props) => {
+export const TopicInfo = ({ topic, subjectId, sessions = [] }: Props) => {
   const queryClient = useQueryClient()
 
   const { mutate: updateProgress, isPending } = useMutation({
@@ -57,12 +65,9 @@ export const TopicInfo = ({ topic, subjectId }: Props) => {
 
   return (
     <div className="p-4 space-y-6">
-      <div>
-        <h2 className="text-lg font-bold text-ink-900">{topic.name}</h2>
-        {topic.description && (
-          <p className="mt-2 text-sm text-ink-600">{topic.description}</p>
-        )}
-      </div>
+      {topic.description && (
+        <p className="text-sm text-ink-600">{topic.description}</p>
+      )}
 
       <div>
         <button
@@ -78,21 +83,41 @@ export const TopicInfo = ({ topic, subjectId }: Props) => {
         </button>
       </div>
 
-      {topic.progress && (
-        <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-ink-700">学習統計</h3>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-ink-50 rounded-xl p-3">
-              <p className="text-2xl font-bold text-ink-900">
-                {topic.progress.lastAccessedAt
-                  ? formatRelativeTime(topic.progress.lastAccessedAt)
-                  : "-"}
-              </p>
-              <p className="text-xs text-ink-500">最終アクセス</p>
-            </div>
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold text-ink-700">学習統計</h3>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-ink-50 rounded-xl p-3">
+            <p className="text-2xl font-bold text-ink-900">
+              {topic.progress?.lastAccessedAt
+                ? formatRelativeTime(topic.progress.lastAccessedAt)
+                : "-"}
+            </p>
+            <p className="text-xs text-ink-500">最終アクセス</p>
           </div>
+          <div className="bg-ink-50 rounded-xl p-3">
+            <p className="text-2xl font-bold text-ink-900">
+              {sessions.length}
+            </p>
+            <p className="text-xs text-ink-500">チャット回数</p>
+          </div>
+          {sessions.length > 0 && (
+            <>
+              <div className="bg-ink-50 rounded-xl p-3">
+                <p className="text-2xl font-bold text-ink-900">
+                  {sessions.reduce((sum, s) => sum + s.messageCount, 0)}
+                </p>
+                <p className="text-xs text-ink-500">総メッセージ</p>
+              </div>
+              <div className="bg-ink-50 rounded-xl p-3">
+                <p className="text-2xl font-bold text-jade-600">
+                  {sessions.reduce((sum, s) => sum + s.goodCount, 0)}
+                </p>
+                <p className="text-xs text-ink-500">深掘り質問</p>
+              </div>
+            </>
+          )}
         </div>
-      )}
+      </div>
 
       {/* チェック履歴タイムライン */}
       <div className="space-y-3">

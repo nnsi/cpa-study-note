@@ -20,6 +20,7 @@ type Session = {
   messageCount: number
   goodCount: number
   surfaceCount: number
+  firstMessagePreview: string | null
 }
 
 function TopicDetailPage() {
@@ -98,6 +99,16 @@ function TopicDetailPage() {
           >
             ← 論点一覧
           </Link>
+          {topic && (
+            <div className="mt-1">
+              <p className="text-xs text-ink-500 truncate">
+                {topic.topic.subjectName} / {topic.topic.categoryName}
+              </p>
+              <h1 className="text-base font-bold text-ink-900 truncate">
+                {topic.topic.name}
+              </h1>
+            </div>
+          )}
         </div>
         <div className="flex">
           {(["info", "chat", "notes"] as const).map((tab) => (
@@ -130,6 +141,16 @@ function TopicDetailPage() {
             >
               ← 論点一覧
             </Link>
+            {topic && (
+              <div className="mt-2">
+                <p className="text-xs text-ink-500">
+                  {topic.topic.subjectName} / {topic.topic.categoryName}
+                </p>
+                <h1 className="text-base font-bold text-ink-900 leading-tight">
+                  {topic.topic.name}
+                </h1>
+              </div>
+            )}
           </div>
           {/* サイドバータブ */}
           <div className="flex border-b border-ink-100">
@@ -152,7 +173,7 @@ function TopicDetailPage() {
           {/* サイドバーコンテンツ */}
           <div className="flex-1 overflow-y-auto">
             {sidebarTab === "info" && topic && (
-              <TopicInfo topic={topic.topic} subjectId={subjectId} />
+              <TopicInfo topic={topic.topic} subjectId={subjectId} sessions={sessions} />
             )}
             {sidebarTab === "sessions" && (
               <SessionList
@@ -182,7 +203,7 @@ function TopicDetailPage() {
       <div className="lg:hidden flex-1 overflow-hidden">
         {activeTab === "info" && topic && (
           <div className="h-full overflow-y-auto">
-            <TopicInfo topic={topic.topic} subjectId={subjectId} />
+            <TopicInfo topic={topic.topic} subjectId={subjectId} sessions={sessions} />
           </div>
         )}
         {activeTab === "chat" && (
@@ -272,6 +293,7 @@ function SessionList({
               <div className="flex items-center justify-between">
                 <span className="text-sm text-ink-800">
                   {new Date(session.createdAt).toLocaleDateString("ja-JP", {
+                    year: "numeric",
                     month: "short",
                     day: "numeric",
                     hour: "2-digit",
@@ -282,6 +304,13 @@ function SessionList({
                   {session.messageCount}件
                 </span>
               </div>
+              {/* プレビュー */}
+              {session.firstMessagePreview && (
+                <p className="text-xs text-ink-500 mt-1.5 truncate">
+                  {session.firstMessagePreview}
+                  {session.firstMessagePreview.length >= 50 && "..."}
+                </p>
+              )}
               {/* 質問評価統計 */}
               {(session.goodCount > 0 || session.surfaceCount > 0) && (
                 <div className="flex items-center gap-2 mt-1.5">

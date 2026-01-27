@@ -59,6 +59,7 @@ type SessionWithStats = SessionResponse & {
   messageCount: number
   goodCount: number
   surfaceCount: number
+  firstMessagePreview: string | null
 }
 
 // セッション一覧取得（メッセージが1件以上あるセッションのみ）

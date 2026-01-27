@@ -33,6 +33,9 @@ type CategoryNode = {
 type TopicWithProgress = {
   id: string
   categoryId: string
+  categoryName: string
+  subjectId: string
+  subjectName: string
   name: string
   description: string | null
   displayOrder: number
@@ -190,7 +193,7 @@ export const getTopicWithProgress = async (
   topicId: string
 ): Promise<TopicWithProgress | null> => {
   const { repo } = deps
-  const topic = await repo.findTopicById(topicId)
+  const topic = await repo.findTopicWithHierarchy(topicId)
 
   if (!topic) {
     return null
@@ -202,7 +205,14 @@ export const getTopicWithProgress = async (
   await repo.upsertProgress({ userId, topicId })
 
   return {
-    ...topic,
+    id: topic.id,
+    categoryId: topic.categoryId,
+    categoryName: topic.categoryName,
+    subjectId: topic.subjectId,
+    subjectName: topic.subjectName,
+    name: topic.name,
+    description: topic.description,
+    displayOrder: topic.displayOrder,
     createdAt: topic.createdAt.toISOString(),
     updatedAt: topic.updatedAt.toISOString(),
     progress: progress

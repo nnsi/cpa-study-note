@@ -1,4 +1,4 @@
-import { eq, and, desc, sql } from "drizzle-orm"
+import { eq, and, desc, sql, inArray } from "drizzle-orm"
 import type { Db } from "@cpa-study/db"
 import { chatSessions, chatMessages } from "@cpa-study/db/schema"
 
@@ -35,6 +35,7 @@ export type SessionWithStats = {
   messageCount: number
   goodCount: number
   surfaceCount: number
+  firstMessagePreview: string | null
 }
 
 export type ChatRepository = {
@@ -85,44 +86,70 @@ export const createChatRepository = (db: Db): ChatRepository => ({
       .orderBy(desc(chatSessions.createdAt))
   },
 
-  // N+1問題を解消: セッション一覧と統計を1クエリで取得
+  // セッション一覧と統計を取得（2クエリで実装）
   findSessionsWithStatsByTopic: async (userId, topicId) => {
-    const result = await db.all<{
-      id: string
-      userId: string
-      topicId: string
-      createdAt: number
-      updatedAt: number
-      messageCount: number
-      goodCount: number
-      surfaceCount: number
-    }>(sql`
-      SELECT
-        s.id,
-        s.user_id as userId,
-        s.topic_id as topicId,
-        s.created_at as createdAt,
-        s.updated_at as updatedAt,
-        COUNT(m.id) as messageCount,
-        SUM(CASE WHEN m.question_quality = 'good' AND m.role = 'user' THEN 1 ELSE 0 END) as goodCount,
-        SUM(CASE WHEN m.question_quality = 'surface' AND m.role = 'user' THEN 1 ELSE 0 END) as surfaceCount
-      FROM chat_sessions s
-      LEFT JOIN chat_messages m ON s.id = m.session_id
-      WHERE s.user_id = ${userId} AND s.topic_id = ${topicId}
-      GROUP BY s.id
-      HAVING COUNT(m.id) > 0
-      ORDER BY s.created_at DESC
-    `)
+    // 1. セッション一覧と統計を取得
+    const sessionsWithStats = await db
+      .select({
+        id: chatSessions.id,
+        userId: chatSessions.userId,
+        topicId: chatSessions.topicId,
+        createdAt: chatSessions.createdAt,
+        updatedAt: chatSessions.updatedAt,
+        messageCount: sql<number>`count(${chatMessages.id})`,
+        goodCount: sql<number>`sum(case when ${chatMessages.questionQuality} = 'good' and ${chatMessages.role} = 'user' then 1 else 0 end)`,
+        surfaceCount: sql<number>`sum(case when ${chatMessages.questionQuality} = 'surface' and ${chatMessages.role} = 'user' then 1 else 0 end)`,
+      })
+      .from(chatSessions)
+      .leftJoin(chatMessages, eq(chatSessions.id, chatMessages.sessionId))
+      .where(
+        and(
+          eq(chatSessions.userId, userId),
+          eq(chatSessions.topicId, topicId)
+        )
+      )
+      .groupBy(chatSessions.id)
+      .having(sql`count(${chatMessages.id}) > 0`)
+      .orderBy(desc(chatSessions.createdAt))
 
-    return result.map((row) => ({
-      id: row.id,
-      userId: row.userId,
-      topicId: row.topicId,
-      createdAt: new Date(row.createdAt),
-      updatedAt: new Date(row.updatedAt),
-      messageCount: row.messageCount,
-      goodCount: row.goodCount,
-      surfaceCount: row.surfaceCount,
+    if (sessionsWithStats.length === 0) {
+      return []
+    }
+
+    // 2. 各セッションの最初のユーザーメッセージを取得
+    const sessionIds = sessionsWithStats.map((s) => s.id)
+    const firstMessages = await db
+      .select({
+        sessionId: chatMessages.sessionId,
+        content: chatMessages.content,
+      })
+      .from(chatMessages)
+      .where(
+        and(
+          inArray(chatMessages.sessionId, sessionIds),
+          eq(chatMessages.role, "user")
+        )
+      )
+      .orderBy(chatMessages.createdAt)
+
+    // セッションIDごとに最初のメッセージをマップ化（最初に見つかったものを採用）
+    const firstMessageMap = new Map<string, string>()
+    for (const msg of firstMessages) {
+      if (!firstMessageMap.has(msg.sessionId)) {
+        firstMessageMap.set(msg.sessionId, msg.content.slice(0, 50))
+      }
+    }
+
+    return sessionsWithStats.map((session) => ({
+      id: session.id,
+      userId: session.userId,
+      topicId: session.topicId,
+      createdAt: session.createdAt,
+      updatedAt: session.updatedAt,
+      messageCount: session.messageCount ?? 0,
+      goodCount: session.goodCount ?? 0,
+      surfaceCount: session.surfaceCount ?? 0,
+      firstMessagePreview: firstMessageMap.get(session.id) ?? null,
     }))
   },
 

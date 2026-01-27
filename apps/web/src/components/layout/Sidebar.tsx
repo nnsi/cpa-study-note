@@ -1,4 +1,5 @@
 import { Link, useLocation } from "@tanstack/react-router"
+import { useRecentTopics } from "@/features/home"
 
 const navItems = [
   {
@@ -32,6 +33,7 @@ const navItems = [
 
 export const Sidebar = () => {
   const location = useLocation()
+  const { topics: recentTopics, isLoading: isLoadingRecent } = useRecentTopics()
 
   return (
     <nav className="p-6">
@@ -72,10 +74,36 @@ export const Sidebar = () => {
         <span className="label">クイックアクセス</span>
       </div>
 
-      <div className="px-4">
-        <p className="text-sm text-ink-400">
-          最近の学習や、お気に入りの論点がここに表示されます
-        </p>
+      <div className="px-2">
+        {isLoadingRecent ? (
+          <div className="space-y-1 px-2">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="h-8 skeleton rounded" />
+            ))}
+          </div>
+        ) : recentTopics.length === 0 ? (
+          <p className="text-sm text-ink-400 px-2">
+            最近の学習がここに表示されます
+          </p>
+        ) : (
+          <ul className="space-y-0.5">
+            {recentTopics.slice(0, 5).map((topic) => (
+              <li key={topic.topicId}>
+                <Link
+                  to="/subjects/$subjectId/$categoryId/$topicId"
+                  params={{
+                    subjectId: topic.subjectId,
+                    categoryId: topic.categoryId,
+                    topicId: topic.topicId,
+                  }}
+                  className="block px-3 py-2 text-sm text-ink-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors truncate"
+                >
+                  {topic.topicName}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </nav>
   )
