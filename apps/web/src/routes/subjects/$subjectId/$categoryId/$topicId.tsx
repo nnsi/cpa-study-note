@@ -217,9 +217,7 @@ function TopicDetailPage() {
               >
                 <option value="new">新しいチャット</option>
                 {sessions.map((s) => {
-                  const qualityLabel = s.goodCount > 0 || s.surfaceCount > 0
-                    ? ` | ${s.goodCount > 0 ? `✔${s.goodCount}` : ""}${s.goodCount > 0 && s.surfaceCount > 0 ? " " : ""}${s.surfaceCount > 0 ? `△${s.surfaceCount}` : ""}`
-                    : ""
+                  const qualityLabel = s.goodCount > 0 ? ` | ✔${s.goodCount}` : ""
                   return (
                     <option key={s.id} value={s.id}>
                       {new Date(s.createdAt).toLocaleDateString("ja-JP")} ({s.messageCount}件{qualityLabel})
@@ -311,25 +309,15 @@ function SessionList({
                   {session.firstMessagePreview.length >= 50 && "..."}
                 </p>
               )}
-              {/* 質問評価統計 */}
-              {(session.goodCount > 0 || session.surfaceCount > 0) && (
+              {/* 深掘り質問統計 */}
+              {session.goodCount > 0 && (
                 <div className="flex items-center gap-2 mt-1.5">
-                  {session.goodCount > 0 && (
-                    <span className="inline-flex items-center gap-0.5 text-2xs text-jade-600">
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                      </svg>
-                      {session.goodCount}
-                    </span>
-                  )}
-                  {session.surfaceCount > 0 && (
-                    <span className="inline-flex items-center gap-0.5 text-2xs text-amber-600">
-                      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 2L2 22h20L12 2zm0 4.5l7.5 13H4.5L12 6.5z" />
-                      </svg>
-                      {session.surfaceCount}
-                    </span>
-                  )}
+                  <span className="inline-flex items-center gap-0.5 text-2xs text-jade-600">
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                    </svg>
+                    {session.goodCount}
+                  </span>
                 </div>
               )}
             </button>

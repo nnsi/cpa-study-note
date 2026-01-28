@@ -183,6 +183,7 @@ export const useSendMessage = ({ sessionId, topicId, onSessionCreated }: UseSend
       try {
         let userMessageId: string | undefined
         let currentSessionId = sessionId
+        let newSessionId: string | undefined
 
         // セッションがない場合は新規セッション作成APIを使用
         const streamSource = sessionId
@@ -191,9 +192,9 @@ export const useSendMessage = ({ sessionId, topicId, onSessionCreated }: UseSend
 
         for await (const chunk of streamSource) {
           if (chunk.type === "session_created") {
-            // 新規セッションが作成された
+            // 新規セッションが作成された（ストリーミング完了後に通知）
             currentSessionId = chunk.sessionId
-            onSessionCreated?.(chunk.sessionId)
+            newSessionId = chunk.sessionId
           } else if (chunk.type === "text") {
             setStreamingText((prev) => prev + chunk.content)
           } else if (chunk.type === "done") {
@@ -208,6 +209,11 @@ export const useSendMessage = ({ sessionId, topicId, onSessionCreated }: UseSend
             queryClient.invalidateQueries({
               queryKey: ["chat", "sessions"],
             })
+            // 新規セッションが作成されていた場合、ストリーミング完了後に親に通知
+            // （key変更によるコンポーネント再マウントを防ぐため）
+            if (newSessionId) {
+              onSessionCreated?.(newSessionId)
+            }
           } else if (chunk.type === "error") {
             setError(new Error(chunk.error))
           }

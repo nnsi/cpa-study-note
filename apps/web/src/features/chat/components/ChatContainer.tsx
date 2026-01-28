@@ -62,13 +62,6 @@ export const ChatContainer = ({ sessionId, topicId, onSessionCreated, onNavigate
                 </svg>
                 深掘り
               </span>
-              確認には
-              <span className="inline-flex items-center mx-1 px-1.5 py-0.5 bg-amber-100 text-amber-600 rounded text-xs font-medium">
-                <svg className="w-3 h-3 mr-0.5" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2L2 22h20L12 2zm0 4.5l7.5 13H4.5L12 6.5z" />
-                </svg>
-                確認
-              </span>
               マークがつきます
             </p>
           </div>
