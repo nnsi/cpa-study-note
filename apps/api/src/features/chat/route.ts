@@ -7,6 +7,7 @@ import { authMiddleware } from "@/shared/middleware/auth"
 import { createAIAdapter, streamToSSE } from "@/shared/lib/ai"
 import { createChatRepository } from "./repository"
 import { createTopicRepository } from "../topic/repository"
+import { resolveAIConfig } from "./domain/ai-config"
 import {
   createSession,
   getSession,
@@ -114,9 +115,10 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
           provider: env.AI_PROVIDER,
           apiKey: env.OPENROUTER_API_KEY,
         })
+        const aiConfig = resolveAIConfig(env.ENVIRONMENT)
 
         const stream = sendMessage(
-          { chatRepo, topicRepo, aiAdapter },
+          { chatRepo, topicRepo, aiAdapter, aiConfig },
           {
             sessionId,
             userId: user.id,
@@ -151,9 +153,10 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
           provider: env.AI_PROVIDER,
           apiKey: env.OPENROUTER_API_KEY,
         })
+        const aiConfig = resolveAIConfig(env.ENVIRONMENT)
 
         const stream = sendMessageWithNewSession(
-          { chatRepo, topicRepo, aiAdapter },
+          { chatRepo, topicRepo, aiAdapter, aiConfig },
           {
             topicId,
             userId: user.id,
@@ -182,9 +185,10 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         provider: env.AI_PROVIDER,
         apiKey: env.OPENROUTER_API_KEY,
       })
+      const aiConfig = resolveAIConfig(env.ENVIRONMENT)
 
       const quality = await evaluateQuestion(
-        { chatRepo, topicRepo, aiAdapter },
+        { chatRepo, topicRepo, aiAdapter, aiConfig },
         messageId,
         result.content
       )

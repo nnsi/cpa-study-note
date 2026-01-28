@@ -5,6 +5,7 @@ import { createChatRepository, type ChatRepository } from "./repository"
 import { createTopicRepository, type TopicRepository } from "../topic/repository"
 import { createMockAIAdapter } from "../../test/mocks/ai"
 import type { AIAdapter, StreamChunk } from "../../shared/lib/ai"
+import { defaultAIConfig } from "./domain/ai-config"
 import {
   createSession,
   listSessionsByTopic,
@@ -279,7 +280,7 @@ describe("Chat UseCase", () => {
 
       const chunks: StreamChunk[] = []
       for await (const chunk of sendMessage(
-        { chatRepo, topicRepo, aiAdapter },
+        { chatRepo, topicRepo, aiAdapter, aiConfig: defaultAIConfig },
         {
           sessionId: session.id,
           userId: testData.userId,
@@ -323,7 +324,7 @@ describe("Chat UseCase", () => {
 
       const chunks: StreamChunk[] = []
       for await (const chunk of sendMessage(
-        { chatRepo, topicRepo, aiAdapter: errorAdapter },
+        { chatRepo, topicRepo, aiAdapter: errorAdapter, aiConfig: defaultAIConfig },
         {
           sessionId: session.id,
           userId: testData.userId,
@@ -348,7 +349,7 @@ describe("Chat UseCase", () => {
 
       const chunks: StreamChunk[] = []
       for await (const chunk of sendMessage(
-        { chatRepo, topicRepo, aiAdapter },
+        { chatRepo, topicRepo, aiAdapter, aiConfig: defaultAIConfig },
         {
           sessionId: session.id,
           userId: "other-user-id",
@@ -371,7 +372,7 @@ describe("Chat UseCase", () => {
 
       const chunks: StreamChunk[] = []
       for await (const chunk of sendMessage(
-        { chatRepo, topicRepo, aiAdapter },
+        { chatRepo, topicRepo, aiAdapter, aiConfig: defaultAIConfig },
         {
           sessionId: session.id,
           userId: testData.userId,
@@ -407,7 +408,7 @@ describe("Chat UseCase", () => {
       })
 
       for await (const _ of sendMessage(
-        { chatRepo, topicRepo, aiAdapter: trackingAdapter },
+        { chatRepo, topicRepo, aiAdapter: trackingAdapter, aiConfig: defaultAIConfig },
         {
           sessionId: session.id,
           userId: testData.userId,
@@ -438,7 +439,7 @@ describe("Chat UseCase", () => {
     it("should create session and send message simultaneously", async () => {
       const chunks: (StreamChunk & { sessionId?: string })[] = []
       for await (const chunk of sendMessageWithNewSession(
-        { chatRepo, topicRepo, aiAdapter },
+        { chatRepo, topicRepo, aiAdapter, aiConfig: defaultAIConfig },
         {
           topicId: testData.topicId,
           userId: testData.userId,
@@ -477,7 +478,7 @@ describe("Chat UseCase", () => {
     it("should reject for non-existent topic", async () => {
       const chunks: StreamChunk[] = []
       for await (const chunk of sendMessageWithNewSession(
-        { chatRepo, topicRepo, aiAdapter },
+        { chatRepo, topicRepo, aiAdapter, aiConfig: defaultAIConfig },
         {
           topicId: "non-existent-topic",
           userId: testData.userId,
@@ -494,7 +495,7 @@ describe("Chat UseCase", () => {
 
     it("should update progress after message sent", async () => {
       for await (const _ of sendMessageWithNewSession(
-        { chatRepo, topicRepo, aiAdapter },
+        { chatRepo, topicRepo, aiAdapter, aiConfig: defaultAIConfig },
         {
           topicId: testData.topicId,
           userId: testData.userId,
@@ -533,7 +534,7 @@ describe("Chat UseCase", () => {
       })
 
       const result = await evaluateQuestion(
-        { chatRepo, topicRepo, aiAdapter: goodAdapter },
+        { chatRepo, topicRepo, aiAdapter: goodAdapter, aiConfig: defaultAIConfig },
         message.id,
         message.content
       )
@@ -565,7 +566,7 @@ describe("Chat UseCase", () => {
       })
 
       const result = await evaluateQuestion(
-        { chatRepo, topicRepo, aiAdapter: surfaceAdapter },
+        { chatRepo, topicRepo, aiAdapter: surfaceAdapter, aiConfig: defaultAIConfig },
         message.id,
         message.content
       )
@@ -597,7 +598,7 @@ describe("Chat UseCase", () => {
       })
 
       const result = await evaluateQuestion(
-        { chatRepo, topicRepo, aiAdapter: ambiguousAdapter },
+        { chatRepo, topicRepo, aiAdapter: ambiguousAdapter, aiConfig: defaultAIConfig },
         message.id,
         message.content
       )
