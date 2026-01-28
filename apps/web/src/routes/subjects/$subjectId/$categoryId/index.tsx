@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { api } from "@/lib/api-client"
 import { requireAuth } from "@/lib/auth"
 import { filterTopics, type FilteredTopic } from "@/features/review/api"
+import { PageWrapper } from "@/components/layout"
 
 export const Route = createFileRoute("/subjects/$subjectId/$categoryId/")({
   beforeLoad: requireAuth,
@@ -95,18 +96,18 @@ function CategoryPage() {
 
   if (isLoading) {
     return (
-      <div className="p-4 lg:p-6">
+      <PageWrapper>
         <div className="animate-pulse space-y-3">
           {[...Array(5)].map((_, i) => (
             <div key={i} className="h-16 skeleton rounded-xl" />
           ))}
         </div>
-      </div>
+      </PageWrapper>
     )
   }
 
   return (
-    <div className="p-4 lg:p-6">
+    <PageWrapper>
       <div className="mb-6">
         <Link
           to="/subjects/$subjectId"
@@ -213,6 +214,6 @@ function CategoryPage() {
           </p>
         )}
       </div>
-    </div>
+    </PageWrapper>
   )
 }

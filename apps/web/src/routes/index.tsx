@@ -3,6 +3,7 @@ import { useAuthStore } from "@/lib/auth"
 import { ProgressStats } from "@/features/progress"
 import { MiniMetricsChart } from "@/features/metrics"
 import { TodayActivityCard, RecentTopicsList } from "@/features/home"
+import { PageWrapper } from "@/components/layout"
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -15,7 +16,11 @@ function HomePage() {
     return <LandingPage />
   }
 
-  return <DashboardPage user={user} />
+  return (
+    <PageWrapper>
+      <DashboardPage user={user} />
+    </PageWrapper>
+  )
 }
 
 // ランディングページ（未ログイン）

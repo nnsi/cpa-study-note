@@ -92,20 +92,9 @@ export const ChatMessageView = ({ message, isStreaming }: Props) => {
 
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} animate-fade-in-up`}>
-      {/* AIアバター */}
-      {!isUser && (
-        <div className="flex-shrink-0 mr-3">
-          <div className="size-8 rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center shadow-soft">
-            <svg className="size-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
-            </svg>
-          </div>
-        </div>
-      )}
-
       {/* メッセージバブル */}
       <div
-        className={`max-w-[75%] ${
+        className={`max-w-full ${
           isUser
             ? "chat-bubble-user"
             : "chat-bubble-ai"
@@ -205,17 +194,6 @@ export const ChatMessageView = ({ message, isStreaming }: Props) => {
           </div>
         )}
       </div>
-
-      {/* ユーザーアバター */}
-      {isUser && (
-        <div className="flex-shrink-0 ml-3">
-          <div className="size-8 rounded-lg bg-gradient-to-br from-ink-200 to-ink-300 flex items-center justify-center">
-            <svg className="size-4 text-ink-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
-            </svg>
-          </div>
-        </div>
-      )}
 
       {/* 画像プレビューモーダル */}
       {showPreview && imageUrl && (

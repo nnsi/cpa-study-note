@@ -95,7 +95,7 @@ Repository > Settings > Environments
 
 ### production
 
-- [ ] Environment 作成: `production`
+- [x] Environment 作成: `production`
 - [ ] Protection rules 設定（推奨）
 
 **Variables（手動設定）:**

@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
 import { api } from "@/lib/api-client"
 import { requireAuth } from "@/lib/auth"
+import { PageWrapper } from "@/components/layout"
 
 export const Route = createFileRoute("/subjects/$subjectId/")({
   beforeLoad: requireAuth,
@@ -44,18 +45,18 @@ function SubjectDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="p-4 lg:p-6">
+      <PageWrapper>
         <div className="animate-pulse space-y-3">
           {[...Array(8)].map((_, i) => (
             <div key={i} className="h-14 skeleton rounded-xl" />
           ))}
         </div>
-      </div>
+      </PageWrapper>
     )
   }
 
   return (
-    <div className="p-4 lg:p-6">
+    <PageWrapper>
       <div className="mb-6">
         <Link to="/subjects" className="text-indigo-600 hover:underline text-sm">
           ← 科目一覧
@@ -74,7 +75,7 @@ function SubjectDetailPage() {
           />
         ))}
       </div>
-    </div>
+    </PageWrapper>
   )
 }
 

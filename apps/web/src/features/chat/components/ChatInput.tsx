@@ -45,7 +45,7 @@ export const ChatInputView = ({
 
   return (
     <>
-      <div className="border-t border-ink-100 bg-white/80 backdrop-blur-sm p-4">
+      <div className="border-t border-ink-100 bg-white/80 backdrop-blur-sm px-2 py-2 my-3 lg:px-4 lg:py-3">
         {/* 画像プレビュー */}
         {imageId && (
           <div className="mb-3 p-3 bg-indigo-50 rounded-xl border border-indigo-100 flex items-center justify-between animate-scale-in">
@@ -75,13 +75,13 @@ export const ChatInputView = ({
           </div>
         )}
 
-        <div className="flex gap-3 items-end">
+        <div className="flex gap-1 items-center">
           {/* 画像アップロードボタン */}
           <button
             type="button"
             onClick={() => setShowUploader(true)}
             disabled={isSubmitting || !!imageId}
-            className="flex-shrink-0 p-2.5 text-ink-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex-shrink-0 p-1 text-ink-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
             title="画像をアップロード"
           >
             <svg className="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -96,7 +96,7 @@ export const ChatInputView = ({
               type="button"
               onClick={onToggleListening}
               disabled={isSubmitting}
-              className={`flex-shrink-0 p-2.5 rounded-xl transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed ${
+              className={`flex-shrink-0 p-1 rounded-lg transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed ${
                 isListening
                   ? "text-crimson-600 bg-crimson-50 animate-pulse"
                   : "text-ink-400 hover:text-indigo-600 hover:bg-indigo-50"
@@ -119,13 +119,13 @@ export const ChatInputView = ({
               placeholder={
                 imageId
                   ? "この画像について質問..."
-                  : "質問を入力... (Shift+Enterで改行)"
+                  : "Shift+Enterで改行"
               }
               className="textarea-field pr-4"
               rows={1}
               disabled={isSubmitting}
               style={{
-                minHeight: "48px",
+                minHeight: "36px",
                 maxHeight: "120px",
               }}
             />
@@ -135,7 +135,7 @@ export const ChatInputView = ({
           <button
             onClick={onSubmit}
             disabled={isSubmitting || !content.trim()}
-            className="flex-shrink-0 btn-primary size-12 !p-0 flex items-center justify-center disabled:opacity-40"
+            className="flex-shrink-0 btn-primary size-9 !p-0 flex items-center justify-center disabled:opacity-40"
           >
             {isSubmitting ? (
               <svg className="animate-spin size-5" fill="none" viewBox="0 0 24 24">

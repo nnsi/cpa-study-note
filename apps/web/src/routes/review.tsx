@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router"
 import { TopicFilter, FilteredTopicList, useTopicFilter } from "@/features/review"
 import { DailyMetricsChart } from "@/features/metrics"
 import { requireAuth } from "@/lib/auth"
+import { PageWrapper } from "@/components/layout"
 
 type ReviewSearch = {
   minSessionCount?: string
@@ -52,9 +53,10 @@ function ReviewPage() {
   } = useTopicFilter()
 
   return (
-    <div className="animate-fade-in">
-      {/* ヘッダー */}
-      <div className="mb-6">
+    <PageWrapper>
+      <div className="animate-fade-in">
+        {/* ヘッダー */}
+        <div className="mb-6">
         <nav className="flex items-center gap-2 text-sm text-ink-500 mb-2">
           <Link to="/" className="hover:text-indigo-600">
             ホーム
@@ -107,5 +109,6 @@ function ReviewPage() {
         </main>
       </div>
     </div>
+    </PageWrapper>
   )
 }

@@ -3,6 +3,7 @@ import { useState, useEffect } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { api } from "@/lib/api-client"
 import { requireAuth } from "@/lib/auth"
+import { PageWrapper } from "@/components/layout"
 
 export const Route = createFileRoute("/notes/$noteId")({
   beforeLoad: requireAuth,
@@ -58,12 +59,12 @@ function NoteDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="p-4 lg:p-6">
+      <PageWrapper>
         <div className="animate-pulse space-y-4">
           <div className="h-8 skeleton rounded w-1/3" />
           <div className="h-32 skeleton rounded" />
         </div>
-      </div>
+      </PageWrapper>
     )
   }
 
@@ -71,14 +72,14 @@ function NoteDetailPage() {
 
   if (!note) {
     return (
-      <div className="p-4 lg:p-6">
+      <PageWrapper>
         <div className="text-crimson-500">ノートが見つかりません</div>
-      </div>
+      </PageWrapper>
     )
   }
 
   return (
-    <div className="p-4 lg:p-6 max-w-3xl mx-auto">
+    <PageWrapper>
       <div className="flex items-center gap-4 text-sm">
         <Link to="/notes" className="text-indigo-600 hover:underline">
           ← ノート一覧
@@ -320,6 +321,6 @@ function NoteDetailPage() {
           作成日: {new Date(note.createdAt).toLocaleString("ja-JP")}
         </div>
       </div>
-    </div>
+    </PageWrapper>
   )
 }
