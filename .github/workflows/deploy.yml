@@ -1,10 +1,9 @@
 name: Deploy
 
 on:
-  # push:
-  #   branches:
-  #     - master    # → staging環境
-  #     - release   # → production環境
+  push:
+    branches:
+      - master    # → staging環境
   workflow_dispatch:
     inputs:
       environment:
