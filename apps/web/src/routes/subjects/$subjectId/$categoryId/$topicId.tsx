@@ -88,7 +88,7 @@ function TopicDetailPage() {
   }
 
   return (
-    <div className="h-[calc(100dvh-60px)] lg:h-[calc(100dvh-72px)] flex flex-col lg:flex-row overflow-hidden">
+    <div className="h-[calc(100dvh-76px)] lg:h-[calc(100dvh-72px)] flex flex-col lg:flex-row overflow-hidden">
       {/* モバイル: ヘッダー + タブ切り替え */}
       <div className="lg:hidden border-b border-ink-100 bg-white">
         <div className="px-4 py-2 border-b border-ink-100">
@@ -200,14 +200,14 @@ function TopicDetailPage() {
       </div>
 
       {/* モバイル: タブコンテンツ */}
-      <div className="lg:hidden flex-1 overflow-hidden min-w-0">
+      <div className="lg:hidden flex-1 min-h-0 overflow-hidden min-w-0 flex flex-col">
         {activeTab === "info" && topic && (
           <div className="h-full overflow-y-auto">
             <TopicInfo topic={topic.topic} subjectId={subjectId} sessions={sessions} />
           </div>
         )}
         {activeTab === "chat" && (
-          <div className="h-full flex flex-col">
+          <div className="flex-1 min-h-0 flex flex-col">
             {/* セッション選択バー */}
             <div className="flex items-center gap-2 px-4 py-2.5 bg-ink-50 border-b border-ink-100">
               <select

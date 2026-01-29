@@ -1,22 +1,22 @@
-import { ReactNode } from "react"
-import { useLocation } from "@tanstack/react-router"
-import { Header } from "./Header"
-import { Sidebar } from "./Sidebar"
-import { BottomNav } from "./BottomNav"
-import { useAuthStore } from "@/lib/auth"
+import { ReactNode } from "react";
+import { useLocation } from "@tanstack/react-router";
+import { Header } from "./Header";
+import { Sidebar } from "./Sidebar";
+import { BottomNav } from "./BottomNav";
+import { useAuthStore } from "@/lib/auth";
 
 type Props = {
-  children: ReactNode
-}
+  children: ReactNode;
+};
 
 export const Layout = ({ children }: Props) => {
-  const { isAuthenticated } = useAuthStore()
-  const location = useLocation()
-  const loggedIn = isAuthenticated()
+  const { isAuthenticated } = useAuthStore();
+  const location = useLocation();
+  const loggedIn = isAuthenticated();
 
   // モバイルでホーム以外はヘッダー非表示
-  const isHome = location.pathname === "/"
-  const showMobileHeader = isHome || !loggedIn
+  const isHome = location.pathname === "/";
+  const showMobileHeader = isHome || !loggedIn;
 
   return (
     <div className="min-h-screen">
@@ -36,8 +36,8 @@ export const Layout = ({ children }: Props) => {
         <main
           className={`flex-1 overflow-x-hidden ${
             showMobileHeader
-              ? `min-h-[calc(100vh-72px)] ${loggedIn ? "lg:pb-0" : ""}`
-              : `min-h-screen lg:min-h-[calc(100vh-72px)] ${loggedIn ? "lg:pb-0" : ""}`
+              ? `min-h-[calc(100dvh-72px)] ${loggedIn ? "lg:pb-0" : ""}`
+              : `min-h-screen lg:min-h-[calc(100dvh-72px)] ${loggedIn ? "lg:pb-0" : ""}`
           }`}
         >
           {children}
@@ -47,5 +47,5 @@ export const Layout = ({ children }: Props) => {
       {/* モバイル: ボトムナビ（ログイン時のみ） */}
       {loggedIn && <BottomNav />}
     </div>
-  )
-}
+  );
+};

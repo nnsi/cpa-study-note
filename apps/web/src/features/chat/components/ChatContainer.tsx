@@ -40,9 +40,9 @@ export const ChatContainer = ({ sessionId, topicId, onSessionCreated, onNavigate
   }, [messages.displayMessages, input.pendingUserMessage, input.streamingText])
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col flex-1 min-h-0">
       {/* メッセージエリア */}
-      <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-4">
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 lg:p-6 space-y-4">
         {/* 空の状態 */}
         {messages.displayMessages.length === 0 && !input.streamingText && (
           <div className="flex flex-col items-center justify-center h-full py-12 animate-fade-in">
@@ -109,12 +109,56 @@ export const ChatContainer = ({ sessionId, topicId, onSessionCreated, onNavigate
           />
         )}
 
+        {/* スマホ用ノート作成ボタン */}
+        {messages.displayMessages.length > 0 && sessionId && (
+          <div className="lg:hidden pt-3 pb-0">
+            {existingNote?.note ? (
+              <button
+                onClick={onNavigateToNotes}
+                className="flex items-center justify-center gap-2 text-sm text-jade-600"
+              >
+                <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                </svg>
+                ノートに記録済み
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  if (sessionId) {
+                    createNote(sessionId)
+                  }
+                }}
+                disabled={isCreatingNote}
+                className="flex items-center justify-center gap-2 text-sm text-indigo-600 disabled:text-ink-400"
+              >
+                {isCreatingNote ? (
+                  <>
+                    <svg className="animate-spin size-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    作成中...
+                  </>
+                ) : (
+                  <>
+                    <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                    </svg>
+                    ノートを作成する
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+        )}
+
         <div ref={messagesEndRef} />
       </div>
 
-      {/* ノート作成バー */}
+      {/* ノート作成バー（PC版のみ表示、スマホはノートタブで代替） */}
       {messages.displayMessages.length > 0 && sessionId && (
-        <div className="px-4 py-3 border-t border-ink-100 bg-ink-50/50">
+        <div className="hidden lg:block px-4 py-3 border-t border-ink-100 bg-ink-50/50">
           {existingNote?.note ? (
             <div className="flex items-center justify-center gap-3">
               <div className="flex items-center gap-2 text-jade-600">
