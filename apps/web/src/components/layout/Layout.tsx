@@ -18,13 +18,13 @@ export const Layout = ({ children }: Props) => {
   const isHome = location.pathname === "/";
   const showMobileHeader = isHome || !loggedIn;
 
-  // モバイルでログイン時: BottomNavの高さ分を引く
-  const mobileMainHeight = loggedIn
-    ? "h-[calc(100dvh-var(--bottom-nav-height)-var(--safe-area-bottom))]"
-    : "h-dvh";
+  // モバイルでログイン時: BottomNavの高さ分の下パディング
+  const mobileBottomPadding = loggedIn
+    ? "pb-[calc(var(--bottom-nav-height)+var(--safe-area-bottom))] lg:pb-0"
+    : "";
 
   return (
-    <div className="h-dvh flex flex-col">
+    <div className="min-h-dvh flex flex-col">
       {/* PC: 常に表示、モバイル: ホームのみ表示 */}
       <div className={showMobileHeader ? "" : "hidden lg:block"}>
         <Header />
@@ -39,7 +39,7 @@ export const Layout = ({ children }: Props) => {
 
         {/* メインコンテンツ */}
         <main
-          className={`flex-1 min-h-0 min-w-0 ${mobileMainHeight} lg:h-auto`}
+          className={`flex-1 min-h-0 min-w-0 ${mobileBottomPadding}`}
         >
           {children}
         </main>
