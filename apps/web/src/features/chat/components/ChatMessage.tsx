@@ -94,7 +94,7 @@ export const ChatMessageView = ({ message, isStreaming }: Props) => {
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} animate-fade-in-up`}>
       {/* メッセージバブル */}
       <div
-        className={`max-w-full ${
+        className={`max-w-full min-w-0 ${
           isUser
             ? "chat-bubble-user"
             : "chat-bubble-ai"

@@ -18,27 +18,28 @@ export const Layout = ({ children }: Props) => {
   const isHome = location.pathname === "/";
   const showMobileHeader = isHome || !loggedIn;
 
+  // モバイルでログイン時: BottomNavの高さ分を引く
+  const mobileMainHeight = loggedIn
+    ? "h-[calc(100dvh-var(--bottom-nav-height)-var(--safe-area-bottom))]"
+    : "h-dvh";
+
   return (
-    <div className="min-h-screen">
+    <div className="h-dvh flex flex-col">
       {/* PC: 常に表示、モバイル: ホームのみ表示 */}
       <div className={showMobileHeader ? "" : "hidden lg:block"}>
         <Header />
       </div>
-      <div className="flex">
+      <div className="flex flex-1 min-h-0">
         {/* PC: サイドバー表示（ログイン時のみ） */}
         {loggedIn && (
-          <aside className="hidden lg:block w-72 min-h-[calc(100vh-72px)] border-r border-ink-100">
+          <aside className="hidden lg:block w-72 border-r border-ink-100 overflow-y-auto">
             <Sidebar />
           </aside>
         )}
 
         {/* メインコンテンツ */}
         <main
-          className={`flex-1 overflow-x-hidden ${
-            showMobileHeader
-              ? `min-h-[calc(100dvh-72px)] ${loggedIn ? "lg:pb-0" : ""}`
-              : `min-h-screen lg:min-h-[calc(100dvh-72px)] ${loggedIn ? "lg:pb-0" : ""}`
-          }`}
+          className={`flex-1 min-h-0 min-w-0 ${mobileMainHeight} lg:h-auto`}
         >
           {children}
         </main>

@@ -5,10 +5,17 @@
 @tailwind utilities;
 
 @layer base {
-  html {
+  :root {
+    /* BottomNav: py-2(8px) + Link内py-2(8px) + icon(24px) + gap(4px) + text(10px) + py-2(8px) + py-2(8px) ≈ 70px */
+    --bottom-nav-height: 70px;
+    --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  html, body {
     font-family: "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    overscroll-behavior: none;
   }
 
   body {

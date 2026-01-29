@@ -12,9 +12,10 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    host: true, // 外部からのアクセスを許可（0.0.0.0でリッスン）
     proxy: {
       "/api": {
-        target: "http://localhost:8787",
+        target: "http://127.0.0.1:8787", // IPv4を明示的に指定
         changeOrigin: true,
       },
     },

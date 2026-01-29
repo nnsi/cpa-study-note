@@ -88,7 +88,7 @@ function TopicDetailPage() {
   }
 
   return (
-    <div className="h-[calc(100dvh-76px)] lg:h-[calc(100dvh-72px)] flex flex-col lg:flex-row overflow-hidden">
+    <div className="h-full min-w-0 flex flex-col lg:flex-row overflow-hidden">
       {/* モバイル: ヘッダー + タブ切り替え */}
       <div className="lg:hidden border-b border-ink-100 bg-white">
         <div className="px-4 py-2 border-b border-ink-100">

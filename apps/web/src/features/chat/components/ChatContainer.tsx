@@ -40,7 +40,7 @@ export const ChatContainer = ({ sessionId, topicId, onSessionCreated, onNavigate
   }, [messages.displayMessages, input.pendingUserMessage, input.streamingText])
 
   return (
-    <div className="flex flex-col flex-1 min-h-0">
+    <div className="flex flex-col flex-1 min-h-0 min-w-0">
       {/* メッセージエリア */}
       <div className="flex-1 min-h-0 overflow-y-auto p-4 lg:p-6 space-y-4">
         {/* 空の状態 */}
