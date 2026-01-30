@@ -4,7 +4,7 @@ import { z } from "zod"
 import type { Db } from "@cpa-study/db"
 import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
-import { createAIAdapter } from "@/shared/lib/ai"
+import { createAIAdapter, resolveAIConfig } from "@/shared/lib/ai"
 import { createNoteRepository } from "./repository"
 import { createChatRepository } from "../chat/repository"
 import { createTopicRepository } from "../topic/repository"
@@ -32,6 +32,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
   const noteRepo = createNoteRepository(db)
   const chatRepo = createChatRepository(db)
   const topicRepo = createTopicRepository(db)
+  const aiConfig = resolveAIConfig(env.ENVIRONMENT)
 
   const app = new Hono<{ Bindings: Env; Variables: Variables }>()
     // ノート作成（セッションから）
@@ -49,7 +50,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
         })
 
         const result = await createNoteFromSession(
-          { noteRepo, chatRepo, aiAdapter },
+          { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: aiConfig.noteSummary },
           { userId: user.id, sessionId }
         )
 
@@ -164,7 +165,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
       })
 
       const result = await refreshNoteFromSession(
-        { noteRepo, chatRepo, aiAdapter },
+        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: aiConfig.noteSummary },
         user.id,
         noteId
       )

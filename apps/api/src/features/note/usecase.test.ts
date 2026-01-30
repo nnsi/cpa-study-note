@@ -5,6 +5,7 @@ import { describe, it, expect, vi } from "vitest"
 import type { NoteRepository } from "./repository"
 import type { ChatRepository } from "../chat/repository"
 import type { AIAdapter } from "@/shared/lib/ai"
+import { defaultAIConfig } from "@/shared/lib/ai"
 import type { TopicRepository } from "../topic/repository"
 import {
   createNoteFromSession,
@@ -151,7 +152,7 @@ describe("Note UseCase", () => {
       const aiAdapter = createMockAIAdapter()
 
       const result = await createNoteFromSession(
-        { noteRepo, chatRepo, aiAdapter },
+        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: defaultAIConfig.noteSummary },
         { userId: "user-1", sessionId: "session-1" }
       )
 
@@ -172,7 +173,7 @@ describe("Note UseCase", () => {
       const aiAdapter = createMockAIAdapter()
 
       const result = await createNoteFromSession(
-        { noteRepo, chatRepo, aiAdapter },
+        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: defaultAIConfig.noteSummary },
         { userId: "user-1", sessionId: "non-existent" }
       )
 
@@ -192,7 +193,7 @@ describe("Note UseCase", () => {
       const aiAdapter = createMockAIAdapter()
 
       const result = await createNoteFromSession(
-        { noteRepo, chatRepo, aiAdapter },
+        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: defaultAIConfig.noteSummary },
         { userId: "user-1", sessionId: "session-1" }
       )
 
@@ -231,7 +232,7 @@ describe("Note UseCase", () => {
       })
 
       const result = await createNoteFromSession(
-        { noteRepo, chatRepo, aiAdapter },
+        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: defaultAIConfig.noteSummary },
         { userId: "user-1", sessionId: "session-1" }
       )
 
@@ -262,7 +263,7 @@ describe("Note UseCase", () => {
       })
 
       const result = await createNoteFromSession(
-        { noteRepo, chatRepo, aiAdapter },
+        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: defaultAIConfig.noteSummary },
         { userId: "user-1", sessionId: "session-1" }
       )
 
@@ -609,7 +610,7 @@ describe("Note UseCase", () => {
       const aiAdapter = createMockAIAdapter()
 
       const result = await createNoteFromSession(
-        { noteRepo, chatRepo, aiAdapter },
+        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: defaultAIConfig.noteSummary },
         { userId: "user-1", sessionId: "session-1" }
       )
 

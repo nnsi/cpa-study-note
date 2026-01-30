@@ -4,10 +4,9 @@ import { z } from "zod"
 import type { Db } from "@cpa-study/db"
 import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
-import { createAIAdapter, streamToSSE } from "@/shared/lib/ai"
+import { createAIAdapter, streamToSSE, resolveAIConfig } from "@/shared/lib/ai"
 import { createChatRepository } from "./repository"
 import { createTopicRepository } from "../topic/repository"
-import { resolveAIConfig } from "./domain/ai-config"
 import {
   createSession,
   getSession,
