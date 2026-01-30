@@ -132,7 +132,7 @@ ${conversationText}${goodQuestionsSection}
 }`
 
   const result = await aiAdapter.generateText({
-    model: "deepseek/deepseek-chat",
+    model: "z-ai/glm-4.7-flash",
     messages: [{ role: "user", content: summaryPrompt }],
     temperature: 0.3,
     maxTokens: 1000,
@@ -357,7 +357,7 @@ ${conversationText}${goodQuestionsSection}
 }`
 
   const result = await aiAdapter.generateText({
-    model: "deepseek/deepseek-chat",
+    model: "z-ai/glm-4.7-flash",
     messages: [{ role: "user", content: summaryPrompt }],
     temperature: 0.3,
     maxTokens: 1000,

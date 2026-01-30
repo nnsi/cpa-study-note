@@ -22,12 +22,12 @@ export type AIConfig = {
 /** ローカル開発用（安価なモデル） */
 const localAIConfig: AIConfig = {
   chat: {
-    model: "deepseek/deepseek-chat",
+    model: "z-ai/glm-4.7-flash",
     temperature: 0.7,
     maxTokens: 2000,
   },
   evaluation: {
-    model: "deepseek/deepseek-chat",
+    model: "z-ai/glm-4.7-flash",
     temperature: 0,
     maxTokens: 100,
   },
@@ -36,12 +36,12 @@ const localAIConfig: AIConfig = {
 /** staging/production用 */
 const productionAIConfig: AIConfig = {
   chat: {
-    model: "z-ai/glm-4.5",
+    model: "z-ai/glm-4.7-flash",
     temperature: 0.7,
     maxTokens: 2000,
   },
   evaluation: {
-    model: "deepseek/deepseek-chat", // 質問評価は常に安価なモデル
+    model: "z-ai/glm-4.7-flash",
     temperature: 0,
     maxTokens: 100,
   },
