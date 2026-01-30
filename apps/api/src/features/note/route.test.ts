@@ -56,6 +56,11 @@ const notesListSchema = z.object({
 // AI Adapterをモック
 vi.mock("../../shared/lib/ai", () => ({
   createAIAdapter: () => mockAIPresets.noteSummary,
+  resolveAIConfig: () => ({
+    chat: { model: "test-model", temperature: 0.7, maxTokens: 2000 },
+    evaluation: { model: "test-model", temperature: 0, maxTokens: 100 },
+    noteSummary: { model: "test-model", temperature: 0.3, maxTokens: 1000 },
+  }),
 }))
 
 describe("Note Routes", () => {
