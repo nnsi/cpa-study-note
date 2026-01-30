@@ -4,10 +4,9 @@ import { z } from "zod"
 import type { Db } from "@cpa-study/db"
 import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
-import { createAIAdapter, streamToSSE } from "@/shared/lib/ai"
+import { createAIAdapter, streamToSSE, resolveAIConfig } from "@/shared/lib/ai"
 import { createChatRepository } from "./repository"
 import { createTopicRepository } from "../topic/repository"
-import { resolveAIConfig } from "./domain/ai-config"
 import {
   createSession,
   getSession,
@@ -27,6 +26,7 @@ type ChatDeps = {
 export const chatRoutes = ({ env, db }: ChatDeps) => {
   const chatRepo = createChatRepository(db)
   const topicRepo = createTopicRepository(db)
+  const aiConfig = resolveAIConfig(env.ENVIRONMENT)
 
   const app = new Hono<{ Bindings: Env; Variables: Variables }>()
     // セッション作成
@@ -115,7 +115,6 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
           provider: env.AI_PROVIDER,
           apiKey: env.OPENROUTER_API_KEY,
         })
-        const aiConfig = resolveAIConfig(env.ENVIRONMENT)
 
         const stream = sendMessage(
           { chatRepo, topicRepo, aiAdapter, aiConfig },
@@ -153,7 +152,6 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
           provider: env.AI_PROVIDER,
           apiKey: env.OPENROUTER_API_KEY,
         })
-        const aiConfig = resolveAIConfig(env.ENVIRONMENT)
 
         const stream = sendMessageWithNewSession(
           { chatRepo, topicRepo, aiAdapter, aiConfig },
@@ -185,7 +183,6 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         provider: env.AI_PROVIDER,
         apiKey: env.OPENROUTER_API_KEY,
       })
-      const aiConfig = resolveAIConfig(env.ENVIRONMENT)
 
       const quality = await evaluateQuestion(
         { chatRepo, topicRepo, aiAdapter, aiConfig },

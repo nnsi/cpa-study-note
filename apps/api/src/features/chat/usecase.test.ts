@@ -5,7 +5,7 @@ import { createChatRepository, type ChatRepository } from "./repository"
 import { createTopicRepository, type TopicRepository } from "../topic/repository"
 import { createMockAIAdapter } from "../../test/mocks/ai"
 import type { AIAdapter, StreamChunk } from "../../shared/lib/ai"
-import { defaultAIConfig } from "./domain/ai-config"
+import { defaultAIConfig } from "../../shared/lib/ai"
 import {
   createSession,
   listSessionsByTopic,

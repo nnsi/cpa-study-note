@@ -1,13 +1,14 @@
 import type { NoteRepository } from "./repository"
 import type { ChatRepository } from "../chat/repository"
 import type { TopicRepository } from "../topic/repository"
-import type { AIAdapter } from "@/shared/lib/ai"
+import type { AIAdapter, AIModelConfig } from "@/shared/lib/ai"
 import type { NoteSource } from "@cpa-study/shared/schemas"
 
 type NoteDeps = {
   noteRepo: NoteRepository
   chatRepo: ChatRepository
   aiAdapter: AIAdapter
+  noteSummaryConfig: AIModelConfig
 }
 
 type NoteResponse = {
@@ -85,7 +86,7 @@ export const createNoteFromSession = async (
 ): Promise<
   { ok: true; note: NoteResponse } | { ok: false; error: string; status: number }
 > => {
-  const { noteRepo, chatRepo, aiAdapter } = deps
+  const { noteRepo, chatRepo, aiAdapter, noteSummaryConfig } = deps
   const { userId, sessionId } = input
 
   const session = await chatRepo.findSessionById(sessionId)
@@ -131,12 +132,22 @@ ${conversationText}${goodQuestionsSection}
   "stumbledPoints": ["つまずいたポイント1", ...]
 }`
 
-  const result = await aiAdapter.generateText({
-    model: "deepseek/deepseek-chat",
-    messages: [{ role: "user", content: summaryPrompt }],
-    temperature: 0.3,
-    maxTokens: 1000,
-  })
+  let result
+  try {
+    result = await aiAdapter.generateText({
+      model: noteSummaryConfig.model,
+      messages: [{ role: "user", content: summaryPrompt }],
+      temperature: noteSummaryConfig.temperature,
+      maxTokens: noteSummaryConfig.maxTokens,
+    })
+  } catch (error) {
+    console.error("[AI] generateText error:", error)
+    return {
+      ok: false,
+      error: "AI要約の生成に失敗しました。再度お試しください。",
+      status: 503,
+    }
+  }
 
   let aiSummary = ""
   let keyPoints: string[] = []
@@ -307,7 +318,7 @@ export const refreshNoteFromSession = async (
 ): Promise<
   { ok: true; note: NoteResponse } | { ok: false; error: string; status: number }
 > => {
-  const { noteRepo, chatRepo, aiAdapter } = deps
+  const { noteRepo, chatRepo, aiAdapter, noteSummaryConfig } = deps
 
   const existing = await noteRepo.findById(noteId)
   if (!existing) {
@@ -356,12 +367,22 @@ ${conversationText}${goodQuestionsSection}
   "stumbledPoints": ["つまずいたポイント1", ...]
 }`
 
-  const result = await aiAdapter.generateText({
-    model: "deepseek/deepseek-chat",
-    messages: [{ role: "user", content: summaryPrompt }],
-    temperature: 0.3,
-    maxTokens: 1000,
-  })
+  let result
+  try {
+    result = await aiAdapter.generateText({
+      model: noteSummaryConfig.model,
+      messages: [{ role: "user", content: summaryPrompt }],
+      temperature: noteSummaryConfig.temperature,
+      maxTokens: noteSummaryConfig.maxTokens,
+    })
+  } catch (error) {
+    console.error("[AI] generateText error:", error)
+    return {
+      ok: false,
+      error: "AI要約の生成に失敗しました。再度お試しください。",
+      status: 503,
+    }
+  }
 
   let aiSummary = ""
   let keyPoints: string[] = []

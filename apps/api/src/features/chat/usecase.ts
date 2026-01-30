@@ -1,7 +1,6 @@
-import type { AIAdapter, AIMessage, StreamChunk } from "@/shared/lib/ai"
+import type { AIAdapter, AIMessage, StreamChunk, AIConfig } from "@/shared/lib/ai"
 import type { ChatRepository, ChatMessage } from "./repository"
 import type { TopicRepository } from "../topic/repository"
-import type { AIConfig } from "./domain/ai-config"
 import { buildSystemPrompt, buildEvaluationPrompt } from "./domain/prompts"
 
 type ChatDeps = {

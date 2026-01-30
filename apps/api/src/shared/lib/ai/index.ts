@@ -21,6 +21,7 @@ export const createAIAdapter = (config: AIAdapterConfig): AIAdapter => {
 }
 
 export { streamToSSE } from "./sse"
+export { resolveAIConfig, defaultAIConfig } from "./config"
 export type {
   AIAdapter,
   AIMessage,
@@ -28,3 +29,4 @@ export type {
   GenerateTextInput,
   StreamTextInput,
 } from "./types"
+export type { AIConfig, AIModelConfig } from "./config"
