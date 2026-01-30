@@ -132,12 +132,22 @@ ${conversationText}${goodQuestionsSection}
   "stumbledPoints": ["つまずいたポイント1", ...]
 }`
 
-  const result = await aiAdapter.generateText({
-    model: noteSummaryConfig.model,
-    messages: [{ role: "user", content: summaryPrompt }],
-    temperature: noteSummaryConfig.temperature,
-    maxTokens: noteSummaryConfig.maxTokens,
-  })
+  let result
+  try {
+    result = await aiAdapter.generateText({
+      model: noteSummaryConfig.model,
+      messages: [{ role: "user", content: summaryPrompt }],
+      temperature: noteSummaryConfig.temperature,
+      maxTokens: noteSummaryConfig.maxTokens,
+    })
+  } catch (error) {
+    console.error("[AI] generateText error:", error)
+    return {
+      ok: false,
+      error: "AI要約の生成に失敗しました。再度お試しください。",
+      status: 503,
+    }
+  }
 
   let aiSummary = ""
   let keyPoints: string[] = []
@@ -357,12 +367,22 @@ ${conversationText}${goodQuestionsSection}
   "stumbledPoints": ["つまずいたポイント1", ...]
 }`
 
-  const result = await aiAdapter.generateText({
-    model: noteSummaryConfig.model,
-    messages: [{ role: "user", content: summaryPrompt }],
-    temperature: noteSummaryConfig.temperature,
-    maxTokens: noteSummaryConfig.maxTokens,
-  })
+  let result
+  try {
+    result = await aiAdapter.generateText({
+      model: noteSummaryConfig.model,
+      messages: [{ role: "user", content: summaryPrompt }],
+      temperature: noteSummaryConfig.temperature,
+      maxTokens: noteSummaryConfig.maxTokens,
+    })
+  } catch (error) {
+    console.error("[AI] generateText error:", error)
+    return {
+      ok: false,
+      error: "AI要約の生成に失敗しました。再度お試しください。",
+      status: 503,
+    }
+  }
 
   let aiSummary = ""
   let keyPoints: string[] = []

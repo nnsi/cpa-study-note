@@ -26,6 +26,7 @@ type ChatDeps = {
 export const chatRoutes = ({ env, db }: ChatDeps) => {
   const chatRepo = createChatRepository(db)
   const topicRepo = createTopicRepository(db)
+  const aiConfig = resolveAIConfig(env.ENVIRONMENT)
 
   const app = new Hono<{ Bindings: Env; Variables: Variables }>()
     // セッション作成
@@ -114,7 +115,6 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
           provider: env.AI_PROVIDER,
           apiKey: env.OPENROUTER_API_KEY,
         })
-        const aiConfig = resolveAIConfig(env.ENVIRONMENT)
 
         const stream = sendMessage(
           { chatRepo, topicRepo, aiAdapter, aiConfig },
@@ -152,7 +152,6 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
           provider: env.AI_PROVIDER,
           apiKey: env.OPENROUTER_API_KEY,
         })
-        const aiConfig = resolveAIConfig(env.ENVIRONMENT)
 
         const stream = sendMessageWithNewSession(
           { chatRepo, topicRepo, aiAdapter, aiConfig },
@@ -184,7 +183,6 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         provider: env.AI_PROVIDER,
         apiKey: env.OPENROUTER_API_KEY,
       })
-      const aiConfig = resolveAIConfig(env.ENVIRONMENT)
 
       const quality = await evaluateQuestion(
         { chatRepo, topicRepo, aiAdapter, aiConfig },
