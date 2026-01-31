@@ -113,6 +113,17 @@ function LandingPage() {
           <br />
           代わりに、学習がうまくいっている状態を再現可能な形で残します。
         </p>
+
+        {/* フッターリンク */}
+        <div className="mt-12 flex items-center justify-center gap-4 text-sm text-ink-400">
+          <Link to="/terms" className="hover:text-indigo-600 transition-colors">
+            利用規約
+          </Link>
+          <span className="text-ink-300">|</span>
+          <Link to="/privacy" className="hover:text-indigo-600 transition-colors">
+            プライバシーポリシー
+          </Link>
+        </div>
       </div>
     </div>
   )

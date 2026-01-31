@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import { useEffect, useState } from "react"
 import { useAuthStore, isDevMode, devLogin } from "@/lib/auth"
 
@@ -124,9 +124,9 @@ function LoginPage() {
           {/* 利用規約 */}
           <p className="mt-8 text-center text-xs text-ink-400 leading-relaxed">
             ログインすることで、
-            <a href="#" className="text-indigo-500 hover:text-indigo-600 hover:underline">利用規約</a>
+            <Link to="/terms" className="text-indigo-500 hover:text-indigo-600 hover:underline">利用規約</Link>
             と
-            <a href="#" className="text-indigo-500 hover:text-indigo-600 hover:underline">プライバシーポリシー</a>
+            <Link to="/privacy" className="text-indigo-500 hover:text-indigo-600 hover:underline">プライバシーポリシー</Link>
             に同意したものとみなされます。
           </p>
         </div>
