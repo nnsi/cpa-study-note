@@ -16,3 +16,7 @@ coverage
 !*.tfvars.example
 tfplan
 .terraform.lock.hcl
+
+# Data files
+/csv/
+packages/db/seed.sql
