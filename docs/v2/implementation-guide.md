@@ -300,7 +300,7 @@ import { DEFAULT_STUDY_DOMAIN_ID } from "@cpa-study-note/shared/constants"
 export const Route = createFileRoute("/subjects")({
   beforeLoad: () => {
     throw redirect({
-      to: "/d/$domainId/subjects",
+      to: "/domains/$domainId/subjects",
       params: { domainId: DEFAULT_STUDY_DOMAIN_ID },
       replace: true,
     })
@@ -313,7 +313,7 @@ export const Route = createFileRoute("/subjects")({
 ```typescript
 // apps/web/src/features/study-domain/hooks/useCurrentDomain.ts
 export function useCurrentDomain() {
-  const { domainId } = useParams({ from: "/d/$domainId" })
+  const { domainId } = useParams({ from: "/domains/$domainId" })
   const { data: domain } = useQuery({
     queryKey: ["study-domains", domainId],
     queryFn: () => api.studyDomains[":id"].$get({ param: { id: domainId } }),

@@ -234,16 +234,16 @@ apps/api/src/features/
 | Store-driven | URL がシンプル | リロードで状態消失、共有不可 |
 
 **ルーティング設計:**
-- `/d/:domainId/subjects/...` （`/d/` = domain の略、URL短縮のため）
-- 下位互換: `/subjects/...` → `/d/cpa/subjects/...` にリダイレクト
+- `/domains/:domainId/subjects/...`
+- 下位互換: `/subjects/...` → `/domains/cpa/subjects/...` にリダイレクト
 
 **リダイレクト対象パス:**
 | 旧パス | 新パス |
 |--------|--------|
-| `/subjects` | `/d/cpa/subjects` |
-| `/subjects/:subjectId` | `/d/cpa/subjects/:subjectId` |
-| `/subjects/:subjectId/:categoryId` | `/d/cpa/subjects/:subjectId/:categoryId` |
-| `/subjects/:subjectId/:categoryId/:topicId` | `/d/cpa/subjects/:subjectId/:categoryId/:topicId` |
+| `/subjects` | `/domains/cpa/subjects` |
+| `/subjects/:subjectId` | `/domains/cpa/subjects/:subjectId` |
+| `/subjects/:subjectId/:categoryId` | `/domains/cpa/subjects/:subjectId/:categoryId` |
+| `/subjects/:subjectId/:categoryId/:topicId` | `/domains/cpa/subjects/:subjectId/:categoryId/:topicId` |
 
 ---
 
@@ -386,7 +386,7 @@ packages/db/data/study-domains/
 |----------|---------|--------|
 | `apps/web/src/routes/subjects/index.tsx` | getSubjectEmoji/Color 削除 | 中 |
 | `apps/web/src/routes/__root.tsx` | 学習領域セレクタ追加 | 高 |
-| `apps/web/src/routes/d/$domainId/*` | 新規ルート作成 | 高 |
+| `apps/web/src/routes/domains/$domainId/*` | 新規ルート作成 | 高 |
 | `apps/web/src/lib/colorClasses.ts` | 新規作成 | - |
 
 ### 10.3 テスト修正箇所
