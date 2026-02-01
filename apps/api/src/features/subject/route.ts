@@ -11,9 +11,10 @@ import {
   createSubject,
   updateSubject,
   deleteSubject,
+  getSubjectTree,
+  updateSubjectTree,
+  importCSVToSubject,
 } from "./usecase"
-import { getSubjectTree, updateSubjectTree } from "./tree"
-import { importCSV } from "./csv-import"
 import type { SimpleTransactionRunner } from "../../shared/lib/transaction"
 
 type SubjectDeps = {
@@ -25,6 +26,7 @@ type SubjectDeps = {
 export const subjectRoutes = ({ db, txRunner }: SubjectDeps) => {
   const subjectRepo = createSubjectRepository(db)
   const deps = { subjectRepo }
+  const treeDeps = { subjectRepo, db, txRunner }
 
   const app = new Hono<{ Bindings: Env; Variables: Variables }>()
     // List subjects by study domain
@@ -121,7 +123,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectDeps) => {
     .get("/subjects/:id/tree", authMiddleware, async (c) => {
       const user = c.get("user")
       const id = c.req.param("id")
-      const result = await getSubjectTree(db, user.id, id)
+      const result = await getSubjectTree(treeDeps, user.id, id)
 
       if (!result.ok) {
         return c.json({ error: "科目が見つかりません" }, 404)
@@ -139,7 +141,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectDeps) => {
         const user = c.get("user")
         const id = c.req.param("id")
         const data = c.req.valid("json")
-        const result = await updateSubjectTree(db, user.id, id, data, txRunner)
+        const result = await updateSubjectTree(treeDeps, user.id, id, data)
 
         if (!result.ok) {
           if (result.error === "NOT_FOUND") {
@@ -150,7 +152,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectDeps) => {
         }
 
         // Return updated tree
-        const treeResult = await getSubjectTree(db, user.id, id)
+        const treeResult = await getSubjectTree(treeDeps, user.id, id)
         if (!treeResult.ok) {
           return c.json({ error: "ツリーの取得に失敗しました" }, 500)
         }
@@ -169,7 +171,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectDeps) => {
         const id = c.req.param("id")
         const { csvContent } = c.req.valid("json")
 
-        const result = await importCSV(db, user.id, id, csvContent, txRunner)
+        const result = await importCSVToSubject(treeDeps, user.id, id, csvContent)
 
         if (!result.ok) {
           return c.json({ error: "科目が見つかりません" }, 404)

@@ -2,12 +2,11 @@ import { Hono } from "hono"
 import { setCookie, getCookie } from "hono/cookie"
 import { SignJWT } from "jose"
 import type { Db } from "@cpa-study/db"
-import { users } from "@cpa-study/db/schema"
 import type { Env, Variables, User } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
 import { createAuthRepository } from "./repository"
 import { createProviders } from "./providers"
-import { handleOAuthCallback, refreshAccessToken } from "./usecase"
+import { handleOAuthCallback, refreshAccessToken, getOrCreateDevUser, saveRefreshToken, logout } from "./usecase"
 
 // Token expiration times
 const ACCESS_TOKEN_EXPIRES_IN = "15m"
@@ -145,14 +144,17 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
       const refreshToken = generateRefreshToken()
       const refreshTokenHash = await hashToken(refreshToken)
 
-      // Save refresh token to DB
+      // Save refresh token to DB（UseCase経由）
       const expiresAt = new Date()
       expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_EXPIRES_DAYS)
-      await repo.saveRefreshToken({
-        userId: user.id,
-        tokenHash: refreshTokenHash,
-        expiresAt,
-      })
+      await saveRefreshToken(
+        { repo },
+        {
+          userId: user.id,
+          tokenHash: refreshTokenHash,
+          expiresAt,
+        }
+      )
 
       // Set refresh token in HttpOnly cookie
       setCookie(c, "refresh_token", refreshToken, {
@@ -223,26 +225,23 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
 
       const devUserId = env.DEV_USER_ID || "test-user-1"
 
-      // ユーザーが存在しない場合は作成
-      let existingUser = await repo.findUserById(devUserId)
-      if (!existingUser) {
-        const now = new Date()
-        await db.insert(users).values({
-          id: devUserId,
+      // ユーザーが存在しない場合は作成（UseCase経由）
+      const userResult = await getOrCreateDevUser(
+        { repo },
+        {
+          userId: devUserId,
           email: `${devUserId}@example.com`,
           name: "テストユーザー",
           avatarUrl: null,
           timezone: "Asia/Tokyo",
-          createdAt: now,
-          updatedAt: now,
-        })
-        existingUser = await repo.findUserById(devUserId)
-      }
+        }
+      )
 
-      if (!existingUser) {
+      if (!userResult.ok) {
         return c.json({ error: "Failed to create dev user" }, 500)
       }
 
+      const existingUser = userResult.value
       const devUser: User = {
         id: existingUser.id,
         email: existingUser.email,
@@ -257,14 +256,17 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
       const refreshToken = generateRefreshToken()
       const refreshTokenHash = await hashToken(refreshToken)
 
-      // Save refresh token to DB
+      // Save refresh token to DB（UseCase経由）
       const expiresAt = new Date()
       expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_EXPIRES_DAYS)
-      await repo.saveRefreshToken({
-        userId: devUser.id,
-        tokenHash: refreshTokenHash,
-        expiresAt,
-      })
+      await saveRefreshToken(
+        { repo },
+        {
+          userId: devUser.id,
+          tokenHash: refreshTokenHash,
+          expiresAt,
+        }
+      )
 
       // Set refresh token in HttpOnly cookie
       setCookie(c, "refresh_token", refreshToken, {
@@ -286,12 +288,9 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
       const refreshToken = getCookie(c, "refresh_token")
 
       if (refreshToken) {
-        // Delete refresh token from DB
+        // Delete refresh token from DB（UseCase経由）
         const tokenHash = await hashToken(refreshToken)
-        const storedToken = await repo.findRefreshTokenByHash(tokenHash)
-        if (storedToken) {
-          await repo.deleteRefreshToken(storedToken.id)
-        }
+        await logout({ repo }, tokenHash)
       }
 
       // Clear refresh token cookie

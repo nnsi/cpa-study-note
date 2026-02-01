@@ -1,15 +1,23 @@
 import { describe, it, expect, beforeEach } from "vitest"
-import { createSubjectRepository } from "./repository"
+import { createSubjectRepository, type SubjectRepository } from "./repository"
 import {
   listSubjects,
   getSubject,
   createSubject,
   updateSubject,
   deleteSubject,
+  getSubjectTree,
+  updateSubjectTree,
+  importCSVToSubject,
   type SubjectUseCaseDeps,
+  type TreeUseCaseDeps,
 } from "./usecase"
 import { createTestDatabase, type TestDatabase } from "@/test/mocks/db"
-import { createTestUser, createTestStudyDomain, createTestSubject, createTestCategory } from "@/test/helpers"
+import { createTestUser, createTestStudyDomain, createTestSubject, createTestCategory, createTestTopic } from "@/test/helpers"
+import { createMockSimpleTransactionRunner } from "@/shared/lib/transaction"
+import * as schema from "@cpa-study/db/schema"
+import { eq } from "drizzle-orm"
+import type { UpdateTreeRequest } from "@cpa-study/shared/schemas"
 
 describe("Subject UseCase", () => {
   let db: TestDatabase
@@ -337,6 +345,364 @@ describe("Subject UseCase", () => {
       const result = await deleteSubject(deps, userId, subjectId)
 
       expect(result.ok).toBe(true)
+    })
+  })
+})
+
+describe("Subject UseCase - Tree Operations", () => {
+  let db: TestDatabase
+  let subjectRepo: SubjectRepository
+  let treeDeps: TreeUseCaseDeps
+
+  beforeEach(() => {
+    const result = createTestDatabase()
+    db = result.db
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    subjectRepo = createSubjectRepository(db as any)
+    const txRunner = createMockSimpleTransactionRunner(db)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    treeDeps = { subjectRepo, db: db as any, txRunner }
+  })
+
+  describe("getSubjectTree", () => {
+    it("should return empty tree for subject with no categories", async () => {
+      const { id: userId } = createTestUser(db)
+      const { id: domainId } = createTestStudyDomain(db, userId)
+      const { id: subjectId } = createTestSubject(db, userId, domainId)
+
+      const result = await getSubjectTree(treeDeps, userId, subjectId)
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.value.categories).toHaveLength(0)
+      }
+    })
+
+    it("should return tree with categories and topics", async () => {
+      const { id: userId } = createTestUser(db)
+      const { id: domainId } = createTestStudyDomain(db, userId)
+      const { id: subjectId } = createTestSubject(db, userId, domainId)
+      const { id: cat1Id } = createTestCategory(db, userId, subjectId, { name: "Category 1", depth: 1 })
+      const { id: subcat1Id } = createTestCategory(db, userId, subjectId, {
+        name: "Subcategory 1",
+        depth: 2,
+        parentId: cat1Id,
+      })
+      createTestTopic(db, userId, subcat1Id, { name: "Topic 1" })
+      createTestTopic(db, userId, subcat1Id, { name: "Topic 2" })
+
+      const result = await getSubjectTree(treeDeps, userId, subjectId)
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.value.categories).toHaveLength(1)
+        expect(result.value.categories[0].name).toBe("Category 1")
+        expect(result.value.categories[0].subcategories).toHaveLength(1)
+        expect(result.value.categories[0].subcategories[0].name).toBe("Subcategory 1")
+        expect(result.value.categories[0].subcategories[0].topics).toHaveLength(2)
+      }
+    })
+
+    it("should not return soft-deleted categories", async () => {
+      const { id: userId } = createTestUser(db)
+      const { id: domainId } = createTestStudyDomain(db, userId)
+      const { id: subjectId } = createTestSubject(db, userId, domainId)
+      createTestCategory(db, userId, subjectId, { name: "Active", depth: 1 })
+      createTestCategory(db, userId, subjectId, { name: "Deleted", depth: 1, deletedAt: new Date() })
+
+      const result = await getSubjectTree(treeDeps, userId, subjectId)
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.value.categories).toHaveLength(1)
+        expect(result.value.categories[0].name).toBe("Active")
+      }
+    })
+
+    it("should return NOT_FOUND for non-existent subject", async () => {
+      const { id: userId } = createTestUser(db)
+
+      const result = await getSubjectTree(treeDeps, userId, "non-existent")
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error).toBe("NOT_FOUND")
+      }
+    })
+
+    it("should return NOT_FOUND for other user's subject", async () => {
+      const { id: user1Id } = createTestUser(db)
+      const { id: user2Id } = createTestUser(db)
+      const { id: domainId } = createTestStudyDomain(db, user1Id)
+      const { id: subjectId } = createTestSubject(db, user1Id, domainId)
+
+      const result = await getSubjectTree(treeDeps, user2Id, subjectId)
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error).toBe("NOT_FOUND")
+      }
+    })
+  })
+
+  describe("updateSubjectTree", () => {
+    it("should create new categories and topics", async () => {
+      const { id: userId } = createTestUser(db)
+      const { id: domainId } = createTestStudyDomain(db, userId)
+      const { id: subjectId } = createTestSubject(db, userId, domainId)
+
+      const tree: UpdateTreeRequest = {
+        categories: [
+          {
+            id: null,
+            name: "New Category",
+            displayOrder: 0,
+            subcategories: [
+              {
+                id: null,
+                name: "New Subcategory",
+                displayOrder: 0,
+                topics: [
+                  {
+                    id: null,
+                    name: "New Topic",
+                    displayOrder: 0,
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      }
+
+      const result = await updateSubjectTree(treeDeps, userId, subjectId, tree)
+
+      expect(result.ok).toBe(true)
+
+      // Verify tree was created
+      const treeResult = await getSubjectTree(treeDeps, userId, subjectId)
+      expect(treeResult.ok).toBe(true)
+      if (treeResult.ok) {
+        expect(treeResult.value.categories).toHaveLength(1)
+        expect(treeResult.value.categories[0].name).toBe("New Category")
+        expect(treeResult.value.categories[0].subcategories[0].name).toBe("New Subcategory")
+        expect(treeResult.value.categories[0].subcategories[0].topics[0].name).toBe("New Topic")
+      }
+    })
+
+    it("should update existing categories", async () => {
+      const { id: userId } = createTestUser(db)
+      const { id: domainId } = createTestStudyDomain(db, userId)
+      const { id: subjectId } = createTestSubject(db, userId, domainId)
+      const { id: catId } = createTestCategory(db, userId, subjectId, { name: "Original", depth: 1 })
+
+      const tree: UpdateTreeRequest = {
+        categories: [
+          {
+            id: catId,
+            name: "Updated",
+            displayOrder: 0,
+            subcategories: [],
+          },
+        ],
+      }
+
+      const result = await updateSubjectTree(treeDeps, userId, subjectId, tree)
+
+      expect(result.ok).toBe(true)
+
+      const treeResult = await getSubjectTree(treeDeps, userId, subjectId)
+      expect(treeResult.ok).toBe(true)
+      if (treeResult.ok) {
+        expect(treeResult.value.categories[0].name).toBe("Updated")
+        expect(treeResult.value.categories[0].id).toBe(catId)
+      }
+    })
+
+    it("should soft-delete nodes not in request", async () => {
+      const { id: userId } = createTestUser(db)
+      const { id: domainId } = createTestStudyDomain(db, userId)
+      const { id: subjectId } = createTestSubject(db, userId, domainId)
+      const { id: catId } = createTestCategory(db, userId, subjectId, { name: "ToDelete", depth: 1 })
+
+      const tree: UpdateTreeRequest = {
+        categories: [], // Empty tree
+      }
+
+      const result = await updateSubjectTree(treeDeps, userId, subjectId, tree)
+
+      expect(result.ok).toBe(true)
+
+      // Verify it's soft-deleted
+      const deleted = db.select().from(schema.categories).where(eq(schema.categories.id, catId)).all()
+      expect(deleted[0].deletedAt).not.toBeNull()
+    })
+
+    it("should revive soft-deleted nodes if id is provided", async () => {
+      const { id: userId } = createTestUser(db)
+      const { id: domainId } = createTestStudyDomain(db, userId)
+      const { id: subjectId } = createTestSubject(db, userId, domainId)
+      const { id: catId } = createTestCategory(db, userId, subjectId, {
+        name: "Deleted",
+        depth: 1,
+        deletedAt: new Date(),
+      })
+
+      const tree: UpdateTreeRequest = {
+        categories: [
+          {
+            id: catId,
+            name: "Revived",
+            displayOrder: 0,
+            subcategories: [],
+          },
+        ],
+      }
+
+      const result = await updateSubjectTree(treeDeps, userId, subjectId, tree)
+
+      expect(result.ok).toBe(true)
+
+      // Verify it's revived
+      const revived = db.select().from(schema.categories).where(eq(schema.categories.id, catId)).all()
+      expect(revived[0].deletedAt).toBeNull()
+      expect(revived[0].name).toBe("Revived")
+    })
+
+    it("should return INVALID_ID for another user's category ID", async () => {
+      const { id: user1Id } = createTestUser(db)
+      const { id: user2Id } = createTestUser(db)
+      const { id: domain1Id } = createTestStudyDomain(db, user1Id)
+      const { id: domain2Id } = createTestStudyDomain(db, user2Id)
+      const { id: subject1Id } = createTestSubject(db, user1Id, domain1Id)
+      const { id: subject2Id } = createTestSubject(db, user2Id, domain2Id)
+      const { id: cat2Id } = createTestCategory(db, user2Id, subject2Id, { name: "User2 Category", depth: 1 })
+
+      const tree: UpdateTreeRequest = {
+        categories: [
+          {
+            id: cat2Id, // User2's category
+            name: "Hijacked",
+            displayOrder: 0,
+            subcategories: [],
+          },
+        ],
+      }
+
+      const result = await updateSubjectTree(treeDeps, user1Id, subject1Id, tree)
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error).toBe("INVALID_ID")
+      }
+    })
+
+    it("should return NOT_FOUND for non-existent subject", async () => {
+      const { id: userId } = createTestUser(db)
+
+      const tree: UpdateTreeRequest = {
+        categories: [],
+      }
+
+      const result = await updateSubjectTree(treeDeps, userId, "non-existent", tree)
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error).toBe("NOT_FOUND")
+      }
+    })
+  })
+
+  describe("importCSVToSubject", () => {
+    it("should import CSV data into empty subject", async () => {
+      const { id: userId } = createTestUser(db)
+      const { id: domainId } = createTestStudyDomain(db, userId)
+      const { id: subjectId } = createTestSubject(db, userId, domainId)
+
+      const csv = `大単元,中単元,論点
+カテゴリ1,サブカテゴリ1,トピック1
+カテゴリ1,サブカテゴリ1,トピック2`
+
+      const result = await importCSVToSubject(treeDeps, userId, subjectId, csv)
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.value.success).toBe(true)
+        expect(result.value.imported.categories).toBe(1)
+        expect(result.value.imported.subcategories).toBe(1)
+        expect(result.value.imported.topics).toBe(2)
+      }
+
+      // Verify tree was created
+      const tree = await getSubjectTree(treeDeps, userId, subjectId)
+      expect(tree.ok).toBe(true)
+      if (tree.ok) {
+        expect(tree.value.categories).toHaveLength(1)
+        expect(tree.value.categories[0].subcategories[0].topics).toHaveLength(2)
+      }
+    })
+
+    it("should merge with existing categories", async () => {
+      const { id: userId } = createTestUser(db)
+      const { id: domainId } = createTestStudyDomain(db, userId)
+      const { id: subjectId } = createTestSubject(db, userId, domainId)
+      const { id: catId } = createTestCategory(db, userId, subjectId, { name: "カテゴリ1", depth: 1 })
+      const { id: subcatId } = createTestCategory(db, userId, subjectId, {
+        name: "サブカテゴリ1",
+        depth: 2,
+        parentId: catId,
+      })
+      createTestTopic(db, userId, subcatId, { name: "既存トピック" })
+
+      const csv = `大単元,中単元,論点
+カテゴリ1,サブカテゴリ1,新規トピック`
+
+      const result = await importCSVToSubject(treeDeps, userId, subjectId, csv)
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.value.success).toBe(true)
+      }
+
+      // Verify merged tree
+      const tree = await getSubjectTree(treeDeps, userId, subjectId)
+      expect(tree.ok).toBe(true)
+      if (tree.ok) {
+        expect(tree.value.categories).toHaveLength(1)
+        expect(tree.value.categories[0].subcategories[0].topics).toHaveLength(2)
+      }
+    })
+
+    it("should return NOT_FOUND for non-existent subject", async () => {
+      const { id: userId } = createTestUser(db)
+
+      const csv = `大単元,中単元,論点
+カテゴリ,サブカテゴリ,トピック`
+
+      const result = await importCSVToSubject(treeDeps, userId, "non-existent", csv)
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error).toBe("NOT_FOUND")
+      }
+    })
+
+    it("should return success=false with errors for empty CSV", async () => {
+      const { id: userId } = createTestUser(db)
+      const { id: domainId } = createTestStudyDomain(db, userId)
+      const { id: subjectId } = createTestSubject(db, userId, domainId)
+
+      const csv = `大単元,中単元,論点
+`
+
+      const result = await importCSVToSubject(treeDeps, userId, subjectId, csv)
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.value.success).toBe(false)
+        expect(result.value.errors).toHaveLength(1)
+        expect(result.value.errors[0].message).toContain("インポートするデータがありません")
+      }
     })
   })
 })

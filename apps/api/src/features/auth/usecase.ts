@@ -101,6 +101,77 @@ const hashToken = async (token: string) => {
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("")
 }
 
+type DevLoginDeps = {
+  repo: AuthRepository
+}
+
+type DevLoginInput = {
+  userId: string
+  email: string
+  name: string
+  avatarUrl: string | null
+  timezone: string
+}
+
+type SaveRefreshTokenInput = {
+  userId: string
+  tokenHash: string
+  expiresAt: Date
+}
+
+/**
+ * Get or create a dev user for local development
+ */
+export const getOrCreateDevUser = async (
+  deps: DevLoginDeps,
+  input: DevLoginInput
+): Promise<Result<User, AuthError>> => {
+  let user = await deps.repo.findUserById(input.userId)
+  if (!user) {
+    user = await deps.repo.createUserWithId(input.userId, {
+      email: input.email,
+      name: input.name,
+      avatarUrl: input.avatarUrl,
+      timezone: input.timezone,
+    })
+  }
+
+  if (!user) {
+    return err("DB_ERROR")
+  }
+
+  return ok(user)
+}
+
+/**
+ * Save a refresh token for a user
+ */
+export const saveRefreshToken = async (
+  deps: DevLoginDeps,
+  input: SaveRefreshTokenInput
+): Promise<Result<void, AuthError>> => {
+  await deps.repo.saveRefreshToken({
+    userId: input.userId,
+    tokenHash: input.tokenHash,
+    expiresAt: input.expiresAt,
+  })
+  return ok(undefined)
+}
+
+/**
+ * Logout by deleting the refresh token
+ */
+export const logout = async (
+  deps: DevLoginDeps,
+  refreshTokenHash: string
+): Promise<Result<void, AuthError>> => {
+  const storedToken = await deps.repo.findRefreshTokenByHash(refreshTokenHash)
+  if (storedToken) {
+    await deps.repo.deleteRefreshToken(storedToken.id)
+  }
+  return ok(undefined)
+}
+
 export const refreshAccessToken = async (
   deps: RefreshDeps,
   refreshToken: string,

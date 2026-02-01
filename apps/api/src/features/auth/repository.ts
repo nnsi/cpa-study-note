@@ -21,6 +21,7 @@ export type AuthRepository = {
   findUserById: (id: string) => Promise<User | null>
   findUserByEmail: (email: string) => Promise<User | null>
   createUser: (user: CreateUserInput) => Promise<User>
+  createUserWithId: (id: string, user: CreateUserInput) => Promise<User>
   updateUser: (id: string, data: UpdateUserInput) => Promise<User | null>
   findConnectionByProviderAndId: (
     provider: string,
@@ -53,6 +54,32 @@ export const createAuthRepository = (db: Db): AuthRepository => ({
 
   createUser: async (user) => {
     const id = crypto.randomUUID()
+    const now = new Date()
+    const timezone = user.timezone ?? "Asia/Tokyo"
+
+    await db.insert(users).values({
+      id,
+      email: user.email,
+      name: user.name,
+      avatarUrl: user.avatarUrl,
+      timezone,
+      createdAt: now,
+      updatedAt: now,
+    })
+
+    return {
+      id,
+      email: user.email,
+      name: user.name,
+      avatarUrl: user.avatarUrl,
+      timezone,
+      defaultStudyDomainId: null,
+      createdAt: now,
+      updatedAt: now,
+    }
+  },
+
+  createUserWithId: async (id, user) => {
     const now = new Date()
     const timezone = user.timezone ?? "Asia/Tokyo"
 
