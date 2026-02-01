@@ -2,6 +2,7 @@ import { Hono } from "hono"
 import { setCookie, getCookie } from "hono/cookie"
 import { SignJWT } from "jose"
 import type { Db } from "@cpa-study/db"
+import { users } from "@cpa-study/db/schema"
 import type { Env, Variables, User } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
 import { createAuthRepository } from "./repository"
@@ -221,13 +222,34 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
       }
 
       const devUserId = env.DEV_USER_ID || "test-user-1"
+
+      // ユーザーが存在しない場合は作成
+      let existingUser = await repo.findUserById(devUserId)
+      if (!existingUser) {
+        const now = new Date()
+        await db.insert(users).values({
+          id: devUserId,
+          email: `${devUserId}@example.com`,
+          name: "テストユーザー",
+          avatarUrl: null,
+          timezone: "Asia/Tokyo",
+          createdAt: now,
+          updatedAt: now,
+        })
+        existingUser = await repo.findUserById(devUserId)
+      }
+
+      if (!existingUser) {
+        return c.json({ error: "Failed to create dev user" }, 500)
+      }
+
       const devUser: User = {
-        id: devUserId,
-        email: `${devUserId}@example.com`,
-        name: "テストユーザー",
-        avatarUrl: null,
-        timezone: "Asia/Tokyo",
-        defaultStudyDomainId: null,
+        id: existingUser.id,
+        email: existingUser.email,
+        name: existingUser.name,
+        avatarUrl: existingUser.avatarUrl,
+        timezone: existingUser.timezone,
+        defaultStudyDomainId: existingUser.defaultStudyDomainId,
       }
 
       // Generate tokens (本番と同じフロー)

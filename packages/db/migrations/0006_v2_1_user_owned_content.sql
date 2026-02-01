@@ -378,20 +378,22 @@ DROP TABLE `_domain_migration_map`;
 DROP TABLE `user_study_domains`;
 --> statement-breakpoint
 
--- Step 30: Remove default_study_domain_id from users (no longer needed)
+-- Step 30: Recreate users table with all required columns
 -- SQLite doesn't support DROP COLUMN directly before 3.35, so we recreate the table
 CREATE TABLE `users_new` (
 	`id` text PRIMARY KEY NOT NULL,
 	`email` text NOT NULL,
-	`name` text,
+	`name` text NOT NULL,
 	`avatar_url` text,
+	`timezone` text NOT NULL DEFAULT 'Asia/Tokyo',
+	`default_study_domain_id` text,
 	`created_at` integer NOT NULL,
 	`updated_at` integer NOT NULL,
 	`deleted_at` integer
 );
 --> statement-breakpoint
-INSERT INTO users_new (id, email, name, avatar_url, created_at, updated_at, deleted_at)
-SELECT id, email, name, avatar_url, created_at, updated_at, deleted_at FROM users;
+INSERT INTO users_new (id, email, name, avatar_url, timezone, default_study_domain_id, created_at, updated_at, deleted_at)
+SELECT id, email, COALESCE(name, email), avatar_url, COALESCE(timezone, 'Asia/Tokyo'), default_study_domain_id, created_at, updated_at, deleted_at FROM users;
 --> statement-breakpoint
 DROP TABLE users;
 --> statement-breakpoint
