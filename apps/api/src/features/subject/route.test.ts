@@ -454,12 +454,7 @@ describe("Subject Routes", () => {
       const { id: domainId } = createTestStudyDomain(db, userId)
       const { id: subjectId } = createTestSubject(db, userId, domainId)
       const { id: catId } = createTestCategory(db, userId, subjectId, { name: "Category", depth: 1 })
-      const { id: subcatId } = createTestCategory(db, userId, subjectId, {
-        name: "Subcategory",
-        depth: 2,
-        parentId: catId,
-      })
-      createTestTopic(db, userId, subcatId, { name: "Topic" })
+      createTestTopic(db, userId, catId, { name: "Topic" })
 
       const res = await client.api.subjects[":id"].tree.$get(
         { param: { id: subjectId } },
@@ -471,8 +466,7 @@ describe("Subject Routes", () => {
       if (!("tree" in json)) throw new Error("Expected tree in response")
       expect(json.tree.categories).toHaveLength(1)
       expect(json.tree.categories[0].name).toBe("Category")
-      expect(json.tree.categories[0].subcategories[0].name).toBe("Subcategory")
-      expect(json.tree.categories[0].subcategories[0].topics[0].name).toBe("Topic")
+      expect(json.tree.categories[0].topics[0].name).toBe("Topic")
     })
 
     it("should return 404 for non-existent subject", async () => {
@@ -528,18 +522,11 @@ describe("Subject Routes", () => {
                 id: null,
                 name: "New Category",
                 displayOrder: 0,
-                subcategories: [
+                topics: [
                   {
                     id: null,
-                    name: "New Subcategory",
+                    name: "New Topic",
                     displayOrder: 0,
-                    topics: [
-                      {
-                        id: null,
-                        name: "New Topic",
-                        displayOrder: 0,
-                      },
-                    ],
                   },
                 ],
               },
@@ -591,7 +578,7 @@ describe("Subject Routes", () => {
                 id: cat2Id, // Other user's category
                 name: "Hijacked",
                 displayOrder: 0,
-                subcategories: [],
+                topics: [],
               },
             ],
           },
@@ -620,7 +607,7 @@ describe("Subject Routes", () => {
                 id: null,
                 name: "", // Empty name (invalid)
                 displayOrder: 0,
-                subcategories: [],
+                topics: [],
               },
             ],
           },

@@ -383,13 +383,8 @@ describe("Subject UseCase - Tree Operations", () => {
       const { id: domainId } = createTestStudyDomain(db, userId)
       const { id: subjectId } = createTestSubject(db, userId, domainId)
       const { id: cat1Id } = createTestCategory(db, userId, subjectId, { name: "Category 1", depth: 1 })
-      const { id: subcat1Id } = createTestCategory(db, userId, subjectId, {
-        name: "Subcategory 1",
-        depth: 2,
-        parentId: cat1Id,
-      })
-      createTestTopic(db, userId, subcat1Id, { name: "Topic 1" })
-      createTestTopic(db, userId, subcat1Id, { name: "Topic 2" })
+      createTestTopic(db, userId, cat1Id, { name: "Topic 1" })
+      createTestTopic(db, userId, cat1Id, { name: "Topic 2" })
 
       const result = await getSubjectTree(treeDeps, userId, subjectId)
 
@@ -397,9 +392,7 @@ describe("Subject UseCase - Tree Operations", () => {
       if (result.ok) {
         expect(result.value.categories).toHaveLength(1)
         expect(result.value.categories[0].name).toBe("Category 1")
-        expect(result.value.categories[0].subcategories).toHaveLength(1)
-        expect(result.value.categories[0].subcategories[0].name).toBe("Subcategory 1")
-        expect(result.value.categories[0].subcategories[0].topics).toHaveLength(2)
+        expect(result.value.categories[0].topics).toHaveLength(2)
       }
     })
 
@@ -457,18 +450,11 @@ describe("Subject UseCase - Tree Operations", () => {
             id: null,
             name: "New Category",
             displayOrder: 0,
-            subcategories: [
+            topics: [
               {
                 id: null,
-                name: "New Subcategory",
+                name: "New Topic",
                 displayOrder: 0,
-                topics: [
-                  {
-                    id: null,
-                    name: "New Topic",
-                    displayOrder: 0,
-                  },
-                ],
               },
             ],
           },
@@ -485,8 +471,7 @@ describe("Subject UseCase - Tree Operations", () => {
       if (treeResult.ok) {
         expect(treeResult.value.categories).toHaveLength(1)
         expect(treeResult.value.categories[0].name).toBe("New Category")
-        expect(treeResult.value.categories[0].subcategories[0].name).toBe("New Subcategory")
-        expect(treeResult.value.categories[0].subcategories[0].topics[0].name).toBe("New Topic")
+        expect(treeResult.value.categories[0].topics[0].name).toBe("New Topic")
       }
     })
 
@@ -502,7 +487,7 @@ describe("Subject UseCase - Tree Operations", () => {
             id: catId,
             name: "Updated",
             displayOrder: 0,
-            subcategories: [],
+            topics: [],
           },
         ],
       }
@@ -554,7 +539,7 @@ describe("Subject UseCase - Tree Operations", () => {
             id: catId,
             name: "Revived",
             displayOrder: 0,
-            subcategories: [],
+            topics: [],
           },
         ],
       }
@@ -584,7 +569,7 @@ describe("Subject UseCase - Tree Operations", () => {
             id: cat2Id, // User2's category
             name: "Hijacked",
             displayOrder: 0,
-            subcategories: [],
+            topics: [],
           },
         ],
       }
@@ -619,9 +604,9 @@ describe("Subject UseCase - Tree Operations", () => {
       const { id: domainId } = createTestStudyDomain(db, userId)
       const { id: subjectId } = createTestSubject(db, userId, domainId)
 
-      const csv = `大単元,中単元,論点
-カテゴリ1,サブカテゴリ1,トピック1
-カテゴリ1,サブカテゴリ1,トピック2`
+      const csv = `カテゴリ,論点
+カテゴリ1,トピック1
+カテゴリ1,トピック2`
 
       const result = await importCSVToSubject(treeDeps, userId, subjectId, csv)
 
@@ -629,7 +614,6 @@ describe("Subject UseCase - Tree Operations", () => {
       if (result.ok) {
         expect(result.value.success).toBe(true)
         expect(result.value.imported.categories).toBe(1)
-        expect(result.value.imported.subcategories).toBe(1)
         expect(result.value.imported.topics).toBe(2)
       }
 
@@ -638,7 +622,7 @@ describe("Subject UseCase - Tree Operations", () => {
       expect(tree.ok).toBe(true)
       if (tree.ok) {
         expect(tree.value.categories).toHaveLength(1)
-        expect(tree.value.categories[0].subcategories[0].topics).toHaveLength(2)
+        expect(tree.value.categories[0].topics).toHaveLength(2)
       }
     })
 
@@ -647,15 +631,10 @@ describe("Subject UseCase - Tree Operations", () => {
       const { id: domainId } = createTestStudyDomain(db, userId)
       const { id: subjectId } = createTestSubject(db, userId, domainId)
       const { id: catId } = createTestCategory(db, userId, subjectId, { name: "カテゴリ1", depth: 1 })
-      const { id: subcatId } = createTestCategory(db, userId, subjectId, {
-        name: "サブカテゴリ1",
-        depth: 2,
-        parentId: catId,
-      })
-      createTestTopic(db, userId, subcatId, { name: "既存トピック" })
+      createTestTopic(db, userId, catId, { name: "既存トピック" })
 
-      const csv = `大単元,中単元,論点
-カテゴリ1,サブカテゴリ1,新規トピック`
+      const csv = `カテゴリ,論点
+カテゴリ1,新規トピック`
 
       const result = await importCSVToSubject(treeDeps, userId, subjectId, csv)
 
@@ -669,15 +648,15 @@ describe("Subject UseCase - Tree Operations", () => {
       expect(tree.ok).toBe(true)
       if (tree.ok) {
         expect(tree.value.categories).toHaveLength(1)
-        expect(tree.value.categories[0].subcategories[0].topics).toHaveLength(2)
+        expect(tree.value.categories[0].topics).toHaveLength(2)
       }
     })
 
     it("should return NOT_FOUND for non-existent subject", async () => {
       const { id: userId } = createTestUser(db)
 
-      const csv = `大単元,中単元,論点
-カテゴリ,サブカテゴリ,トピック`
+      const csv = `カテゴリ,論点
+カテゴリ,トピック`
 
       const result = await importCSVToSubject(treeDeps, userId, "non-existent", csv)
 
@@ -692,7 +671,7 @@ describe("Subject UseCase - Tree Operations", () => {
       const { id: domainId } = createTestStudyDomain(db, userId)
       const { id: subjectId } = createTestSubject(db, userId, domainId)
 
-      const csv = `大単元,中単元,論点
+      const csv = `カテゴリ,論点
 `
 
       const result = await importCSVToSubject(treeDeps, userId, subjectId, csv)

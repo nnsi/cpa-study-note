@@ -3,7 +3,6 @@ import type {
   UpdateTreeRequest,
   TreeResponse,
   CategoryNodeResponse,
-  SubcategoryNodeResponse,
   TopicNodeResponse,
   CSVImportResponse,
 } from "@cpa-study/shared/schemas"
@@ -144,6 +143,7 @@ export type TreeUseCaseDeps = {
 
 /**
  * Get the tree structure for a subject
+ * Now simplified: categories directly contain topics (no subcategories)
  */
 export const getSubjectTree = async (
   deps: TreeUseCaseDeps,
@@ -156,18 +156,14 @@ export const getSubjectTree = async (
     return err("NOT_FOUND")
   }
 
-  // 2. Get all categories for this subject
+  // 2. Get all categories for this subject (only depth=1 now)
   const allCategories = await deps.subjectRepo.findCategoriesBySubjectId(subjectId, userId)
 
   // 3. Get all topics for categories in this subject
   const categoryIds = allCategories.map((c) => c.id)
   const allTopics = await deps.subjectRepo.findTopicsByCategoryIds(categoryIds, userId)
 
-  // 4. Build tree structure
-  // Separate depth=1 (categories) and depth=2 (subcategories)
-  const depth1Categories = allCategories.filter((c) => c.depth === 1)
-  const depth2Categories = allCategories.filter((c) => c.depth === 2)
-
+  // 4. Build tree structure (simplified: categories directly contain topics)
   // Build topic map by categoryId
   const topicsByCategory = new Map<string, TopicNodeResponse[]>()
   for (const topic of allTopics) {
@@ -184,33 +180,22 @@ export const getSubjectTree = async (
     topicsByCategory.set(topic.categoryId, list)
   }
 
-  // Build subcategory map by parentId
-  const subcategoriesByParent = new Map<string, SubcategoryNodeResponse[]>()
-  for (const subcat of depth2Categories) {
-    if (!subcat.parentId) continue
-    const list = subcategoriesByParent.get(subcat.parentId) ?? []
-    list.push({
-      id: subcat.id,
-      name: subcat.name,
-      displayOrder: subcat.displayOrder,
-      topics: topicsByCategory.get(subcat.id) ?? [],
-    })
-    subcategoriesByParent.set(subcat.parentId, list)
-  }
-
-  // Build final category list
-  const categoryNodes: CategoryNodeResponse[] = depth1Categories.map((cat) => ({
-    id: cat.id,
-    name: cat.name,
-    displayOrder: cat.displayOrder,
-    subcategories: subcategoriesByParent.get(cat.id) ?? [],
-  }))
+  // Build final category list (all categories now directly contain topics)
+  const categoryNodes: CategoryNodeResponse[] = allCategories
+    .sort((a, b) => a.displayOrder - b.displayOrder)
+    .map((cat) => ({
+      id: cat.id,
+      name: cat.name,
+      displayOrder: cat.displayOrder,
+      topics: (topicsByCategory.get(cat.id) ?? []).sort((a, b) => a.displayOrder - b.displayOrder),
+    }))
 
   return ok({ categories: categoryNodes })
 }
 
 /**
  * Update the tree structure for a subject using diff-based update
+ * Simplified: categories directly contain topics
  */
 export const updateSubjectTree = async (
   deps: TreeUseCaseDeps,
@@ -232,11 +217,8 @@ export const updateSubjectTree = async (
 
   for (const cat of tree.categories) {
     if (cat.id) requestCategoryIds.add(cat.id)
-    for (const subcat of cat.subcategories) {
-      if (subcat.id) requestCategoryIds.add(subcat.id)
-      for (const topic of subcat.topics) {
-        if (topic.id) requestTopicIds.add(topic.id)
-      }
+    for (const topic of cat.topics) {
+      if (topic.id) requestTopicIds.add(topic.id)
     }
   }
 
@@ -295,7 +277,7 @@ export const updateSubjectTree = async (
     const topicsToDelete = existingTopicIds.filter((id) => !requestTopicIds.has(id))
     await txRepo.softDeleteTopics(topicsToDelete, now)
 
-    // 8. Upsert categories and topics
+    // 8. Upsert categories and topics (simplified: no subcategories)
     for (const cat of tree.categories) {
       const categoryId = cat.id ?? crypto.randomUUID()
       const categoryExists = cat.id ? validCategoryIdSet.has(cat.id) : false
@@ -312,40 +294,23 @@ export const updateSubjectTree = async (
         isNew: !categoryExists,
       })
 
-      for (const subcat of cat.subcategories) {
-        const subcategoryId = subcat.id ?? crypto.randomUUID()
-        const subcategoryExists = subcat.id ? validCategoryIdSet.has(subcat.id) : false
+      for (const topic of cat.topics) {
+        const topicId = topic.id ?? crypto.randomUUID()
+        const topicExists = topic.id ? validTopicIdSet.has(topic.id) : false
 
-        await txRepo.upsertCategory({
-          id: subcategoryId,
+        await txRepo.upsertTopic({
+          id: topicId,
           userId,
-          subjectId,
-          name: subcat.name,
-          depth: 2,
-          parentId: categoryId,
-          displayOrder: subcat.displayOrder,
+          categoryId,
+          name: topic.name,
+          description: topic.description ?? null,
+          difficulty: topic.difficulty ?? null,
+          topicType: topic.topicType ?? null,
+          aiSystemPrompt: topic.aiSystemPrompt ?? null,
+          displayOrder: topic.displayOrder,
           now,
-          isNew: !subcategoryExists,
+          isNew: !topicExists,
         })
-
-        for (const topic of subcat.topics) {
-          const topicId = topic.id ?? crypto.randomUUID()
-          const topicExists = topic.id ? validTopicIdSet.has(topic.id) : false
-
-          await txRepo.upsertTopic({
-            id: topicId,
-            userId,
-            categoryId: subcategoryId,
-            name: topic.name,
-            description: topic.description ?? null,
-            difficulty: topic.difficulty ?? null,
-            topicType: topic.topicType ?? null,
-            aiSystemPrompt: topic.aiSystemPrompt ?? null,
-            displayOrder: topic.displayOrder,
-            now,
-            isNew: !topicExists,
-          })
-        }
       }
     }
   })
@@ -374,7 +339,7 @@ export const importCSVToSubject = async (
   if (rows.length === 0) {
     return ok({
       success: false,
-      imported: { categories: 0, subcategories: 0, topics: 0 },
+      imported: { categories: 0, topics: 0 },
       errors: errors.length > 0 ? errors : [{ line: 0, message: "インポートするデータがありません" }],
     })
   }
@@ -388,15 +353,10 @@ export const importCSVToSubject = async (
       id: cat.id as string | null,
       name: cat.name,
       displayOrder: cat.displayOrder,
-      subcategories: cat.subcategories.map((subcat) => ({
-        id: subcat.id as string | null,
-        name: subcat.name,
-        displayOrder: subcat.displayOrder,
-        topics: subcat.topics.map((topic) => ({
-          id: topic.id as string | null,
-          name: topic.name,
-          displayOrder: topic.displayOrder,
-        })),
+      topics: cat.topics.map((topic) => ({
+        id: topic.id as string | null,
+        name: topic.name,
+        displayOrder: topic.displayOrder,
       })),
     })),
   }
@@ -413,22 +373,17 @@ export const importCSVToSubject = async (
 
   // 7. Count imported items
   let categoryCount = 0
-  let subcategoryCount = 0
   let topicCount = 0
 
   for (const cat of importedTree.categories) {
     categoryCount++
-    for (const subcat of cat.subcategories) {
-      subcategoryCount++
-      topicCount += subcat.topics.length
-    }
+    topicCount += cat.topics.length
   }
 
   return ok({
     success: true,
     imported: {
       categories: categoryCount,
-      subcategories: subcategoryCount,
       topics: topicCount,
     },
     errors,

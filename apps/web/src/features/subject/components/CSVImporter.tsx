@@ -3,7 +3,7 @@ import { useState, useRef } from "react"
 type CSVImporterProps = {
   onImport: (csvContent: string) => Promise<{
     success: boolean
-    imported: { categories: number; subcategories: number; topics: number }
+    imported: { categories: number; topics: number }
     errors: Array<{ line: number; message: string }>
   }>
   onClose: () => void
@@ -14,7 +14,7 @@ export function CSVImporter({ onImport, onClose, isLoading }: CSVImporterProps) 
   const [csvContent, setCsvContent] = useState("")
   const [result, setResult] = useState<{
     success: boolean
-    imported: { categories: number; subcategories: number; topics: number }
+    imported: { categories: number; topics: number }
     errors: Array<{ line: number; message: string }>
   } | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -73,13 +73,13 @@ export function CSVImporter({ onImport, onClose, isLoading }: CSVImporterProps) 
           <div className="mb-4 p-4 bg-indigo-50 rounded-xl">
             <h3 className="font-medium text-indigo-900 mb-2">CSV形式</h3>
             <p className="text-sm text-indigo-700 mb-2">
-              3列のCSVファイルをインポートできます:
+              2列のCSVファイルをインポートできます:
             </p>
             <pre className="text-xs bg-white/50 p-2 rounded font-mono text-indigo-800">
-              大単元,中単元,論点{"\n"}
-              財務会計,資産会計,棚卸資産の評価{"\n"}
-              財務会計,資産会計,有価証券の評価{"\n"}
-              財務会計,負債会計,引当金の計上
+              カテゴリ,論点{"\n"}
+              資産会計,棚卸資産の評価{"\n"}
+              資産会計,有価証券の評価{"\n"}
+              負債会計,引当金の計上
             </pre>
             <p className="text-xs text-indigo-600 mt-2">
               * ヘッダー行は自動でスキップされます
@@ -122,7 +122,7 @@ export function CSVImporter({ onImport, onClose, isLoading }: CSVImporterProps) 
                 setError(null)
               }}
               rows={8}
-              placeholder="大単元,中単元,論点&#10;財務会計,資産会計,棚卸資産の評価&#10;..."
+              placeholder="カテゴリ,論点&#10;資産会計,棚卸資産の評価&#10;..."
               className="w-full px-3 py-2 rounded-lg border border-ink-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono text-sm resize-none"
             />
           </div>
@@ -142,10 +142,7 @@ export function CSVImporter({ onImport, onClose, isLoading }: CSVImporterProps) 
               </h4>
               <div className="text-sm space-y-1">
                 <p className={result.success ? "text-jade-700" : "text-amber-700"}>
-                  大単元: {result.imported.categories} 件
-                </p>
-                <p className={result.success ? "text-jade-700" : "text-amber-700"}>
-                  中単元: {result.imported.subcategories} 件
+                  カテゴリ: {result.imported.categories} 件
                 </p>
                 <p className={result.success ? "text-jade-700" : "text-amber-700"}>
                   論点: {result.imported.topics} 件

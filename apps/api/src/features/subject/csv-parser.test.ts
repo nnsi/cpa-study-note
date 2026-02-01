@@ -3,38 +3,37 @@ import { parseCSV, convertToTree, mergeTree } from "./csv-parser"
 
 describe("CSV Parser", () => {
   describe("parseCSV", () => {
-    it("should parse basic CSV with 3 columns", () => {
-      const csv = `大単元,中単元,論点
-財務会計の基礎概念,会計公準,企業実体の公準
-財務会計の基礎概念,会計公準,継続企業の公準`
+    it("should parse basic CSV with 2 columns", () => {
+      const csv = `カテゴリ,論点
+会計公準,企業実体の公準
+会計公準,継続企業の公準`
 
       const result = parseCSV(csv)
 
       expect(result.errors).toHaveLength(0)
       expect(result.rows).toHaveLength(2)
       expect(result.rows[0]).toEqual({
-        largeCategory: "財務会計の基礎概念",
-        mediumCategory: "会計公準",
+        category: "会計公準",
         topic: "企業実体の公準",
       })
     })
 
     it("should skip header row", () => {
-      const csv = `大単元,中単元,論点
-カテゴリ,サブカテゴリ,トピック`
+      const csv = `カテゴリ,論点
+サブカテゴリ,トピック`
 
       const result = parseCSV(csv)
 
       expect(result.rows).toHaveLength(1)
-      expect(result.rows[0].largeCategory).toBe("カテゴリ")
+      expect(result.rows[0].category).toBe("サブカテゴリ")
     })
 
     it("should skip empty lines", () => {
-      const csv = `大単元,中単元,論点
+      const csv = `カテゴリ,論点
 
-カテゴリ1,サブカテゴリ1,トピック1
+カテゴリ1,トピック1
 
-カテゴリ2,サブカテゴリ2,トピック2
+カテゴリ2,トピック2
 `
 
       const result = parseCSV(csv)
@@ -43,50 +42,50 @@ describe("CSV Parser", () => {
     })
 
     it("should handle quoted fields with comma", () => {
-      const csv = `大単元,中単元,論点
-"カンマ,を含む単元",サブカテゴリ,トピック`
+      const csv = `カテゴリ,論点
+"カンマ,を含むカテゴリ",トピック`
 
       const result = parseCSV(csv)
 
       expect(result.errors).toHaveLength(0)
-      expect(result.rows[0].largeCategory).toBe("カンマ,を含む単元")
+      expect(result.rows[0].category).toBe("カンマ,を含むカテゴリ")
     })
 
     it("should handle escaped double quotes", () => {
-      const csv = `大単元,中単元,論点
-"引用符""を含む",サブカテゴリ,トピック`
+      const csv = `カテゴリ,論点
+"引用符""を含む",トピック`
 
       const result = parseCSV(csv)
 
       expect(result.errors).toHaveLength(0)
-      expect(result.rows[0].largeCategory).toBe('引用符"を含む')
+      expect(result.rows[0].category).toBe('引用符"を含む')
     })
 
     it("should handle newline within quoted field", () => {
-      const csv = `大単元,中単元,論点
+      const csv = `カテゴリ,論点
 "複数行
-の単元",サブカテゴリ,トピック`
+のカテゴリ",トピック`
 
       const result = parseCSV(csv)
 
       expect(result.errors).toHaveLength(0)
-      expect(result.rows[0].largeCategory).toBe("複数行\nの単元")
+      expect(result.rows[0].category).toBe("複数行\nのカテゴリ")
     })
 
     it("should report error for insufficient columns", () => {
-      const csv = `大単元,中単元,論点
-カテゴリ,サブカテゴリ`
+      const csv = `カテゴリ,論点
+カテゴリのみ`
 
       const result = parseCSV(csv)
 
       expect(result.errors).toHaveLength(1)
       expect(result.errors[0].line).toBe(2)
-      expect(result.errors[0].message).toContain("3列")
+      expect(result.errors[0].message).toContain("2列")
     })
 
     it("should report error for empty fields", () => {
-      const csv = `大単元,中単元,論点
-カテゴリ,,トピック`
+      const csv = `カテゴリ,論点
+カテゴリ,`
 
       const result = parseCSV(csv)
 
@@ -96,19 +95,19 @@ describe("CSV Parser", () => {
     })
 
     it("should continue parsing after errors", () => {
-      const csv = `大単元,中単元,論点
-カテゴリ1,サブカテゴリ1
-カテゴリ2,サブカテゴリ2,トピック2`
+      const csv = `カテゴリ,論点
+カテゴリ1
+カテゴリ2,トピック2`
 
       const result = parseCSV(csv)
 
       expect(result.errors).toHaveLength(1)
       expect(result.rows).toHaveLength(1)
-      expect(result.rows[0].largeCategory).toBe("カテゴリ2")
+      expect(result.rows[0].category).toBe("カテゴリ2")
     })
 
     it("should handle CRLF line endings", () => {
-      const csv = "大単元,中単元,論点\r\nカテゴリ,サブカテゴリ,トピック\r\n"
+      const csv = "カテゴリ,論点\r\nカテゴリ1,トピック1\r\n"
 
       const result = parseCSV(csv)
 
@@ -117,13 +116,12 @@ describe("CSV Parser", () => {
     })
 
     it("should trim whitespace from fields", () => {
-      const csv = `大単元,中単元,論点
- カテゴリ , サブカテゴリ , トピック `
+      const csv = `カテゴリ,論点
+ カテゴリ , トピック `
 
       const result = parseCSV(csv)
 
-      expect(result.rows[0].largeCategory).toBe("カテゴリ")
-      expect(result.rows[0].mediumCategory).toBe("サブカテゴリ")
+      expect(result.rows[0].category).toBe("カテゴリ")
       expect(result.rows[0].topic).toBe("トピック")
     })
   })
@@ -131,23 +129,23 @@ describe("CSV Parser", () => {
   describe("convertToTree", () => {
     it("should convert rows to tree structure", () => {
       const rows = [
-        { largeCategory: "カテゴリ1", mediumCategory: "サブカテゴリ1", topic: "トピック1" },
-        { largeCategory: "カテゴリ1", mediumCategory: "サブカテゴリ1", topic: "トピック2" },
-        { largeCategory: "カテゴリ1", mediumCategory: "サブカテゴリ2", topic: "トピック3" },
+        { category: "カテゴリ1", topic: "トピック1" },
+        { category: "カテゴリ1", topic: "トピック2" },
+        { category: "カテゴリ2", topic: "トピック3" },
       ]
 
       const tree = convertToTree(rows)
 
-      expect(tree.categories).toHaveLength(1)
+      expect(tree.categories).toHaveLength(2)
       expect(tree.categories[0].name).toBe("カテゴリ1")
-      expect(tree.categories[0].subcategories).toHaveLength(2)
-      expect(tree.categories[0].subcategories[0].topics).toHaveLength(2)
+      expect(tree.categories[0].topics).toHaveLength(2)
+      expect(tree.categories[1].topics).toHaveLength(1)
     })
 
     it("should handle multiple categories", () => {
       const rows = [
-        { largeCategory: "カテゴリ1", mediumCategory: "サブカテゴリ1", topic: "トピック1" },
-        { largeCategory: "カテゴリ2", mediumCategory: "サブカテゴリ2", topic: "トピック2" },
+        { category: "カテゴリ1", topic: "トピック1" },
+        { category: "カテゴリ2", topic: "トピック2" },
       ]
 
       const tree = convertToTree(rows)
@@ -157,21 +155,21 @@ describe("CSV Parser", () => {
       expect(tree.categories[1].name).toBe("カテゴリ2")
     })
 
-    it("should deduplicate topics within same subcategory", () => {
+    it("should deduplicate topics within same category", () => {
       const rows = [
-        { largeCategory: "カテゴリ1", mediumCategory: "サブカテゴリ1", topic: "トピック1" },
-        { largeCategory: "カテゴリ1", mediumCategory: "サブカテゴリ1", topic: "トピック1" }, // Duplicate
+        { category: "カテゴリ1", topic: "トピック1" },
+        { category: "カテゴリ1", topic: "トピック1" }, // Duplicate
       ]
 
       const tree = convertToTree(rows)
 
-      expect(tree.categories[0].subcategories[0].topics).toHaveLength(1)
+      expect(tree.categories[0].topics).toHaveLength(1)
     })
 
     it("should assign display orders starting from 0", () => {
       const rows = [
-        { largeCategory: "カテゴリ1", mediumCategory: "サブカテゴリ1", topic: "トピック1" },
-        { largeCategory: "カテゴリ2", mediumCategory: "サブカテゴリ2", topic: "トピック2" },
+        { category: "カテゴリ1", topic: "トピック1" },
+        { category: "カテゴリ2", topic: "トピック2" },
       ]
 
       const tree = convertToTree(rows)
@@ -181,15 +179,12 @@ describe("CSV Parser", () => {
     })
 
     it("should set all IDs to null (new nodes)", () => {
-      const rows = [
-        { largeCategory: "カテゴリ1", mediumCategory: "サブカテゴリ1", topic: "トピック1" },
-      ]
+      const rows = [{ category: "カテゴリ1", topic: "トピック1" }]
 
       const tree = convertToTree(rows)
 
       expect(tree.categories[0].id).toBeNull()
-      expect(tree.categories[0].subcategories[0].id).toBeNull()
-      expect(tree.categories[0].subcategories[0].topics[0].id).toBeNull()
+      expect(tree.categories[0].topics[0].id).toBeNull()
     })
   })
 
@@ -201,7 +196,7 @@ describe("CSV Parser", () => {
             id: "cat-1",
             name: "既存カテゴリ",
             displayOrder: 0,
-            subcategories: [],
+            topics: [],
           },
         ],
       }
@@ -212,7 +207,7 @@ describe("CSV Parser", () => {
             id: null,
             name: "新規カテゴリ",
             displayOrder: 0,
-            subcategories: [],
+            topics: [],
           },
         ],
       }
@@ -224,21 +219,14 @@ describe("CSV Parser", () => {
       expect(merged.categories[1].id).toBeNull()
     })
 
-    it("should merge subcategories into same category name", () => {
+    it("should merge topics into same category name", () => {
       const existing = {
         categories: [
           {
             id: "cat-1",
             name: "カテゴリ",
             displayOrder: 0,
-            subcategories: [
-              {
-                id: "subcat-1",
-                name: "既存サブカテゴリ",
-                displayOrder: 0,
-                topics: [],
-              },
-            ],
+            topics: [{ id: "topic-1", name: "既存トピック", displayOrder: 0 }],
           },
         ],
       }
@@ -249,14 +237,7 @@ describe("CSV Parser", () => {
             id: null,
             name: "カテゴリ", // Same name
             displayOrder: 0,
-            subcategories: [
-              {
-                id: null,
-                name: "新規サブカテゴリ",
-                displayOrder: 0,
-                topics: [],
-              },
-            ],
+            topics: [{ id: null, name: "新規トピック", displayOrder: 0 }],
           },
         ],
       }
@@ -265,55 +246,7 @@ describe("CSV Parser", () => {
 
       expect(merged.categories).toHaveLength(1)
       expect(merged.categories[0].id).toBe("cat-1") // Preserves existing ID
-      expect(merged.categories[0].subcategories).toHaveLength(2)
-    })
-
-    it("should merge topics into same subcategory name", () => {
-      const existing = {
-        categories: [
-          {
-            id: "cat-1",
-            name: "カテゴリ",
-            displayOrder: 0,
-            subcategories: [
-              {
-                id: "subcat-1",
-                name: "サブカテゴリ",
-                displayOrder: 0,
-                topics: [
-                  { id: "topic-1", name: "既存トピック", displayOrder: 0 },
-                ],
-              },
-            ],
-          },
-        ],
-      }
-
-      const imported = {
-        categories: [
-          {
-            id: null,
-            name: "カテゴリ",
-            displayOrder: 0,
-            subcategories: [
-              {
-                id: null,
-                name: "サブカテゴリ", // Same name
-                displayOrder: 0,
-                topics: [
-                  { id: null, name: "新規トピック", displayOrder: 0 },
-                ],
-              },
-            ],
-          },
-        ],
-      }
-
-      const merged = mergeTree(existing, imported)
-
-      expect(merged.categories[0].subcategories[0].topics).toHaveLength(2)
-      expect(merged.categories[0].subcategories[0].topics[0].id).toBe("topic-1")
-      expect(merged.categories[0].subcategories[0].topics[1].id).toBeNull()
+      expect(merged.categories[0].topics).toHaveLength(2)
     })
 
     it("should not duplicate existing topics with same name", () => {
@@ -323,16 +256,7 @@ describe("CSV Parser", () => {
             id: "cat-1",
             name: "カテゴリ",
             displayOrder: 0,
-            subcategories: [
-              {
-                id: "subcat-1",
-                name: "サブカテゴリ",
-                displayOrder: 0,
-                topics: [
-                  { id: "topic-1", name: "トピック", displayOrder: 0 },
-                ],
-              },
-            ],
+            topics: [{ id: "topic-1", name: "トピック", displayOrder: 0 }],
           },
         ],
       }
@@ -343,24 +267,15 @@ describe("CSV Parser", () => {
             id: null,
             name: "カテゴリ",
             displayOrder: 0,
-            subcategories: [
-              {
-                id: null,
-                name: "サブカテゴリ",
-                displayOrder: 0,
-                topics: [
-                  { id: null, name: "トピック", displayOrder: 0 }, // Same name
-                ],
-              },
-            ],
+            topics: [{ id: null, name: "トピック", displayOrder: 0 }], // Same name
           },
         ],
       }
 
       const merged = mergeTree(existing, imported)
 
-      expect(merged.categories[0].subcategories[0].topics).toHaveLength(1)
-      expect(merged.categories[0].subcategories[0].topics[0].id).toBe("topic-1") // Preserves existing
+      expect(merged.categories[0].topics).toHaveLength(1)
+      expect(merged.categories[0].topics[0].id).toBe("topic-1") // Preserves existing
     })
 
     it("should preserve display order and sort correctly", () => {
@@ -370,7 +285,7 @@ describe("CSV Parser", () => {
             id: "cat-1",
             name: "カテゴリ1",
             displayOrder: 0,
-            subcategories: [],
+            topics: [],
           },
         ],
       }
@@ -381,7 +296,7 @@ describe("CSV Parser", () => {
             id: null,
             name: "カテゴリ2",
             displayOrder: 0,
-            subcategories: [],
+            topics: [],
           },
         ],
       }

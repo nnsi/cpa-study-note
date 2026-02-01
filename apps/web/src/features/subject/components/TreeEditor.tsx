@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { useTreeState } from "../hooks/useTreeState"
 import { useSubjectTree, useUpdateSubjectTree, useImportCSV } from "../hooks/useSubjects"
-import type { CategoryNode, TopicNodeInput } from "../api"
+import type { TopicNodeInput } from "../api"
 import { TreeNode } from "./TreeNode"
 import { TopicDetailEditor } from "./TopicDetailEditor"
 import { CSVImporter } from "./CSVImporter"
@@ -19,7 +19,6 @@ export function TreeEditor({ subjectId, subjectName }: TreeEditorProps) {
   const treeState = useTreeState(tree?.categories ?? [])
   const [selectedTopic, setSelectedTopic] = useState<{
     categoryIdx: number
-    subcategoryIdx: number
     topicIdx: number
     topic: TopicNodeInput
   } | null>(null)
@@ -64,14 +63,10 @@ export function TreeEditor({ subjectId, subjectName }: TreeEditorProps) {
     }
   }
 
-  const handleTopicSelect = (
-    categoryIdx: number,
-    subcategoryIdx: number,
-    topicIdx: number
-  ) => {
-    const topic = treeState.categories[categoryIdx]?.subcategories[subcategoryIdx]?.topics[topicIdx]
+  const handleTopicSelect = (categoryIdx: number, topicIdx: number) => {
+    const topic = treeState.categories[categoryIdx]?.topics[topicIdx]
     if (topic) {
-      setSelectedTopic({ categoryIdx, subcategoryIdx, topicIdx, topic })
+      setSelectedTopic({ categoryIdx, topicIdx, topic })
     }
   }
 
@@ -79,7 +74,6 @@ export function TreeEditor({ subjectId, subjectName }: TreeEditorProps) {
     if (selectedTopic) {
       treeState.updateTopic(
         selectedTopic.categoryIdx,
-        selectedTopic.subcategoryIdx,
         selectedTopic.topicIdx,
         updates
       )
@@ -120,7 +114,7 @@ export function TreeEditor({ subjectId, subjectName }: TreeEditorProps) {
             <svg className="size-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
             </svg>
-            大単元を追加
+            カテゴリを追加
           </button>
           <button
             type="button"
@@ -179,10 +173,10 @@ export function TreeEditor({ subjectId, subjectName }: TreeEditorProps) {
             </svg>
           </div>
           <h3 className="heading-serif text-lg text-ink-700 mb-2">
-            単元がありません
+            カテゴリがありません
           </h3>
           <p className="text-sm text-ink-500 mb-6">
-            「大単元を追加」ボタンまたはCSVインポートで単元・論点を追加してください
+            「カテゴリを追加」ボタンまたはCSVインポートでカテゴリ・論点を追加してください
           </p>
         </div>
       ) : (
@@ -196,34 +190,24 @@ export function TreeEditor({ subjectId, subjectName }: TreeEditorProps) {
                 categoryIdx={categoryIdx}
                 onUpdateCategory={(name) => treeState.updateCategory(categoryIdx, name)}
                 onDeleteCategory={() => treeState.deleteCategory(categoryIdx)}
-                onAddSubcategory={() => treeState.addSubcategory(categoryIdx)}
-                onUpdateSubcategory={(subIdx, name) =>
-                  treeState.updateSubcategory(categoryIdx, subIdx, name)
+                onAddTopic={() => treeState.addTopic(categoryIdx)}
+                onUpdateTopic={(topicIdx, updates) =>
+                  treeState.updateTopic(categoryIdx, topicIdx, updates)
                 }
-                onDeleteSubcategory={(subIdx) =>
-                  treeState.deleteSubcategory(categoryIdx, subIdx)
+                onDeleteTopic={(topicIdx) =>
+                  treeState.deleteTopic(categoryIdx, topicIdx)
                 }
-                onAddTopic={(subIdx) => treeState.addTopic(categoryIdx, subIdx)}
-                onUpdateTopic={(subIdx, topicIdx, updates) =>
-                  treeState.updateTopic(categoryIdx, subIdx, topicIdx, updates)
-                }
-                onDeleteTopic={(subIdx, topicIdx) =>
-                  treeState.deleteTopic(categoryIdx, subIdx, topicIdx)
-                }
-                onSelectTopic={(subIdx, topicIdx) =>
-                  handleTopicSelect(categoryIdx, subIdx, topicIdx)
+                onSelectTopic={(topicIdx) =>
+                  handleTopicSelect(categoryIdx, topicIdx)
                 }
                 selectedTopicId={
                   selectedTopic?.categoryIdx === categoryIdx
-                    ? `${selectedTopic.subcategoryIdx}-${selectedTopic.topicIdx}`
+                    ? String(selectedTopic.topicIdx)
                     : null
                 }
                 onMoveCategory={(toIdx) => treeState.moveCategory(categoryIdx, toIdx)}
-                onMoveSubcategory={(fromSubIdx, toSubIdx) =>
-                  treeState.moveSubcategory(categoryIdx, fromSubIdx, toSubIdx)
-                }
-                onMoveTopic={(subIdx, fromTopicIdx, toTopicIdx) =>
-                  treeState.moveTopic(categoryIdx, subIdx, fromTopicIdx, toTopicIdx)
+                onMoveTopic={(fromTopicIdx, toTopicIdx) =>
+                  treeState.moveTopic(categoryIdx, fromTopicIdx, toTopicIdx)
                 }
                 totalCategories={treeState.categories.length}
               />

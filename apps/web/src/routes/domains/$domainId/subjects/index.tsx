@@ -116,9 +116,9 @@ function SubjectsPage() {
     })
   }
 
-  const getSubcategoryStats = (subcategory: CategoryNode["subcategories"][0]) => {
-    const topicCount = subcategory.topics.length
-    const understoodCount = subcategory.topics.filter(
+  const getCategoryStats = (category: CategoryNode) => {
+    const topicCount = category.topics.length
+    const understoodCount = category.topics.filter(
       (t) => progressMap.get(t.id)?.understood
     ).length
     return { topicCount, understoodCount }
@@ -331,28 +331,40 @@ function SubjectsPage() {
                         </div>
                       ) : categories.length === 0 ? (
                         <div className="py-6 text-center text-ink-500 text-sm">
-                          単元がありません
+                          カテゴリがありません
                         </div>
                       ) : (
-                        <div className="space-y-3">
+                        <div className="space-y-2">
                           {categories.map((category) => {
+                            const stats = getCategoryStats(category)
+                            const isAllUnderstood = stats.topicCount > 0 && stats.understoodCount === stats.topicCount
                             const isCategoryExpanded = expandedCategoryIds.has(category.id)
 
                             return (
-                              <div key={category.id}>
-                                {/* Category (大単元) Header */}
+                              <div key={category.id} className="bg-white rounded-xl border border-ink-100 overflow-hidden">
+                                {/* Category Header */}
                                 <button
                                   onClick={() => handleCategoryClick(category.id)}
-                                  className="w-full flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-white/80 transition-colors text-left"
+                                  className="w-full flex items-center gap-3 py-3 px-4 hover:bg-ink-50 transition-colors text-left"
                                 >
-                                  <div className="size-7 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600 flex-shrink-0">
-                                    <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" />
-                                    </svg>
+                                  <div className={`size-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                    isAllUnderstood ? "bg-jade-100 text-jade-600" : "bg-indigo-100 text-indigo-600"
+                                  }`}>
+                                    {isAllUnderstood ? (
+                                      <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                                      </svg>
+                                    ) : (
+                                      <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" />
+                                      </svg>
+                                    )}
                                   </div>
-                                  <span className="font-medium text-ink-800 flex-1">{category.name}</span>
-                                  <span className="text-sm text-ink-500">
-                                    {category.subcategories.length}単元
+                                  <span className={`font-medium flex-1 ${isAllUnderstood ? "text-jade-700" : "text-ink-800"}`}>
+                                    {category.name}
+                                  </span>
+                                  <span className={`text-sm ${isAllUnderstood ? "text-jade-600" : "text-ink-500"}`}>
+                                    {stats.understoodCount}/{stats.topicCount}
                                   </span>
                                   <div className={`text-ink-400 transition-transform ${isCategoryExpanded ? "rotate-180" : ""}`}>
                                     <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -361,86 +373,51 @@ function SubjectsPage() {
                                   </div>
                                 </button>
 
-                                {/* Subcategories (中単元) & Topics */}
-                                {isCategoryExpanded && (
-                                  <div className="ml-10 mt-2 space-y-2">
-                                    {category.subcategories.map((subcategory) => {
-                                      const stats = getSubcategoryStats(subcategory)
-                                      const isAllUnderstood = stats.topicCount > 0 && stats.understoodCount === stats.topicCount
+                                {/* Topics */}
+                                {isCategoryExpanded && category.topics.length > 0 && (
+                                  <div className="border-t border-ink-100 px-4 py-2 space-y-1">
+                                    {category.topics.map((topic) => {
+                                      const isUnderstood = progressMap.get(topic.id)?.understood
+                                      const sessionCount = statsMap.get(topic.id)?.sessionCount ?? 0
 
                                       return (
-                                        <div key={subcategory.id} className="bg-white rounded-xl p-3 border border-ink-100">
-                                          {/* Subcategory Header */}
-                                          <div className="flex items-center gap-2 mb-2">
-                                            <div className={`size-6 rounded-md flex items-center justify-center flex-shrink-0 ${
-                                              isAllUnderstood ? "bg-jade-100 text-jade-600" : "bg-ink-100 text-ink-500"
-                                            }`}>
-                                              {isAllUnderstood ? (
-                                                <svg className="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                                                </svg>
-                                              ) : (
-                                                <svg className="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                                                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 0 0-1.883 2.542l.857 6a2.25 2.25 0 0 0 2.227 1.932H19.05a2.25 2.25 0 0 0 2.227-1.932l.857-6a2.25 2.25 0 0 0-1.883-2.542m-16.5 0V6A2.25 2.25 0 0 1 6 3.75h3.879a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 0 1.06.44H18A2.25 2.25 0 0 1 20.25 9v.776" />
-                                                </svg>
-                                              )}
-                                            </div>
-                                            <span className={`font-medium text-sm ${isAllUnderstood ? "text-jade-700" : "text-ink-700"}`}>
-                                              {subcategory.name}
-                                            </span>
-                                            <span className="text-xs text-ink-400 ml-auto">
-                                              {stats.understoodCount}/{stats.topicCount}
-                                            </span>
+                                        <Link
+                                          key={topic.id}
+                                          to="/domains/$domainId/subjects/$subjectId/$categoryId/$topicId"
+                                          params={{
+                                            domainId,
+                                            subjectId: subject.id,
+                                            categoryId: category.id,
+                                            topicId: topic.id,
+                                          }}
+                                          className="flex items-center gap-2 py-1.5 px-2 -mx-1 rounded-lg hover:bg-indigo-50 transition-colors group"
+                                        >
+                                          <div className={`size-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                                            isUnderstood
+                                              ? "border-jade-500 bg-jade-500"
+                                              : "border-ink-300"
+                                          }`}>
+                                            {isUnderstood && (
+                                              <svg className="size-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                                              </svg>
+                                            )}
                                           </div>
-
-                                          {/* Topics */}
-                                          <div className="space-y-1">
-                                            {subcategory.topics.map((topic) => {
-                                              const isUnderstood = progressMap.get(topic.id)?.understood
-                                              const sessionCount = statsMap.get(topic.id)?.sessionCount ?? 0
-
-                                              return (
-                                                <Link
-                                                  key={topic.id}
-                                                  to="/domains/$domainId/subjects/$subjectId/$categoryId/$topicId"
-                                                  params={{
-                                                    domainId,
-                                                    subjectId: subject.id,
-                                                    categoryId: subcategory.id,
-                                                    topicId: topic.id,
-                                                  }}
-                                                  className="flex items-center gap-2 py-1.5 px-2 -mx-1 rounded-lg hover:bg-indigo-50 transition-colors group"
-                                                >
-                                                  <div className={`size-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                                                    isUnderstood
-                                                      ? "border-jade-500 bg-jade-500"
-                                                      : "border-ink-300"
-                                                  }`}>
-                                                    {isUnderstood && (
-                                                      <svg className="size-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                                                        <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                                                      </svg>
-                                                    )}
-                                                  </div>
-                                                  <span className="text-sm text-ink-700 group-hover:text-indigo-700 transition-colors flex-1 truncate">
-                                                    {topic.name}
-                                                  </span>
-                                                  {sessionCount > 0 && (
-                                                    <span className="text-xs text-ink-400 flex items-center gap-0.5">
-                                                      <svg className="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z" />
-                                                      </svg>
-                                                      {sessionCount}
-                                                    </span>
-                                                  )}
-                                                  <svg className="size-4 text-ink-300 group-hover:text-indigo-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                                    <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-                                                  </svg>
-                                                </Link>
-                                              )
-                                            })}
-                                          </div>
-                                        </div>
+                                          <span className="text-sm text-ink-700 group-hover:text-indigo-700 transition-colors flex-1 truncate">
+                                            {topic.name}
+                                          </span>
+                                          {sessionCount > 0 && (
+                                            <span className="text-xs text-ink-400 flex items-center gap-0.5">
+                                              <svg className="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z" />
+                                              </svg>
+                                              {sessionCount}
+                                            </span>
+                                          )}
+                                          <svg className="size-4 text-ink-300 group-hover:text-indigo-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                                          </svg>
+                                        </Link>
                                       )
                                     })}
                                   </div>

@@ -1,8 +1,7 @@
 import type { UpdateTreeRequest } from "@cpa-study/shared/schemas"
 
 export type ParsedRow = {
-  largeCategory: string
-  mediumCategory: string
+  category: string
   topic: string
 }
 
@@ -90,7 +89,7 @@ const parseCSVLine = (line: string): string[] => {
 
 /**
  * Parse CSV content into structured rows (RFC 4180 compliant)
- * Expected format: 大単元,中単元,論点
+ * Expected format: カテゴリ,論点
  */
 export const parseCSV = (csvContent: string): ParseResult => {
   const rows: ParsedRow[] = []
@@ -105,19 +104,19 @@ export const parseCSV = (csvContent: string): ParseResult => {
 
     const fields = parseCSVLine(line)
 
-    if (fields.length < 3) {
-      errors.push({ line: i + 1, message: "3列必要です（大単元, 中単元, 論点）" })
+    if (fields.length < 2) {
+      errors.push({ line: i + 1, message: "2列必要です（カテゴリ, 論点）" })
       continue
     }
 
-    const [large, medium, topic] = fields.map((f) => f.trim())
+    const [category, topic] = fields.map((f) => f.trim())
 
-    if (!large || !medium || !topic) {
+    if (!category || !topic) {
       errors.push({ line: i + 1, message: "空のフィールドがあります" })
       continue
     }
 
-    rows.push({ largeCategory: large, mediumCategory: medium, topic })
+    rows.push({ category, topic })
   }
 
   return { rows, errors }
@@ -131,56 +130,39 @@ export const convertToTree = (rows: ParsedRow[]): UpdateTreeRequest => {
     string,
     {
       name: string
-      subcategories: Map<string, { name: string; topics: string[] }>
+      topics: string[]
     }
   >()
 
   for (const row of rows) {
-    if (!categoryMap.has(row.largeCategory)) {
-      categoryMap.set(row.largeCategory, {
-        name: row.largeCategory,
-        subcategories: new Map(),
-      })
-    }
-
-    const category = categoryMap.get(row.largeCategory)!
-
-    if (!category.subcategories.has(row.mediumCategory)) {
-      category.subcategories.set(row.mediumCategory, {
-        name: row.mediumCategory,
+    if (!categoryMap.has(row.category)) {
+      categoryMap.set(row.category, {
+        name: row.category,
         topics: [],
       })
     }
 
-    const subcategory = category.subcategories.get(row.mediumCategory)!
+    const category = categoryMap.get(row.category)!
 
     // Avoid duplicates
-    if (!subcategory.topics.includes(row.topic)) {
-      subcategory.topics.push(row.topic)
+    if (!category.topics.includes(row.topic)) {
+      category.topics.push(row.topic)
     }
   }
 
   // Convert to tree format
   let categoryOrder = 0
   const categories = Array.from(categoryMap.values()).map((cat) => {
-    let subcategoryOrder = 0
+    let topicOrder = 0
     return {
       id: null,
       name: cat.name,
       displayOrder: categoryOrder++,
-      subcategories: Array.from(cat.subcategories.values()).map((subcat) => {
-        let topicOrder = 0
-        return {
-          id: null,
-          name: subcat.name,
-          displayOrder: subcategoryOrder++,
-          topics: subcat.topics.map((topicName) => ({
-            id: null,
-            name: topicName,
-            displayOrder: topicOrder++,
-          })),
-        }
-      }),
+      topics: cat.topics.map((topicName) => ({
+        id: null,
+        name: topicName,
+        displayOrder: topicOrder++,
+      })),
     }
   })
 
@@ -189,8 +171,7 @@ export const convertToTree = (rows: ParsedRow[]): UpdateTreeRequest => {
 
 /**
  * Merge imported tree into existing tree (append mode)
- * - Same category names are merged (subcategories combined)
- * - Same subcategory names within same category are merged (topics combined)
+ * - Same category names are merged (topics combined)
  * - Preserves existing IDs
  */
 export const mergeTree = (
@@ -204,44 +185,18 @@ export const mergeTree = (
       id: string | null
       name: string
       displayOrder: number
-      subcategories: Map<
-        string,
-        {
-          id: string | null
-          name: string
-          displayOrder: number
-          topics: Map<string, { id: string | null; name: string; displayOrder: number }>
-        }
-      >
+      topics: Map<string, { id: string | null; name: string; displayOrder: number }>
     }
   >()
 
   // Load existing into map
   for (const cat of existing.categories) {
-    const subcatMap = new Map<
-      string,
-      {
-        id: string | null
-        name: string
-        displayOrder: number
-        topics: Map<string, { id: string | null; name: string; displayOrder: number }>
-      }
-    >()
-
-    for (const subcat of cat.subcategories) {
-      const topicMap = new Map<string, { id: string | null; name: string; displayOrder: number }>()
-      for (const topic of subcat.topics) {
-        topicMap.set(topic.name, {
-          id: topic.id,
-          name: topic.name,
-          displayOrder: topic.displayOrder,
-        })
-      }
-      subcatMap.set(subcat.name, {
-        id: subcat.id,
-        name: subcat.name,
-        displayOrder: subcat.displayOrder,
-        topics: topicMap,
+    const topicMap = new Map<string, { id: string | null; name: string; displayOrder: number }>()
+    for (const topic of cat.topics) {
+      topicMap.set(topic.name, {
+        id: topic.id,
+        name: topic.name,
+        displayOrder: topic.displayOrder,
       })
     }
 
@@ -249,7 +204,7 @@ export const mergeTree = (
       id: cat.id,
       name: cat.name,
       displayOrder: cat.displayOrder,
-      subcategories: subcatMap,
+      topics: topicMap,
     })
   }
 
@@ -263,40 +218,24 @@ export const mergeTree = (
         id: null,
         name: importedCat.name,
         displayOrder: maxCategoryOrder++,
-        subcategories: new Map(),
+        topics: new Map(),
       })
     }
 
     const category = categoryMap.get(importedCat.name)!
-    let maxSubcategoryOrder =
-      Math.max(0, ...Array.from(category.subcategories.values()).map((s) => s.displayOrder)) + 1
+    let maxTopicOrder =
+      Math.max(0, ...Array.from(category.topics.values()).map((t) => t.displayOrder)) + 1
 
-    for (const importedSubcat of importedCat.subcategories) {
-      if (!category.subcategories.has(importedSubcat.name)) {
-        // New subcategory
-        category.subcategories.set(importedSubcat.name, {
+    for (const importedTopic of importedCat.topics) {
+      if (!category.topics.has(importedTopic.name)) {
+        // New topic
+        category.topics.set(importedTopic.name, {
           id: null,
-          name: importedSubcat.name,
-          displayOrder: maxSubcategoryOrder++,
-          topics: new Map(),
+          name: importedTopic.name,
+          displayOrder: maxTopicOrder++,
         })
       }
-
-      const subcategory = category.subcategories.get(importedSubcat.name)!
-      let maxTopicOrder =
-        Math.max(0, ...Array.from(subcategory.topics.values()).map((t) => t.displayOrder)) + 1
-
-      for (const importedTopic of importedSubcat.topics) {
-        if (!subcategory.topics.has(importedTopic.name)) {
-          // New topic
-          subcategory.topics.set(importedTopic.name, {
-            id: null,
-            name: importedTopic.name,
-            displayOrder: maxTopicOrder++,
-          })
-        }
-        // Existing topics are kept as-is (no update)
-      }
+      // Existing topics are kept as-is (no update)
     }
   }
 
@@ -307,19 +246,12 @@ export const mergeTree = (
       id: cat.id,
       name: cat.name,
       displayOrder: cat.displayOrder,
-      subcategories: Array.from(cat.subcategories.values())
+      topics: Array.from(cat.topics.values())
         .sort((a, b) => a.displayOrder - b.displayOrder)
-        .map((subcat) => ({
-          id: subcat.id,
-          name: subcat.name,
-          displayOrder: subcat.displayOrder,
-          topics: Array.from(subcat.topics.values())
-            .sort((a, b) => a.displayOrder - b.displayOrder)
-            .map((topic) => ({
-              id: topic.id,
-              name: topic.name,
-              displayOrder: topic.displayOrder,
-            })),
+        .map((topic) => ({
+          id: topic.id,
+          name: topic.name,
+          displayOrder: topic.displayOrder,
         })),
     }))
 

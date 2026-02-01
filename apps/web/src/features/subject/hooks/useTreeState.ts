@@ -1,10 +1,7 @@
 import { useState, useCallback } from "react"
 import type {
   CategoryNode,
-  SubcategoryNode,
-  TopicNode,
   CategoryNodeInput,
-  SubcategoryNodeInput,
   TopicNodeInput,
   UpdateTreeInput,
 } from "../api"
@@ -13,28 +10,20 @@ export type TreeState = {
   categories: CategoryNodeInput[]
 }
 
-// Generate temporary ID for new nodes
-const generateTempId = () => `temp_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
-
 // Convert API response to editable state
 function toEditableTree(categories: CategoryNode[]): CategoryNodeInput[] {
   return categories.map((cat, catIdx) => ({
     id: cat.id,
     name: cat.name,
     displayOrder: cat.displayOrder ?? catIdx,
-    subcategories: cat.subcategories.map((sub, subIdx) => ({
-      id: sub.id,
-      name: sub.name,
-      displayOrder: sub.displayOrder ?? subIdx,
-      topics: sub.topics.map((topic, topicIdx) => ({
-        id: topic.id,
-        name: topic.name,
-        description: topic.description,
-        difficulty: topic.difficulty,
-        topicType: topic.topicType,
-        aiSystemPrompt: topic.aiSystemPrompt,
-        displayOrder: topic.displayOrder ?? topicIdx,
-      })),
+    topics: cat.topics.map((topic, topicIdx) => ({
+      id: topic.id,
+      name: topic.name,
+      description: topic.description,
+      difficulty: topic.difficulty,
+      topicType: topic.topicType,
+      aiSystemPrompt: topic.aiSystemPrompt,
+      displayOrder: topic.displayOrder ?? topicIdx,
     })),
   }))
 }
@@ -52,14 +41,14 @@ export function useTreeState(initialCategories: CategoryNode[] = []) {
   }, [])
 
   // Add category
-  const addCategory = useCallback((name: string = "新しい単元") => {
+  const addCategory = useCallback((name: string = "新しいカテゴリ") => {
     setCategories((prev) => [
       ...prev,
       {
         id: null,
         name,
         displayOrder: prev.length,
-        subcategories: [],
+        topics: [],
       },
     ])
     setIsDirty(true)
@@ -79,103 +68,26 @@ export function useTreeState(initialCategories: CategoryNode[] = []) {
     setIsDirty(true)
   }, [])
 
-  // Add subcategory
-  const addSubcategory = useCallback(
-    (categoryIdx: number, name: string = "新しい中単元") => {
+  // Add topic
+  const addTopic = useCallback(
+    (categoryIdx: number, name: string = "新しい論点") => {
       setCategories((prev) =>
-        prev.map((cat, idx) =>
-          idx === categoryIdx
+        prev.map((cat, catIdx) =>
+          catIdx === categoryIdx
             ? {
                 ...cat,
-                subcategories: [
-                  ...cat.subcategories,
+                topics: [
+                  ...cat.topics,
                   {
                     id: null,
                     name,
-                    displayOrder: cat.subcategories.length,
-                    topics: [],
+                    description: null,
+                    difficulty: null,
+                    topicType: null,
+                    aiSystemPrompt: null,
+                    displayOrder: cat.topics.length,
                   },
                 ],
-              }
-            : cat
-        )
-      )
-      setIsDirty(true)
-    },
-    []
-  )
-
-  // Update subcategory name
-  const updateSubcategory = useCallback(
-    (categoryIdx: number, subcategoryIdx: number, name: string) => {
-      setCategories((prev) =>
-        prev.map((cat, catIdx) =>
-          catIdx === categoryIdx
-            ? {
-                ...cat,
-                subcategories: cat.subcategories.map((sub, subIdx) =>
-                  subIdx === subcategoryIdx ? { ...sub, name } : sub
-                ),
-              }
-            : cat
-        )
-      )
-      setIsDirty(true)
-    },
-    []
-  )
-
-  // Delete subcategory
-  const deleteSubcategory = useCallback(
-    (categoryIdx: number, subcategoryIdx: number) => {
-      setCategories((prev) =>
-        prev.map((cat, catIdx) =>
-          catIdx === categoryIdx
-            ? {
-                ...cat,
-                subcategories: cat.subcategories.filter(
-                  (_, subIdx) => subIdx !== subcategoryIdx
-                ),
-              }
-            : cat
-        )
-      )
-      setIsDirty(true)
-    },
-    []
-  )
-
-  // Add topic
-  const addTopic = useCallback(
-    (
-      categoryIdx: number,
-      subcategoryIdx: number,
-      name: string = "新しい論点"
-    ) => {
-      setCategories((prev) =>
-        prev.map((cat, catIdx) =>
-          catIdx === categoryIdx
-            ? {
-                ...cat,
-                subcategories: cat.subcategories.map((sub, subIdx) =>
-                  subIdx === subcategoryIdx
-                    ? {
-                        ...sub,
-                        topics: [
-                          ...sub.topics,
-                          {
-                            id: null,
-                            name,
-                            description: null,
-                            difficulty: null,
-                            topicType: null,
-                            aiSystemPrompt: null,
-                            displayOrder: sub.topics.length,
-                          },
-                        ],
-                      }
-                    : sub
-                ),
               }
             : cat
         )
@@ -189,7 +101,6 @@ export function useTreeState(initialCategories: CategoryNode[] = []) {
   const updateTopic = useCallback(
     (
       categoryIdx: number,
-      subcategoryIdx: number,
       topicIdx: number,
       updates: Partial<TopicNodeInput>
     ) => {
@@ -198,15 +109,8 @@ export function useTreeState(initialCategories: CategoryNode[] = []) {
           catIdx === categoryIdx
             ? {
                 ...cat,
-                subcategories: cat.subcategories.map((sub, subIdx) =>
-                  subIdx === subcategoryIdx
-                    ? {
-                        ...sub,
-                        topics: sub.topics.map((topic, tIdx) =>
-                          tIdx === topicIdx ? { ...topic, ...updates } : topic
-                        ),
-                      }
-                    : sub
+                topics: cat.topics.map((topic, tIdx) =>
+                  tIdx === topicIdx ? { ...topic, ...updates } : topic
                 ),
               }
             : cat
@@ -219,22 +123,13 @@ export function useTreeState(initialCategories: CategoryNode[] = []) {
 
   // Delete topic
   const deleteTopic = useCallback(
-    (categoryIdx: number, subcategoryIdx: number, topicIdx: number) => {
+    (categoryIdx: number, topicIdx: number) => {
       setCategories((prev) =>
         prev.map((cat, catIdx) =>
           catIdx === categoryIdx
             ? {
                 ...cat,
-                subcategories: cat.subcategories.map((sub, subIdx) =>
-                  subIdx === subcategoryIdx
-                    ? {
-                        ...sub,
-                        topics: sub.topics.filter(
-                          (_, tIdx) => tIdx !== topicIdx
-                        ),
-                      }
-                    : sub
-                ),
+                topics: cat.topics.filter((_, tIdx) => tIdx !== topicIdx),
               }
             : cat
         )
@@ -255,52 +150,18 @@ export function useTreeState(initialCategories: CategoryNode[] = []) {
     setIsDirty(true)
   }, [])
 
-  // Move subcategory within same category
-  const moveSubcategory = useCallback(
+  // Move topic within same category
+  const moveTopic = useCallback(
     (categoryIdx: number, fromIdx: number, toIdx: number) => {
       setCategories((prev) =>
         prev.map((cat, catIdx) => {
           if (catIdx !== categoryIdx) return cat
-          const newSubs = [...cat.subcategories]
-          const [moved] = newSubs.splice(fromIdx, 1)
-          newSubs.splice(toIdx, 0, moved)
+          const newTopics = [...cat.topics]
+          const [moved] = newTopics.splice(fromIdx, 1)
+          newTopics.splice(toIdx, 0, moved)
           return {
             ...cat,
-            subcategories: newSubs.map((sub, idx) => ({
-              ...sub,
-              displayOrder: idx,
-            })),
-          }
-        })
-      )
-      setIsDirty(true)
-    },
-    []
-  )
-
-  // Move topic within same subcategory
-  const moveTopic = useCallback(
-    (
-      categoryIdx: number,
-      subcategoryIdx: number,
-      fromIdx: number,
-      toIdx: number
-    ) => {
-      setCategories((prev) =>
-        prev.map((cat, catIdx) => {
-          if (catIdx !== categoryIdx) return cat
-          return {
-            ...cat,
-            subcategories: cat.subcategories.map((sub, subIdx) => {
-              if (subIdx !== subcategoryIdx) return sub
-              const newTopics = [...sub.topics]
-              const [moved] = newTopics.splice(fromIdx, 1)
-              newTopics.splice(toIdx, 0, moved)
-              return {
-                ...sub,
-                topics: newTopics.map((t, idx) => ({ ...t, displayOrder: idx })),
-              }
-            }),
+            topics: newTopics.map((t, idx) => ({ ...t, displayOrder: idx })),
           }
         })
       )
@@ -315,13 +176,9 @@ export function useTreeState(initialCategories: CategoryNode[] = []) {
       categories: categories.map((cat, catIdx) => ({
         ...cat,
         displayOrder: catIdx,
-        subcategories: cat.subcategories.map((sub, subIdx) => ({
-          ...sub,
-          displayOrder: subIdx,
-          topics: sub.topics.map((topic, topicIdx) => ({
-            ...topic,
-            displayOrder: topicIdx,
-          })),
+        topics: cat.topics.map((topic, topicIdx) => ({
+          ...topic,
+          displayOrder: topicIdx,
         })),
       })),
     }
@@ -334,14 +191,10 @@ export function useTreeState(initialCategories: CategoryNode[] = []) {
     addCategory,
     updateCategory,
     deleteCategory,
-    addSubcategory,
-    updateSubcategory,
-    deleteSubcategory,
     addTopic,
     updateTopic,
     deleteTopic,
     moveCategory,
-    moveSubcategory,
     moveTopic,
     getUpdatePayload,
   }

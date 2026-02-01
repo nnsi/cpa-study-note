@@ -38,18 +38,11 @@ export type TopicNode = {
   displayOrder: number
 }
 
-export type SubcategoryNode = {
-  id: string
-  name: string
-  displayOrder: number
-  topics: TopicNode[]
-}
-
 export type CategoryNode = {
   id: string
   name: string
   displayOrder: number
-  subcategories: SubcategoryNode[]
+  topics: TopicNode[]
 }
 
 export type TreeResponse = {
@@ -67,18 +60,11 @@ export type TopicNodeInput = {
   displayOrder: number
 }
 
-export type SubcategoryNodeInput = {
-  id: string | null
-  name: string
-  displayOrder: number
-  topics: TopicNodeInput[]
-}
-
 export type CategoryNodeInput = {
   id: string | null
   name: string
   displayOrder: number
-  subcategories: SubcategoryNodeInput[]
+  topics: TopicNodeInput[]
 }
 
 export type UpdateTreeInput = {
@@ -180,7 +166,7 @@ export const importCSV = async (
   csvContent: string
 ): Promise<{
   success: boolean
-  imported: { categories: number; subcategories: number; topics: number }
+  imported: { categories: number; topics: number }
   errors: Array<{ line: number; message: string }>
 }> => {
   const res = await api.api.subjects[":id"].import.$post({

@@ -14,22 +14,12 @@ export const topicNodeSchema = z.object({
 
 export type TopicNode = z.infer<typeof topicNodeSchema>
 
-// Subcategory (depth=2 category) node in tree
-export const subcategoryNodeSchema = z.object({
-  id: z.string().nullable(),
-  name: z.string().min(1, "名前は必須です").max(200, "名前は200文字以内で入力してください"),
-  displayOrder: z.number().int().min(0),
-  topics: z.array(topicNodeSchema),
-})
-
-export type SubcategoryNode = z.infer<typeof subcategoryNodeSchema>
-
-// Category (depth=1 category) node in tree
+// Category node in tree (directly contains topics)
 export const categoryNodeSchema = z.object({
   id: z.string().nullable(),
   name: z.string().min(1, "名前は必須です").max(200, "名前は200文字以内で入力してください"),
   displayOrder: z.number().int().min(0),
-  subcategories: z.array(subcategoryNodeSchema),
+  topics: z.array(topicNodeSchema),
 })
 
 export type CategoryNode = z.infer<typeof categoryNodeSchema>
@@ -54,20 +44,11 @@ export const topicNodeResponseSchema = z.object({
 
 export type TopicNodeResponse = z.infer<typeof topicNodeResponseSchema>
 
-export const subcategoryNodeResponseSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  displayOrder: z.number(),
-  topics: z.array(topicNodeResponseSchema),
-})
-
-export type SubcategoryNodeResponse = z.infer<typeof subcategoryNodeResponseSchema>
-
 export const categoryNodeResponseSchema = z.object({
   id: z.string(),
   name: z.string(),
   displayOrder: z.number(),
-  subcategories: z.array(subcategoryNodeResponseSchema),
+  topics: z.array(topicNodeResponseSchema),
 })
 
 export type CategoryNodeResponse = z.infer<typeof categoryNodeResponseSchema>
@@ -93,7 +74,6 @@ export const csvImportResponseSchema = z.object({
   success: z.boolean(),
   imported: z.object({
     categories: z.number(),
-    subcategories: z.number(),
     topics: z.number(),
   }),
   errors: z.array(
