@@ -73,16 +73,18 @@ export function CSVImporter({ onImport, onClose, isLoading }: CSVImporterProps) 
           <div className="mb-4 p-4 bg-indigo-50 rounded-xl">
             <h3 className="font-medium text-indigo-900 mb-2">CSV形式</h3>
             <p className="text-sm text-indigo-700 mb-2">
-              2列のCSVファイルをインポートできます:
+              3列のCSVファイルをインポートできます:
             </p>
             <pre className="text-xs bg-white/50 p-2 rounded font-mono text-indigo-800">
-              カテゴリ,論点{"\n"}
-              資産会計,棚卸資産の評価{"\n"}
-              資産会計,有価証券の評価{"\n"}
-              負債会計,引当金の計上
+              科目,カテゴリ,論点{"\n"}
+              財務会計,資産会計,棚卸資産の評価{"\n"}
+              財務会計,資産会計,有価証券の評価{"\n"}
+              財務会計,負債会計,引当金の計上
             </pre>
             <p className="text-xs text-indigo-600 mt-2">
               * ヘッダー行は自動でスキップされます
+              <br />
+              * この科目に一致する行のみがインポートされます
               <br />
               * 既存の同名カテゴリには追加されます
             </p>
@@ -122,7 +124,7 @@ export function CSVImporter({ onImport, onClose, isLoading }: CSVImporterProps) 
                 setError(null)
               }}
               rows={8}
-              placeholder="カテゴリ,論点&#10;資産会計,棚卸資産の評価&#10;..."
+              placeholder="科目,カテゴリ,論点&#10;財務会計,資産会計,棚卸資産の評価&#10;..."
               className="w-full px-3 py-2 rounded-lg border border-ink-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono text-sm resize-none"
             />
           </div>

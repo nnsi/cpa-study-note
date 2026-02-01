@@ -1,6 +1,7 @@
 import type { UpdateTreeRequest } from "@cpa-study/shared/schemas"
 
 export type ParsedRow = {
+  subject: string
   category: string
   topic: string
 }
@@ -89,7 +90,7 @@ const parseCSVLine = (line: string): string[] => {
 
 /**
  * Parse CSV content into structured rows (RFC 4180 compliant)
- * Expected format: カテゴリ,論点
+ * Expected format: 科目,カテゴリ,論点
  */
 export const parseCSV = (csvContent: string): ParseResult => {
   const rows: ParsedRow[] = []
@@ -104,19 +105,19 @@ export const parseCSV = (csvContent: string): ParseResult => {
 
     const fields = parseCSVLine(line)
 
-    if (fields.length < 2) {
-      errors.push({ line: i + 1, message: "2列必要です（カテゴリ, 論点）" })
+    if (fields.length < 3) {
+      errors.push({ line: i + 1, message: "3列必要です（科目, カテゴリ, 論点）" })
       continue
     }
 
-    const [category, topic] = fields.map((f) => f.trim())
+    const [subject, category, topic] = fields.map((f) => f.trim())
 
-    if (!category || !topic) {
+    if (!subject || !category || !topic) {
       errors.push({ line: i + 1, message: "空のフィールドがあります" })
       continue
     }
 
-    rows.push({ category, topic })
+    rows.push({ subject, category, topic })
   }
 
   return { rows, errors }

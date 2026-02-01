@@ -3,37 +3,39 @@ import { parseCSV, convertToTree, mergeTree } from "./csv-parser"
 
 describe("CSV Parser", () => {
   describe("parseCSV", () => {
-    it("should parse basic CSV with 2 columns", () => {
-      const csv = `カテゴリ,論点
-会計公準,企業実体の公準
-会計公準,継続企業の公準`
+    it("should parse basic CSV with 3 columns", () => {
+      const csv = `科目,カテゴリ,論点
+財務会計,会計公準,企業実体の公準
+財務会計,会計公準,継続企業の公準`
 
       const result = parseCSV(csv)
 
       expect(result.errors).toHaveLength(0)
       expect(result.rows).toHaveLength(2)
       expect(result.rows[0]).toEqual({
+        subject: "財務会計",
         category: "会計公準",
         topic: "企業実体の公準",
       })
     })
 
     it("should skip header row", () => {
-      const csv = `カテゴリ,論点
-サブカテゴリ,トピック`
+      const csv = `科目,カテゴリ,論点
+科目名,カテゴリ名,トピック名`
 
       const result = parseCSV(csv)
 
       expect(result.rows).toHaveLength(1)
-      expect(result.rows[0].category).toBe("サブカテゴリ")
+      expect(result.rows[0].subject).toBe("科目名")
+      expect(result.rows[0].category).toBe("カテゴリ名")
     })
 
     it("should skip empty lines", () => {
-      const csv = `カテゴリ,論点
+      const csv = `科目,カテゴリ,論点
 
-カテゴリ1,トピック1
+科目1,カテゴリ1,トピック1
 
-カテゴリ2,トピック2
+科目2,カテゴリ2,トピック2
 `
 
       const result = parseCSV(csv)
@@ -42,18 +44,19 @@ describe("CSV Parser", () => {
     })
 
     it("should handle quoted fields with comma", () => {
-      const csv = `カテゴリ,論点
-"カンマ,を含むカテゴリ",トピック`
+      const csv = `科目,カテゴリ,論点
+"カンマ,を含む科目","カンマ,を含むカテゴリ",トピック`
 
       const result = parseCSV(csv)
 
       expect(result.errors).toHaveLength(0)
+      expect(result.rows[0].subject).toBe("カンマ,を含む科目")
       expect(result.rows[0].category).toBe("カンマ,を含むカテゴリ")
     })
 
     it("should handle escaped double quotes", () => {
-      const csv = `カテゴリ,論点
-"引用符""を含む",トピック`
+      const csv = `科目,カテゴリ,論点
+科目名,"引用符""を含む",トピック`
 
       const result = parseCSV(csv)
 
@@ -62,8 +65,8 @@ describe("CSV Parser", () => {
     })
 
     it("should handle newline within quoted field", () => {
-      const csv = `カテゴリ,論点
-"複数行
+      const csv = `科目,カテゴリ,論点
+科目名,"複数行
 のカテゴリ",トピック`
 
       const result = parseCSV(csv)
@@ -73,19 +76,19 @@ describe("CSV Parser", () => {
     })
 
     it("should report error for insufficient columns", () => {
-      const csv = `カテゴリ,論点
-カテゴリのみ`
+      const csv = `科目,カテゴリ,論点
+科目名,カテゴリのみ`
 
       const result = parseCSV(csv)
 
       expect(result.errors).toHaveLength(1)
       expect(result.errors[0].line).toBe(2)
-      expect(result.errors[0].message).toContain("2列")
+      expect(result.errors[0].message).toContain("3列")
     })
 
     it("should report error for empty fields", () => {
-      const csv = `カテゴリ,論点
-カテゴリ,`
+      const csv = `科目,カテゴリ,論点
+科目名,カテゴリ,`
 
       const result = parseCSV(csv)
 
@@ -95,9 +98,9 @@ describe("CSV Parser", () => {
     })
 
     it("should continue parsing after errors", () => {
-      const csv = `カテゴリ,論点
-カテゴリ1
-カテゴリ2,トピック2`
+      const csv = `科目,カテゴリ,論点
+科目1,カテゴリ1
+科目2,カテゴリ2,トピック2`
 
       const result = parseCSV(csv)
 
@@ -107,7 +110,7 @@ describe("CSV Parser", () => {
     })
 
     it("should handle CRLF line endings", () => {
-      const csv = "カテゴリ,論点\r\nカテゴリ1,トピック1\r\n"
+      const csv = "科目,カテゴリ,論点\r\n科目1,カテゴリ1,トピック1\r\n"
 
       const result = parseCSV(csv)
 
@@ -116,22 +119,23 @@ describe("CSV Parser", () => {
     })
 
     it("should trim whitespace from fields", () => {
-      const csv = `カテゴリ,論点
- カテゴリ , トピック `
+      const csv = `科目,カテゴリ,論点
+ 科目 , カテゴリ , トピック `
 
       const result = parseCSV(csv)
 
+      expect(result.rows[0].subject).toBe("科目")
       expect(result.rows[0].category).toBe("カテゴリ")
       expect(result.rows[0].topic).toBe("トピック")
     })
   })
 
   describe("convertToTree", () => {
-    it("should convert rows to tree structure", () => {
+    it("should convert rows to tree structure (subject field is ignored)", () => {
       const rows = [
-        { category: "カテゴリ1", topic: "トピック1" },
-        { category: "カテゴリ1", topic: "トピック2" },
-        { category: "カテゴリ2", topic: "トピック3" },
+        { subject: "財務会計", category: "カテゴリ1", topic: "トピック1" },
+        { subject: "財務会計", category: "カテゴリ1", topic: "トピック2" },
+        { subject: "財務会計", category: "カテゴリ2", topic: "トピック3" },
       ]
 
       const tree = convertToTree(rows)
@@ -144,8 +148,8 @@ describe("CSV Parser", () => {
 
     it("should handle multiple categories", () => {
       const rows = [
-        { category: "カテゴリ1", topic: "トピック1" },
-        { category: "カテゴリ2", topic: "トピック2" },
+        { subject: "財務会計", category: "カテゴリ1", topic: "トピック1" },
+        { subject: "財務会計", category: "カテゴリ2", topic: "トピック2" },
       ]
 
       const tree = convertToTree(rows)
@@ -157,8 +161,8 @@ describe("CSV Parser", () => {
 
     it("should deduplicate topics within same category", () => {
       const rows = [
-        { category: "カテゴリ1", topic: "トピック1" },
-        { category: "カテゴリ1", topic: "トピック1" }, // Duplicate
+        { subject: "財務会計", category: "カテゴリ1", topic: "トピック1" },
+        { subject: "財務会計", category: "カテゴリ1", topic: "トピック1" }, // Duplicate
       ]
 
       const tree = convertToTree(rows)
@@ -168,8 +172,8 @@ describe("CSV Parser", () => {
 
     it("should assign display orders starting from 0", () => {
       const rows = [
-        { category: "カテゴリ1", topic: "トピック1" },
-        { category: "カテゴリ2", topic: "トピック2" },
+        { subject: "財務会計", category: "カテゴリ1", topic: "トピック1" },
+        { subject: "財務会計", category: "カテゴリ2", topic: "トピック2" },
       ]
 
       const tree = convertToTree(rows)
@@ -179,7 +183,7 @@ describe("CSV Parser", () => {
     })
 
     it("should set all IDs to null (new nodes)", () => {
-      const rows = [{ category: "カテゴリ1", topic: "トピック1" }]
+      const rows = [{ subject: "財務会計", category: "カテゴリ1", topic: "トピック1" }]
 
       const tree = convertToTree(rows)
 

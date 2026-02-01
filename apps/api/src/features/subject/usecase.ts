@@ -320,6 +320,8 @@ export const updateSubjectTree = async (
 
 /**
  * Import CSV data into subject's tree (append mode)
+ * CSV format: 科目,カテゴリ,論点
+ * Only rows matching the target subject name are imported
  */
 export const importCSVToSubject = async (
   deps: TreeUseCaseDeps,
@@ -327,7 +329,12 @@ export const importCSVToSubject = async (
   subjectId: string,
   csvContent: string
 ): Promise<Result<CSVImportResponse, CSVImportError>> => {
-  // 1. Get existing tree (also validates ownership)
+  // 1. Get subject info and existing tree
+  const subject = await deps.subjectRepo.findById(subjectId, userId)
+  if (!subject) {
+    return err("NOT_FOUND")
+  }
+
   const existingTreeResult = await getSubjectTree(deps, userId, subjectId)
   if (!existingTreeResult.ok) {
     return err("NOT_FOUND")
@@ -336,16 +343,24 @@ export const importCSVToSubject = async (
   // 2. Parse CSV
   const { rows, errors } = parseCSV(csvContent)
 
-  if (rows.length === 0) {
+  // 3. Filter rows by subject name (case-insensitive match)
+  const filteredRows = rows.filter(
+    (row) => row.subject.toLowerCase() === subject.name.toLowerCase()
+  )
+
+  if (filteredRows.length === 0) {
+    const message = rows.length > 0
+      ? `科目「${subject.name}」に一致するデータがありません`
+      : "インポートするデータがありません"
     return ok({
       success: false,
       imported: { categories: 0, topics: 0 },
-      errors: errors.length > 0 ? errors : [{ line: 0, message: "インポートするデータがありません" }],
+      errors: errors.length > 0 ? errors : [{ line: 0, message }],
     })
   }
 
-  // 3. Convert to tree structure
-  const importedTree = convertToTree(rows)
+  // 4. Convert to tree structure
+  const importedTree = convertToTree(filteredRows)
 
   // 4. Convert existing tree to updatable format (with IDs as string | null)
   const existingTreeForMerge = {

@@ -604,9 +604,9 @@ describe("Subject UseCase - Tree Operations", () => {
       const { id: domainId } = createTestStudyDomain(db, userId)
       const { id: subjectId } = createTestSubject(db, userId, domainId)
 
-      const csv = `カテゴリ,論点
-カテゴリ1,トピック1
-カテゴリ1,トピック2`
+      const csv = `科目,カテゴリ,論点
+Test Subject,カテゴリ1,トピック1
+Test Subject,カテゴリ1,トピック2`
 
       const result = await importCSVToSubject(treeDeps, userId, subjectId, csv)
 
@@ -633,8 +633,8 @@ describe("Subject UseCase - Tree Operations", () => {
       const { id: catId } = createTestCategory(db, userId, subjectId, { name: "カテゴリ1", depth: 1 })
       createTestTopic(db, userId, catId, { name: "既存トピック" })
 
-      const csv = `カテゴリ,論点
-カテゴリ1,新規トピック`
+      const csv = `科目,カテゴリ,論点
+Test Subject,カテゴリ1,新規トピック`
 
       const result = await importCSVToSubject(treeDeps, userId, subjectId, csv)
 
@@ -655,8 +655,8 @@ describe("Subject UseCase - Tree Operations", () => {
     it("should return NOT_FOUND for non-existent subject", async () => {
       const { id: userId } = createTestUser(db)
 
-      const csv = `カテゴリ,論点
-カテゴリ,トピック`
+      const csv = `科目,カテゴリ,論点
+Test Subject,カテゴリ,トピック`
 
       const result = await importCSVToSubject(treeDeps, userId, "non-existent", csv)
 
@@ -671,7 +671,7 @@ describe("Subject UseCase - Tree Operations", () => {
       const { id: domainId } = createTestStudyDomain(db, userId)
       const { id: subjectId } = createTestSubject(db, userId, domainId)
 
-      const csv = `カテゴリ,論点
+      const csv = `科目,カテゴリ,論点
 `
 
       const result = await importCSVToSubject(treeDeps, userId, subjectId, csv)
@@ -681,6 +681,51 @@ describe("Subject UseCase - Tree Operations", () => {
         expect(result.value.success).toBe(false)
         expect(result.value.errors).toHaveLength(1)
         expect(result.value.errors[0].message).toContain("インポートするデータがありません")
+      }
+    })
+
+    it("should only import rows matching the subject name", async () => {
+      const { id: userId } = createTestUser(db)
+      const { id: domainId } = createTestStudyDomain(db, userId)
+      const { id: subjectId } = createTestSubject(db, userId, domainId, { name: "財務会計" })
+
+      const csv = `科目,カテゴリ,論点
+財務会計,資産会計,棚卸資産
+管理会計,原価計算,標準原価計算
+財務会計,負債会計,引当金`
+
+      const result = await importCSVToSubject(treeDeps, userId, subjectId, csv)
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.value.success).toBe(true)
+        expect(result.value.imported.categories).toBe(2) // 資産会計, 負債会計
+        expect(result.value.imported.topics).toBe(2) // 棚卸資産, 引当金
+      }
+
+      // Verify only 財務会計 rows were imported
+      const tree = await getSubjectTree(treeDeps, userId, subjectId)
+      expect(tree.ok).toBe(true)
+      if (tree.ok) {
+        expect(tree.value.categories).toHaveLength(2)
+        expect(tree.value.categories.map(c => c.name).sort()).toEqual(["負債会計", "資産会計"])
+      }
+    })
+
+    it("should return success=false when no rows match the subject", async () => {
+      const { id: userId } = createTestUser(db)
+      const { id: domainId } = createTestStudyDomain(db, userId)
+      const { id: subjectId } = createTestSubject(db, userId, domainId, { name: "財務会計" })
+
+      const csv = `科目,カテゴリ,論点
+管理会計,原価計算,標準原価計算`
+
+      const result = await importCSVToSubject(treeDeps, userId, subjectId, csv)
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.value.success).toBe(false)
+        expect(result.value.errors[0].message).toContain("財務会計")
       }
     })
   })
