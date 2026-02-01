@@ -1,0 +1,204 @@
+{
+  "id": "financial",
+  "name": "財務会計論",
+  "description": "財務諸表論と簿記論を含む",
+  "emoji": "📘",
+  "color": "blue",
+  "displayOrder": 1,
+  "categories": [
+    {
+      "id": "financial-meaning",
+      "name": "財務会計の意義と機能",
+      "displayOrder": 1,
+      "subcategories": [
+        {
+          "id": "financial-meaning-meaning",
+          "name": "財務会計の意義",
+          "displayOrder": 1,
+          "topics": []
+        },
+        {
+          "id": "financial-meaning-function",
+          "name": "財務会計の機能",
+          "displayOrder": 2,
+          "topics": [
+            { "name": "情報提供機能" },
+            { "name": "利害調整機能" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "financial-basics",
+      "name": "財務会計の基礎概念",
+      "displayOrder": 2,
+      "subcategories": [
+        {
+          "id": "financial-basics-postulate",
+          "name": "会計公準",
+          "displayOrder": 1,
+          "topics": [
+            { "name": "企業実体の公準" },
+            { "name": "会計期間の公準" },
+            { "name": "貨幣的測定の公準" }
+          ]
+        },
+        {
+          "id": "financial-basics-entity",
+          "name": "会計主体論",
+          "displayOrder": 2,
+          "topics": [
+            { "name": "資本主理論" },
+            { "name": "企業実体理論" }
+          ]
+        },
+        {
+          "id": "financial-basics-profit",
+          "name": "利益概念",
+          "displayOrder": 3,
+          "topics": [
+            { "name": "現金主義会計" },
+            { "name": "発生主義会計" },
+            { "name": "財産法" },
+            { "name": "損益法" },
+            { "name": "資産負債アプローチ" },
+            { "name": "収益費用アプローチ" },
+            { "name": "当期業績主義" },
+            { "name": "包括主義" },
+            { "name": "純利益" },
+            { "name": "包括利益" },
+            { "name": "資本維持論" },
+            { "name": "資産評価と利益計算" },
+            { "name": "実現主義" },
+            { "name": "費用収益の対応" }
+          ]
+        },
+        {
+          "id": "financial-basics-framework",
+          "name": "概念フレームワーク",
+          "displayOrder": 4,
+          "topics": [
+            { "name": "財務報告の目的" },
+            { "name": "会計情報の質的特性" },
+            { "name": "財務諸表の構成要素" },
+            { "name": "認識と測定" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "financial-bookkeeping",
+      "name": "複式簿記の基本原理",
+      "displayOrder": 3,
+      "subcategories": [
+        {
+          "id": "financial-bookkeeping-transaction",
+          "name": "取引と仕訳",
+          "displayOrder": 1,
+          "topics": []
+        },
+        {
+          "id": "financial-bookkeeping-account",
+          "name": "勘定記入",
+          "displayOrder": 2,
+          "topics": []
+        },
+        {
+          "id": "financial-bookkeeping-ledger",
+          "name": "帳簿組織",
+          "displayOrder": 3,
+          "topics": []
+        },
+        {
+          "id": "financial-bookkeeping-closing",
+          "name": "決算手続",
+          "displayOrder": 4,
+          "topics": []
+        },
+        {
+          "id": "financial-bookkeeping-branch",
+          "name": "本支店会計",
+          "displayOrder": 5,
+          "topics": []
+        }
+      ]
+    },
+    {
+      "id": "financial-system",
+      "name": "企業会計制度と会計基準",
+      "displayOrder": 4,
+      "subcategories": [
+        {
+          "id": "financial-system-company",
+          "name": "会社法会計",
+          "displayOrder": 1,
+          "topics": []
+        },
+        {
+          "id": "financial-system-fiel",
+          "name": "金融商品取引法会計",
+          "displayOrder": 2,
+          "topics": []
+        },
+        {
+          "id": "financial-system-standards",
+          "name": "会計基準",
+          "displayOrder": 3,
+          "topics": [
+            { "name": "企業会計原則" },
+            { "name": "一般原則" },
+            { "name": "企業会計基準" },
+            { "name": "国際的コンバージェンス" },
+            { "name": "指定国際会計基準" },
+            { "name": "修正国際基準の取扱い" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "financial-assets",
+      "name": "資産会計総論",
+      "displayOrder": 5,
+      "subcategories": [
+        {
+          "id": "financial-assets-meaning",
+          "name": "資産の意義",
+          "displayOrder": 1,
+          "topics": [
+            { "name": "定義" },
+            { "name": "認識" }
+          ]
+        },
+        {
+          "id": "financial-assets-classification",
+          "name": "資産の分類",
+          "displayOrder": 2,
+          "topics": [
+            { "name": "流動資産" },
+            { "name": "固定資産" },
+            { "name": "貨幣性資産" },
+            { "name": "費用性資産" },
+            { "name": "金融資産" },
+            { "name": "事業資産" }
+          ]
+        },
+        {
+          "id": "financial-assets-valuation",
+          "name": "資産の評価",
+          "displayOrder": 3,
+          "topics": [
+            { "name": "原価" },
+            { "name": "時価" },
+            { "name": "現在価値" }
+          ]
+        },
+        {
+          "id": "financial-assets-allocation",
+          "name": "費用配分の原理",
+          "displayOrder": 4,
+          "topics": []
+        }
+      ]
+    }
+  ]
+}

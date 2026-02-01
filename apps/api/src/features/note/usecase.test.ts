@@ -73,6 +73,7 @@ const createMockChatRepo = (overrides: Partial<ChatRepository> = {}): ChatReposi
   findSessionsWithStatsByTopic: vi.fn().mockResolvedValue([]),
   getSessionMessageCount: vi.fn().mockResolvedValue(0),
   getSessionQualityStats: vi.fn().mockResolvedValue({ goodCount: 0, surfaceCount: 0 }),
+  getTopicWithHierarchy: vi.fn().mockResolvedValue(null),
   createMessage: vi.fn().mockResolvedValue(createMockMessage()),
   findMessageById: vi.fn().mockResolvedValue(null),
   findMessagesBySession: vi.fn().mockResolvedValue([]),
@@ -125,6 +126,7 @@ const createMockTopicRepo = (overrides: Partial<TopicRepository> = {}): TopicRep
   createCheckHistory: vi.fn().mockResolvedValue({} as ReturnType<TopicRepository["createCheckHistory"]> extends Promise<infer T> ? T : never),
   findCheckHistoryByTopic: vi.fn().mockResolvedValue([]),
   findFilteredTopics: vi.fn().mockResolvedValue([]),
+  searchTopics: vi.fn().mockResolvedValue([]),
   ...overrides,
 })
 

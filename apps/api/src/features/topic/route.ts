@@ -2,7 +2,10 @@ import { Hono } from "hono"
 import { zValidator } from "@hono/zod-validator"
 import { z } from "zod"
 import type { Db } from "@cpa-study/db"
-import { topicFilterRequestSchema } from "@cpa-study/shared/schemas"
+import {
+  topicFilterRequestSchema,
+  topicSearchRequestSchema,
+} from "@cpa-study/shared/schemas"
 import type { Env, Variables } from "@/shared/types/env"
 import {
   authMiddleware,
@@ -21,6 +24,8 @@ import {
   getCheckHistory,
   filterTopics,
   listRecentTopics,
+  resolveStudyDomainId,
+  searchTopics,
 } from "./usecase"
 
 type TopicDeps = {
@@ -34,10 +39,23 @@ export const topicRoutes = ({ db }: TopicDeps) => {
 
   const app = new Hono<{ Bindings: Env; Variables: Variables }>()
     // 科目一覧
-    .get("/", async (c) => {
-      const subjects = await listSubjects(deps)
-      return c.json({ subjects })
-    })
+    .get(
+      "/",
+      optionalAuthMiddleware,
+      zValidator(
+        "query",
+        z.object({
+          studyDomainId: z.string().optional(),
+        })
+      ),
+      async (c) => {
+        const { studyDomainId: explicitStudyDomainId } = c.req.valid("query")
+        const user = c.get("user")
+        const studyDomainId = resolveStudyDomainId(explicitStudyDomainId, user)
+        const subjects = await listSubjects(deps, studyDomainId)
+        return c.json({ subjects })
+      }
+    )
 
     // 論点フィルタ（/:subjectId より前に定義）
     .get(
@@ -51,6 +69,23 @@ export const topicRoutes = ({ db }: TopicDeps) => {
         const topics = await filterTopics(deps, user.id, filters)
 
         return c.json({ topics })
+      }
+    )
+
+    // 論点検索（/:subjectId より前に定義）
+    .get(
+      "/search",
+      authMiddleware,
+      zValidator("query", topicSearchRequestSchema),
+      async (c) => {
+        const user = c.get("user")
+        const { q, limit, studyDomainId: explicitStudyDomainId } = c.req.valid("query")
+
+        // 明示的に指定されたstudyDomainIdを優先、なければユーザーのデフォルト
+        const studyDomainId = resolveStudyDomainId(explicitStudyDomainId, user)
+        const results = await searchTopics(deps, studyDomainId, q, limit)
+
+        return c.json({ results, total: results.length })
       }
     )
 

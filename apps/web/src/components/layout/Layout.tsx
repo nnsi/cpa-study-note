@@ -7,9 +7,10 @@ import { useAuthStore } from "@/lib/auth";
 
 type Props = {
   children: ReactNode;
+  onSearchClick?: () => void;
 };
 
-export const Layout = ({ children }: Props) => {
+export const Layout = ({ children, onSearchClick }: Props) => {
   const { isAuthenticated } = useAuthStore();
   const location = useLocation();
   const loggedIn = isAuthenticated();
@@ -27,7 +28,7 @@ export const Layout = ({ children }: Props) => {
     <div className="min-h-dvh flex flex-col">
       {/* PC: 常に表示、モバイル: ホームのみ表示 */}
       <div className={showMobileHeader ? "" : "hidden lg:block"}>
-        <Header />
+        <Header onSearchClick={onSearchClick} />
       </div>
       <div className="flex flex-1 min-h-0">
         {/* PC: サイドバー表示（ログイン時のみ） */}

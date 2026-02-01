@@ -1,0 +1,6 @@
+export { GlobalSearchModal } from "./components/GlobalSearchModal"
+export { SearchInput } from "./components/SearchInput"
+export { SearchResultItem } from "./components/SearchResultItem"
+export { useGlobalSearch, useSearchModal, useSearchNavigation } from "./hooks"
+export { isSearchShortcut, getTopicUrl, highlightMatch } from "./logic"
+export type { TopicSearchResult } from "./api"

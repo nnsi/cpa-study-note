@@ -6,8 +6,10 @@ export const getMyProgress = async () => {
   return res.json()
 }
 
-export const getSubjects = async () => {
-  const res = await api.api.subjects.$get()
+export const getSubjects = async (studyDomainId?: string) => {
+  const res = await api.api.subjects.$get({
+    query: studyDomainId ? { studyDomainId } : {},
+  })
   if (!res.ok) throw new Error("Failed to fetch subjects")
   return res.json()
 }

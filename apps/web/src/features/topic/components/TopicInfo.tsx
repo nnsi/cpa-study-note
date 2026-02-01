@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { api } from "@/lib/api-client"
 import { useCheckHistory } from "../hooks"
 import type { CheckHistoryItem } from "../api"
+import { BookmarkButton } from "@/features/bookmark"
 
 type Topic = {
   id: string
@@ -65,6 +66,12 @@ export const TopicInfo = ({ topic, subjectId, sessions = [] }: Props) => {
 
   return (
     <div className="p-4 space-y-6">
+      {/* ブックマークボタン */}
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-ink-500">この論点をブックマーク</span>
+        <BookmarkButton targetType="topic" targetId={topic.id} size="md" />
+      </div>
+
       {topic.description && (
         <p className="text-sm text-ink-600">{topic.description}</p>
       )}

@@ -14,15 +14,20 @@ import {
   getSubjectProgressStats,
   getCheckHistory,
   filterTopics,
+  resolveStudyDomainId,
 } from "./usecase"
+import { DEFAULT_STUDY_DOMAIN_ID } from "@cpa-study/shared/constants"
 
 // テストデータ生成ヘルパー
 const createMockDate = (offset = 0) => new Date(Date.now() + offset)
 
 const createMockSubject = (overrides = {}) => ({
   id: "subject-1",
+  studyDomainId: "cpa",
   name: "財務会計論",
   description: "財務会計論の科目",
+  emoji: "📊",
+  color: "indigo",
   displayOrder: 1,
   createdAt: createMockDate(),
   updatedAt: createMockDate(),
@@ -97,10 +102,33 @@ const createMockRepo = (overrides: Partial<TopicRepository> = {}): TopicReposito
   createCheckHistory: vi.fn().mockResolvedValue(createMockCheckHistory()),
   findCheckHistoryByTopic: vi.fn().mockResolvedValue([]),
   findFilteredTopics: vi.fn().mockResolvedValue([]),
+  searchTopics: vi.fn().mockResolvedValue([]),
   ...overrides,
 })
 
 describe("Topic UseCase", () => {
+  describe("resolveStudyDomainId", () => {
+    it("明示的に指定されたIDを優先する", () => {
+      const result = resolveStudyDomainId("explicit-domain", { id: "user-1", defaultStudyDomainId: "user-domain" })
+      expect(result).toBe("explicit-domain")
+    })
+
+    it("明示的なIDがない場合はユーザーのデフォルトを使う", () => {
+      const result = resolveStudyDomainId(undefined, { id: "user-1", defaultStudyDomainId: "user-domain" })
+      expect(result).toBe("user-domain")
+    })
+
+    it("ユーザーにデフォルトがない場合はシステムのデフォルトを使う", () => {
+      const result = resolveStudyDomainId(undefined, { id: "user-1", defaultStudyDomainId: null })
+      expect(result).toBe(DEFAULT_STUDY_DOMAIN_ID)
+    })
+
+    it("ユーザーがいない場合はシステムのデフォルトを使う", () => {
+      const result = resolveStudyDomainId(undefined, undefined)
+      expect(result).toBe(DEFAULT_STUDY_DOMAIN_ID)
+    })
+  })
+
   describe("listSubjects", () => {
     it("科目一覧をカテゴリ数・論点数含めて取得する", async () => {
       const mockSubject = createMockSubject()
@@ -114,6 +142,7 @@ describe("Topic UseCase", () => {
       expect(result).toHaveLength(1)
       expect(result[0]).toMatchObject({
         id: "subject-1",
+        studyDomainId: "cpa",
         name: "財務会計論",
         categoryCount: 3,
         topicCount: 15,
@@ -138,6 +167,18 @@ describe("Topic UseCase", () => {
       expect(result).toHaveLength(2)
       expect(result[0].categoryCount).toBe(3)
       expect(result[1].categoryCount).toBe(2)
+    })
+
+    it("studyDomainIdを渡してフィルタリングする", async () => {
+      const mockSubject = createMockSubject({ studyDomainId: "specific-domain" })
+      const repo = createMockRepo({
+        findAllSubjects: vi.fn().mockResolvedValue([mockSubject]),
+        getSubjectStats: vi.fn().mockResolvedValue({ categoryCount: 1, topicCount: 5 }),
+      })
+
+      await listSubjects({ repo }, "specific-domain")
+
+      expect(repo.findAllSubjects).toHaveBeenCalledWith("specific-domain")
     })
   })
 
