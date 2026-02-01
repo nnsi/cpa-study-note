@@ -4,6 +4,7 @@ import { api } from "@/lib/api-client"
 import { requireAuth } from "@/lib/auth"
 import { filterTopics, type FilteredTopic } from "@/features/review/api"
 import { PageWrapper } from "@/components/layout"
+import { BookmarkButton } from "@/features/bookmark"
 
 export const Route = createFileRoute("/domains/$domainId/subjects/$subjectId/$categoryId/")({
   beforeLoad: requireAuth,
@@ -116,7 +117,10 @@ function CategoryPage() {
         >
           ← 単元一覧
         </Link>
-        <h1 className="text-xl font-bold text-ink-900 mt-2">論点一覧</h1>
+        <div className="flex items-center gap-3 mt-2">
+          <h1 className="text-xl font-bold text-ink-900">論点一覧</h1>
+          <BookmarkButton targetType="category" targetId={categoryId} size="md" />
+        </div>
       </div>
 
       <div className="space-y-3">

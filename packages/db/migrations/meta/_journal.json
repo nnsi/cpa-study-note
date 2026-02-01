@@ -50,6 +50,13 @@
       "when": 1769950000000,
       "tag": "0006_v2_1_user_owned_content",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1770000000000,
+      "tag": "0007_add_user_bookmarks",
+      "breakpoints": true
     }
   ]
 }

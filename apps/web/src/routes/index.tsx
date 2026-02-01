@@ -2,7 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router"
 import { useAuthStore } from "@/lib/auth"
 import { ProgressStats } from "@/features/progress"
 import { MiniMetricsChart } from "@/features/metrics"
-import { TodayActivityCard, RecentTopicsList } from "@/features/home"
+import { TodayActivityCard, RecentTopicsList, ContinueLearningSection } from "@/features/home"
+import { BookmarksList } from "@/features/bookmark"
 import { PageWrapper } from "@/components/layout"
 
 export const Route = createFileRoute("/")({
@@ -147,6 +148,12 @@ function DashboardPage({ user }: { user: User | null }) {
         </h1>
         <p className="text-ink-600">今日も学習を頑張りましょう</p>
       </div>
+
+      {/* 続きから学習 */}
+      <ContinueLearningSection />
+
+      {/* ブックマーク */}
+      <BookmarksList />
 
       {/* 今日の活動 + 最近の論点 */}
       <div className="grid gap-4 md:grid-cols-2">

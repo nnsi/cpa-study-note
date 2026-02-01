@@ -11,6 +11,7 @@ import { createImageFeature } from "./features/image"
 import { createMetricsFeature } from "./features/metrics"
 import { createStudyDomainFeature } from "./features/study-domain"
 import { createSubjectFeature } from "./features/subject"
+import { createBookmarkFeature } from "./features/bookmark"
 import {
   createRateLimitStore,
   createRateLimiterFactory,
@@ -113,6 +114,7 @@ const createApp = (env: Env) => {
     .route("/api/metrics", createMetricsFeature(env, db))
     .route("/api/study-domains", createStudyDomainFeature(env, db))
     .route("/api", createSubjectFeature(env, db))
+    .route("/api/bookmarks", createBookmarkFeature(env, db))
     .get("/api/health", (c) => c.json({ status: "ok" }))
     .onError((error, c) => {
       // ローカル環境では詳細なエラー情報を出力

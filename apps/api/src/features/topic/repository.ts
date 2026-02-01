@@ -1,4 +1,4 @@
-import { eq, and, sql, desc, gte, lte, gt } from "drizzle-orm"
+import { eq, and, sql, desc, gte, lte, gt, like, or } from "drizzle-orm"
 import type { Db } from "@cpa-study/db"
 import {
   subjects,
@@ -58,6 +58,13 @@ export type TopicRepository = {
     userId: string,
     filters: TopicFilterParams
   ) => Promise<FilteredTopicRow[]>
+
+  // Search
+  searchTopics: (
+    studyDomainId: string,
+    query: string,
+    limit: number
+  ) => Promise<SearchTopicRow[]>
 }
 
 type SubjectProgressCount = {
@@ -175,6 +182,17 @@ export type FilteredTopicRow = {
   understood: boolean
   goodQuestionCount: number
   lastCheckedAt: Date | null
+}
+
+export type SearchTopicRow = {
+  id: string
+  name: string
+  description: string | null
+  categoryId: string
+  categoryName: string
+  subjectId: string
+  subjectName: string
+  studyDomainId: string
 }
 
 export const createTopicRepository = (db: Db): TopicRepository => ({
@@ -603,5 +621,67 @@ export const createTopicRepository = (db: Db): TopicRepository => ({
 
       return true
     })
+  },
+
+  searchTopics: async (studyDomainId, query, limit) => {
+    const searchPattern = `%${query}%`
+
+    // 名前マッチと説明マッチを別々にクエリして、関連度でソート
+    // 名前にマッチするものを優先
+    // studyDomainIdでフィルタリング（ユーザーのドメインに限定）
+    const nameMatches = await db
+      .select({
+        id: topics.id,
+        name: topics.name,
+        description: topics.description,
+        categoryId: topics.categoryId,
+        categoryName: categories.name,
+        subjectId: subjects.id,
+        subjectName: subjects.name,
+        studyDomainId: subjects.studyDomainId,
+        relevance: sql<number>`1`.as("relevance"),
+      })
+      .from(topics)
+      .innerJoin(categories, eq(topics.categoryId, categories.id))
+      .innerJoin(subjects, eq(categories.subjectId, subjects.id))
+      .where(
+        and(
+          eq(subjects.studyDomainId, studyDomainId),
+          like(topics.name, searchPattern)
+        )
+      )
+      .limit(limit)
+
+    const descriptionMatches = await db
+      .select({
+        id: topics.id,
+        name: topics.name,
+        description: topics.description,
+        categoryId: topics.categoryId,
+        categoryName: categories.name,
+        subjectId: subjects.id,
+        subjectName: subjects.name,
+        studyDomainId: subjects.studyDomainId,
+        relevance: sql<number>`2`.as("relevance"),
+      })
+      .from(topics)
+      .innerJoin(categories, eq(topics.categoryId, categories.id))
+      .innerJoin(subjects, eq(categories.subjectId, subjects.id))
+      .where(
+        and(
+          eq(subjects.studyDomainId, studyDomainId),
+          like(topics.description, searchPattern),
+          // 名前でマッチしたものを除外（重複防止）
+          sql`${topics.name} NOT LIKE ${searchPattern}`
+        )
+      )
+      .limit(limit)
+
+    // 結果をマージして関連度順にソート、limit件数に制限
+    const combined = [...nameMatches, ...descriptionMatches]
+      .sort((a, b) => a.relevance - b.relevance)
+      .slice(0, limit)
+
+    return combined.map(({ relevance, ...row }) => row)
   },
 })

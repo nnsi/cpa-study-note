@@ -126,6 +126,7 @@ const createMockTopicRepo = (overrides: Partial<TopicRepository> = {}): TopicRep
   createCheckHistory: vi.fn().mockResolvedValue({} as ReturnType<TopicRepository["createCheckHistory"]> extends Promise<infer T> ? T : never),
   findCheckHistoryByTopic: vi.fn().mockResolvedValue([]),
   findFilteredTopics: vi.fn().mockResolvedValue([]),
+  searchTopics: vi.fn().mockResolvedValue([]),
   ...overrides,
 })
 

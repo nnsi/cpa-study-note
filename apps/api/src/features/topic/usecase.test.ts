@@ -102,6 +102,7 @@ const createMockRepo = (overrides: Partial<TopicRepository> = {}): TopicReposito
   createCheckHistory: vi.fn().mockResolvedValue(createMockCheckHistory()),
   findCheckHistoryByTopic: vi.fn().mockResolvedValue([]),
   findFilteredTopics: vi.fn().mockResolvedValue([]),
+  searchTopics: vi.fn().mockResolvedValue([]),
   ...overrides,
 })
 

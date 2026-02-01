@@ -6,6 +6,7 @@ import { getSubject, getSubjectTree, type CategoryNode } from "@/features/subjec
 import { getStudyDomain } from "@/features/study-domain/api"
 import { api } from "@/lib/api-client"
 import { filterTopics, type FilteredTopic } from "@/features/review/api"
+import { BookmarkButton } from "@/features/bookmark"
 
 export const Route = createFileRoute("/domains/$domainId/subjects/$subjectId/")({
   beforeLoad: requireAuth,
@@ -112,9 +113,12 @@ function SubjectCategoriesPage() {
             <span>/</span>
             <span>{subjectData?.subject.name ?? "..."}</span>
           </div>
-          <h1 className="heading-serif text-2xl lg:text-3xl">
-            {subjectData?.subject.name ?? "科目"}
-          </h1>
+          <div className="flex items-center gap-3">
+            <h1 className="heading-serif text-2xl lg:text-3xl">
+              {subjectData?.subject.name ?? "科目"}
+            </h1>
+            <BookmarkButton targetType="subject" targetId={subjectId} size="md" />
+          </div>
         </div>
 
         {/* Categories list */}

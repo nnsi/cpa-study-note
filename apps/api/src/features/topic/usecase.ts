@@ -432,3 +432,28 @@ export const filterTopics = async (
     goodQuestionCount: t.goodQuestionCount,
   }))
 }
+
+// 検索結果レスポンス型
+type SearchTopicResult = {
+  id: string
+  name: string
+  description: string | null
+  categoryId: string
+  categoryName: string
+  subjectId: string
+  subjectName: string
+  studyDomainId: string
+}
+
+// 論点検索
+export const searchTopics = async (
+  deps: TopicDeps,
+  studyDomainId: string,
+  query: string,
+  limit: number
+): Promise<SearchTopicResult[]> => {
+  const { repo } = deps
+  const results = await repo.searchTopics(studyDomainId, query, limit)
+
+  return results
+}

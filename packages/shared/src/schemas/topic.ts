@@ -182,3 +182,32 @@ export const updateSubjectRequestSchema = z.object({
 })
 
 export type UpdateSubjectRequest = z.infer<typeof updateSubjectRequestSchema>
+
+// Search schemas
+export const topicSearchRequestSchema = z.object({
+  q: z.string().min(1, "検索キーワードは必須です").max(100, "検索キーワードは100文字以内"),
+  limit: z.coerce.number().int().min(1).max(50).default(10),
+  studyDomainId: z.string().optional(),
+})
+
+export type TopicSearchRequest = z.input<typeof topicSearchRequestSchema>
+
+export const topicSearchResultSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().nullable(),
+  categoryId: z.string(),
+  categoryName: z.string(),
+  subjectId: z.string(),
+  subjectName: z.string(),
+  studyDomainId: z.string(),
+})
+
+export type TopicSearchResult = z.infer<typeof topicSearchResultSchema>
+
+export const topicSearchResponseSchema = z.object({
+  results: z.array(topicSearchResultSchema),
+  total: z.number(),
+})
+
+export type TopicSearchResponse = z.infer<typeof topicSearchResponseSchema>

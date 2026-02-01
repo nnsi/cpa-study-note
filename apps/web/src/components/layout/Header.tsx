@@ -2,7 +2,11 @@ import { Link } from "@tanstack/react-router"
 import { useAuthStore, logout } from "@/lib/auth"
 import { DomainSelector } from "@/features/study-domain"
 
-export const Header = () => {
+type HeaderProps = {
+  onSearchClick?: () => void
+}
+
+export const Header = ({ onSearchClick }: HeaderProps) => {
   const { user, isAuthenticated } = useAuthStore()
   const loggedIn = isAuthenticated()
 
@@ -29,6 +33,32 @@ export const Header = () => {
         {/* ユーザー情報 */}
         {loggedIn && user && (
           <div className="flex items-center gap-4">
+            {/* 検索ボタン */}
+            <button
+              onClick={onSearchClick}
+              className="flex items-center gap-2 px-3 py-1.5 bg-ink-50 hover:bg-ink-100
+                         rounded-lg text-ink-500 hover:text-ink-700 transition-colors"
+              title="検索 (Ctrl+K)"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
+                />
+              </svg>
+              <span className="hidden sm:inline text-sm">検索</span>
+              <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5
+                              bg-ink-100 rounded text-xs text-ink-400">
+                <span className="text-2xs">⌘</span>K
+              </kbd>
+            </button>
             <div className="hidden sm:flex flex-col items-end">
               <span className="text-sm font-medium text-ink-700">
                 {user.displayName || user.email?.split("@")[0]}
