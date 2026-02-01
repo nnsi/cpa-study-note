@@ -84,6 +84,63 @@ describe("AuthRepository", () => {
     })
   })
 
+  describe("createUserWithId", () => {
+    it("should create user with specified id", async () => {
+      const customId = "custom-user-id-123"
+      const userData = {
+        email: "custom@example.com",
+        name: "Custom ID User",
+        avatarUrl: "https://example.com/avatar.png",
+      }
+
+      const created = await repository.createUserWithId(customId, userData)
+
+      expect(created.id).toBe(customId)
+      expect(created.email).toBe(userData.email)
+      expect(created.name).toBe(userData.name)
+      expect(created.avatarUrl).toBe(userData.avatarUrl)
+      expect(created.timezone).toBe("Asia/Tokyo")
+      expect(created.defaultStudyDomainId).toBeNull()
+      expect(created.createdAt).toBeInstanceOf(Date)
+      expect(created.updatedAt).toBeInstanceOf(Date)
+
+      // 実際にDBに保存されていることを確認
+      const found = await repository.findUserById(customId)
+      expect(found).not.toBeNull()
+      expect(found?.id).toBe(customId)
+      expect(found?.email).toBe(userData.email)
+    })
+
+    it("should create user with custom timezone", async () => {
+      const customId = "timezone-user-id"
+      const userData = {
+        email: "timezone@example.com",
+        name: "Timezone User",
+        avatarUrl: null,
+        timezone: "America/New_York",
+      }
+
+      const created = await repository.createUserWithId(customId, userData)
+
+      expect(created.id).toBe(customId)
+      expect(created.timezone).toBe("America/New_York")
+    })
+
+    it("should create user with null avatarUrl", async () => {
+      const customId = "no-avatar-custom-id"
+      const userData = {
+        email: "noavatar-custom@example.com",
+        name: "No Avatar Custom User",
+        avatarUrl: null,
+      }
+
+      const created = await repository.createUserWithId(customId, userData)
+
+      expect(created.id).toBe(customId)
+      expect(created.avatarUrl).toBeNull()
+    })
+  })
+
   describe("findConnectionByProviderAndId", () => {
     it("should return connection when exists", async () => {
       // まず接続を作成

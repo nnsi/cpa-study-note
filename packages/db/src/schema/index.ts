@@ -1,3 +1,4 @@
+export * from "./studyDomain"
 export * from "./users"
 export * from "./auth"
 export * from "./topics"

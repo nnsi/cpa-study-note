@@ -3,10 +3,13 @@ import type { User, AuthError, OAuthUserInfo } from "./domain"
 import type { AuthRepository } from "./repository"
 import type { createProviders } from "./providers"
 import type { User as EnvUser } from "@/shared/types/env"
+import type { Db } from "@cpa-study/db"
+import { createSampleDataForNewUser } from "./sample-data"
 
 type AuthDeps = {
   repo: AuthRepository
   providers: ReturnType<typeof createProviders>
+  db: Db
 }
 
 type RefreshDeps = {
@@ -75,6 +78,17 @@ export const handleOAuthCallback = async (
     providerId: oauthUser.providerId,
   })
 
+  // Create sample data for new user
+  try {
+    const { studyDomainId } = await createSampleDataForNewUser(deps.db, newUser.id)
+    // Update user's default study domain
+    await deps.repo.updateUser(newUser.id, { defaultStudyDomainId: studyDomainId })
+    newUser.defaultStudyDomainId = studyDomainId
+  } catch (error) {
+    // Log but don't fail - user can still use the app without sample data
+    console.error("Failed to create sample data for new user:", error)
+  }
+
   return ok({ user: newUser, isNewUser: true })
 }
 
@@ -85,6 +99,77 @@ const hashToken = async (token: string) => {
   const hashBuffer = await crypto.subtle.digest("SHA-256", data)
   const hashArray = Array.from(new Uint8Array(hashBuffer))
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("")
+}
+
+type DevLoginDeps = {
+  repo: AuthRepository
+}
+
+type DevLoginInput = {
+  userId: string
+  email: string
+  name: string
+  avatarUrl: string | null
+  timezone: string
+}
+
+type SaveRefreshTokenInput = {
+  userId: string
+  tokenHash: string
+  expiresAt: Date
+}
+
+/**
+ * Get or create a dev user for local development
+ */
+export const getOrCreateDevUser = async (
+  deps: DevLoginDeps,
+  input: DevLoginInput
+): Promise<Result<User, AuthError>> => {
+  let user = await deps.repo.findUserById(input.userId)
+  if (!user) {
+    user = await deps.repo.createUserWithId(input.userId, {
+      email: input.email,
+      name: input.name,
+      avatarUrl: input.avatarUrl,
+      timezone: input.timezone,
+    })
+  }
+
+  if (!user) {
+    return err("DB_ERROR")
+  }
+
+  return ok(user)
+}
+
+/**
+ * Save a refresh token for a user
+ */
+export const saveRefreshToken = async (
+  deps: DevLoginDeps,
+  input: SaveRefreshTokenInput
+): Promise<Result<void, AuthError>> => {
+  await deps.repo.saveRefreshToken({
+    userId: input.userId,
+    tokenHash: input.tokenHash,
+    expiresAt: input.expiresAt,
+  })
+  return ok(undefined)
+}
+
+/**
+ * Logout by deleting the refresh token
+ */
+export const logout = async (
+  deps: DevLoginDeps,
+  refreshTokenHash: string
+): Promise<Result<void, AuthError>> => {
+  const storedToken = await deps.repo.findRefreshTokenByHash(refreshTokenHash)
+  if (storedToken) {
+    await deps.repo.deleteRefreshToken(storedToken.id)
+  }
+  return ok(undefined)
 }
 
 export const refreshAccessToken = async (
@@ -123,6 +208,7 @@ export const refreshAccessToken = async (
     name: user.name,
     avatarUrl: user.avatarUrl,
     timezone: user.timezone,
+    defaultStudyDomainId: user.defaultStudyDomainId,
   }
   const accessToken = await generateAccessToken(envUser, jwtSecret)
 

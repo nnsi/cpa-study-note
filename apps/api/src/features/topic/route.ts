@@ -21,6 +21,7 @@ import {
   getCheckHistory,
   filterTopics,
   listRecentTopics,
+  resolveStudyDomainId,
 } from "./usecase"
 
 type TopicDeps = {
@@ -34,10 +35,23 @@ export const topicRoutes = ({ db }: TopicDeps) => {
 
   const app = new Hono<{ Bindings: Env; Variables: Variables }>()
     // 科目一覧
-    .get("/", async (c) => {
-      const subjects = await listSubjects(deps)
-      return c.json({ subjects })
-    })
+    .get(
+      "/",
+      optionalAuthMiddleware,
+      zValidator(
+        "query",
+        z.object({
+          studyDomainId: z.string().optional(),
+        })
+      ),
+      async (c) => {
+        const { studyDomainId: explicitStudyDomainId } = c.req.valid("query")
+        const user = c.get("user")
+        const studyDomainId = resolveStudyDomainId(explicitStudyDomainId, user)
+        const subjects = await listSubjects(deps, studyDomainId)
+        return c.json({ subjects })
+      }
+    )
 
     // 論点フィルタ（/:subjectId より前に定義）
     .get(

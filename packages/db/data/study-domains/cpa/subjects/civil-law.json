@@ -1,0 +1,432 @@
+{
+  "id": "civil-law",
+  "name": "民法",
+  "description": "民法総則・物権・債権を含む",
+  "emoji": "📖",
+  "color": "slate",
+  "displayOrder": 8,
+  "categories": [
+    {
+      "id": "civil-general",
+      "name": "民法通則",
+      "displayOrder": 1,
+      "subcategories": [
+        {
+          "id": "civil-general-principles",
+          "name": "民法における基本原理",
+          "displayOrder": 1,
+          "topics": [
+            { "name": "権利能力平等の原則" },
+            { "name": "所有権絶対の原則" },
+            { "name": "私的自治の原則" },
+            { "name": "過失責任主義" }
+          ]
+        },
+        {
+          "id": "civil-general-rules",
+          "name": "民法における基本原則",
+          "displayOrder": 2,
+          "topics": [
+            { "name": "公共の福祉" },
+            { "name": "信義誠実の原則" },
+            { "name": "権利濫用の禁止" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "civil-total",
+      "name": "民法総則",
+      "displayOrder": 2,
+      "subcategories": [
+        {
+          "id": "civil-total-subject",
+          "name": "権利の主体",
+          "displayOrder": 1,
+          "topics": [
+            { "name": "権利能力" },
+            { "name": "意思能力" },
+            { "name": "行為能力" },
+            { "name": "住所" },
+            { "name": "不在者の財産管理" },
+            { "name": "失踪宣告" },
+            { "name": "一般社団法人・一般財団法人" },
+            { "name": "法人の能力" },
+            { "name": "法人の不法行為能力" },
+            { "name": "権利能力なき社団" },
+            { "name": "法人格否認の法理" }
+          ]
+        },
+        {
+          "id": "civil-total-object",
+          "name": "権利の客体",
+          "displayOrder": 2,
+          "topics": [
+            { "name": "物" },
+            { "name": "不動産" },
+            { "name": "動産" },
+            { "name": "主物" },
+            { "name": "従物" },
+            { "name": "果実" }
+          ]
+        },
+        {
+          "id": "civil-total-juridical",
+          "name": "法律行為の内容及び効力",
+          "displayOrder": 3,
+          "topics": [
+            { "name": "法律行為" },
+            { "name": "意思表示" },
+            { "name": "公序良俗" },
+            { "name": "心裡留保" },
+            { "name": "虚偽表示" },
+            { "name": "錯誤" },
+            { "name": "詐欺" },
+            { "name": "強迫" },
+            { "name": "誤認" },
+            { "name": "困惑" },
+            { "name": "不当条項" },
+            { "name": "無効" },
+            { "name": "取消し" },
+            { "name": "条件" },
+            { "name": "期限" },
+            { "name": "期間の計算" }
+          ]
+        },
+        {
+          "id": "civil-total-agency",
+          "name": "代理",
+          "displayOrder": 4,
+          "topics": [
+            { "name": "自己契約" },
+            { "name": "双方代理" },
+            { "name": "利益相反行為" },
+            { "name": "代理権の濫用" },
+            { "name": "表見代理" },
+            { "name": "無権代理" }
+          ]
+        },
+        {
+          "id": "civil-total-prescription",
+          "name": "時効",
+          "displayOrder": 5,
+          "topics": [
+            { "name": "援用" },
+            { "name": "完成猶予" },
+            { "name": "更新" },
+            { "name": "取得時効" },
+            { "name": "消滅時効" },
+            { "name": "除斥期間" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "civil-property",
+      "name": "物権",
+      "displayOrder": 3,
+      "subcategories": [
+        {
+          "id": "civil-property-general",
+          "name": "物権",
+          "displayOrder": 1,
+          "topics": [
+            { "name": "物権法定主義" },
+            { "name": "物権の効力" }
+          ]
+        },
+        {
+          "id": "civil-property-change",
+          "name": "物権変動",
+          "displayOrder": 2,
+          "topics": [
+            { "name": "意思主義" },
+            { "name": "対抗要件" },
+            { "name": "不動産登記制度" },
+            { "name": "不動産物権変動" },
+            { "name": "動産物権変動" },
+            { "name": "混同" }
+          ]
+        },
+        {
+          "id": "civil-property-possession",
+          "name": "占有権",
+          "displayOrder": 3,
+          "topics": [
+            { "name": "占有の態様" },
+            { "name": "占有訴権" },
+            { "name": "即時取得" }
+          ]
+        },
+        {
+          "id": "civil-property-ownership",
+          "name": "所有権",
+          "displayOrder": 4,
+          "topics": [
+            { "name": "相隣関係" },
+            { "name": "所有権の原始取得" },
+            { "name": "共有" },
+            { "name": "合有" },
+            { "name": "総有" },
+            { "name": "所有者不明土地等管理制度" }
+          ]
+        },
+        {
+          "id": "civil-property-usufruct",
+          "name": "用益物権",
+          "displayOrder": 5,
+          "topics": [
+            { "name": "地上権" },
+            { "name": "永小作権" },
+            { "name": "地役権" },
+            { "name": "入会権" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "civil-security",
+      "name": "担保物権",
+      "displayOrder": 4,
+      "subcategories": [
+        {
+          "id": "civil-security-statutory",
+          "name": "法定担保物権",
+          "displayOrder": 1,
+          "topics": [
+            { "name": "留置権" },
+            { "name": "先取特権" }
+          ]
+        },
+        {
+          "id": "civil-security-conventional",
+          "name": "約定担保物権",
+          "displayOrder": 2,
+          "topics": [
+            { "name": "質権" },
+            { "name": "抵当権" },
+            { "name": "根抵当権" }
+          ]
+        },
+        {
+          "id": "civil-security-atypical",
+          "name": "非典型担保",
+          "displayOrder": 3,
+          "topics": [
+            { "name": "仮登記担保" },
+            { "name": "譲渡担保" },
+            { "name": "所有権留保" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "civil-obligation",
+      "name": "債権",
+      "displayOrder": 5,
+      "subcategories": [
+        {
+          "id": "civil-obligation-object",
+          "name": "債権の目的",
+          "displayOrder": 1,
+          "topics": [
+            { "name": "特定物債権" },
+            { "name": "種類債権" },
+            { "name": "金銭債権" },
+            { "name": "利息債権" },
+            { "name": "法定利率" },
+            { "name": "選択債権" }
+          ]
+        },
+        {
+          "id": "civil-obligation-effect",
+          "name": "債権の効力",
+          "displayOrder": 2,
+          "topics": [
+            { "name": "債務不履行" },
+            { "name": "受領遅滞" },
+            { "name": "履行の強制" },
+            { "name": "損害賠償" },
+            { "name": "損害賠償の範囲" },
+            { "name": "中間利息の控除" },
+            { "name": "過失相殺" },
+            { "name": "金銭債務の特則" },
+            { "name": "賠償額の予定" },
+            { "name": "損害賠償による代位" },
+            { "name": "代償請求権" }
+          ]
+        },
+        {
+          "id": "civil-obligation-subrogation",
+          "name": "債権者代位権・詐害行為取消権",
+          "displayOrder": 3,
+          "topics": []
+        },
+        {
+          "id": "civil-obligation-multiple",
+          "name": "多数当事者の債権・債務",
+          "displayOrder": 4,
+          "topics": [
+            { "name": "分割債権" },
+            { "name": "分割債務" },
+            { "name": "不可分債権" },
+            { "name": "不可分債務" },
+            { "name": "連帯債権" },
+            { "name": "連帯債務" },
+            { "name": "保証債務" },
+            { "name": "個人根保証契約" }
+          ]
+        },
+        {
+          "id": "civil-obligation-transfer",
+          "name": "債権譲渡・債務引受",
+          "displayOrder": 5,
+          "topics": []
+        },
+        {
+          "id": "civil-obligation-extinction",
+          "name": "債権の消滅",
+          "displayOrder": 6,
+          "topics": [
+            { "name": "弁済" },
+            { "name": "代物弁済" },
+            { "name": "弁済の充当" },
+            { "name": "弁済の提供" },
+            { "name": "供託" },
+            { "name": "弁済による代位" },
+            { "name": "相殺" },
+            { "name": "更改" },
+            { "name": "免除" },
+            { "name": "混同" }
+          ]
+        },
+        {
+          "id": "civil-obligation-securities",
+          "name": "有価証券",
+          "displayOrder": 7,
+          "topics": [
+            { "name": "指図証券" },
+            { "name": "記名式所持人払証券" },
+            { "name": "無記名証券" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "civil-contract",
+      "name": "契約",
+      "displayOrder": 6,
+      "subcategories": [
+        {
+          "id": "civil-contract-formation",
+          "name": "契約の成立",
+          "displayOrder": 1,
+          "topics": [
+            { "name": "締結及び内容の自由" },
+            { "name": "方式の自由" },
+            { "name": "申込みと承諾" },
+            { "name": "懸賞広告" },
+            { "name": "契約締結上の過失" }
+          ]
+        },
+        {
+          "id": "civil-contract-effect",
+          "name": "契約の効力",
+          "displayOrder": 2,
+          "topics": [
+            { "name": "同時履行の抗弁" },
+            { "name": "危険負担" },
+            { "name": "第三者のためにする契約" },
+            { "name": "契約上の地位の移転" }
+          ]
+        },
+        {
+          "id": "civil-contract-rescission",
+          "name": "契約の解除",
+          "displayOrder": 3,
+          "topics": [
+            { "name": "催告による解除" },
+            { "name": "催告によらない解除" },
+            { "name": "解除の効果" },
+            { "name": "解除権の消滅" }
+          ]
+        },
+        {
+          "id": "civil-contract-standard",
+          "name": "定型約款",
+          "displayOrder": 4,
+          "topics": []
+        },
+        {
+          "id": "civil-contract-types",
+          "name": "各種の契約とその効力",
+          "displayOrder": 5,
+          "topics": [
+            { "name": "贈与" },
+            { "name": "売買" },
+            { "name": "交換" },
+            { "name": "消費貸借" },
+            { "name": "使用貸借" },
+            { "name": "賃貸借" },
+            { "name": "雇用" },
+            { "name": "請負" },
+            { "name": "委任" },
+            { "name": "寄託" },
+            { "name": "組合" },
+            { "name": "終身定期金" },
+            { "name": "和解" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "civil-statutory",
+      "name": "法定債権関係",
+      "displayOrder": 7,
+      "subcategories": [
+        {
+          "id": "civil-statutory-management",
+          "name": "事務管理",
+          "displayOrder": 1,
+          "topics": []
+        },
+        {
+          "id": "civil-statutory-unjust",
+          "name": "不当利得",
+          "displayOrder": 2,
+          "topics": [
+            { "name": "不当利得の要件" },
+            { "name": "非債弁済" },
+            { "name": "不法原因給付" }
+          ]
+        },
+        {
+          "id": "civil-statutory-tort",
+          "name": "不法行為",
+          "displayOrder": 3,
+          "topics": [
+            { "name": "故意" },
+            { "name": "過失" },
+            { "name": "権利・利益侵害" },
+            { "name": "因果関係" },
+            { "name": "損害" },
+            { "name": "責任能力" },
+            { "name": "責任無能力者の監督義務者の責任" },
+            { "name": "使用者責任" },
+            { "name": "注文者の責任" },
+            { "name": "工作物責任" },
+            { "name": "動物占有者の責任" },
+            { "name": "共同不法行為" },
+            { "name": "正当防衛" },
+            { "name": "緊急避難" },
+            { "name": "中間利息の控除" },
+            { "name": "過失相殺" },
+            { "name": "名誉毀損における原状回復" },
+            { "name": "損害賠償請求権の消滅時効" },
+            { "name": "製造物責任" }
+          ]
+        }
+      ]
+    }
+  ]
+}

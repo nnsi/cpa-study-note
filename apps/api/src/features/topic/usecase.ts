@@ -1,14 +1,38 @@
 import type { TopicRepository, TopicFilterParams } from "./repository"
+import { DEFAULT_STUDY_DOMAIN_ID } from "@cpa-study/shared/constants"
 
 type TopicDeps = {
   repo: TopicRepository
 }
 
+type User = {
+  id: string
+  defaultStudyDomainId: string | null
+}
+
+// studyDomainId を解決する
+// 優先順位: 明示的に指定 > ユーザーのデフォルト > システムのデフォルト
+export const resolveStudyDomainId = (
+  explicitId: string | undefined,
+  user: User | undefined
+): string => {
+  if (explicitId) {
+    return explicitId
+  }
+  if (user?.defaultStudyDomainId) {
+    return user.defaultStudyDomainId
+  }
+  return DEFAULT_STUDY_DOMAIN_ID
+}
+
 // レスポンス用の型定義
 type SubjectWithStats = {
   id: string
+  studyDomainId: string
   name: string
   description: string | null
+  emoji: string | null
+  color: string | null
   displayOrder: number
   createdAt: string
   updatedAt: string
@@ -62,10 +86,11 @@ type ProgressResponse = {
 
 // 科目一覧取得
 export const listSubjects = async (
-  deps: TopicDeps
+  deps: TopicDeps,
+  studyDomainId?: string
 ): Promise<SubjectWithStats[]> => {
   const { repo } = deps
-  const subjects = await repo.findAllSubjects()
+  const subjects = await repo.findAllSubjects(studyDomainId)
 
   const subjectsWithStats = await Promise.all(
     subjects.map(async (subject) => {

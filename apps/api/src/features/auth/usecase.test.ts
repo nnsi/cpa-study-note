@@ -3,16 +3,20 @@ import { createTestDatabase, seedTestData } from "../../test/mocks/db"
 import { createAuthRepository, type AuthRepository } from "./repository"
 import { handleOAuthCallback, refreshAccessToken } from "./usecase"
 import type { OAuthProvider, OAuthTokens, OAuthUserInfo } from "./domain"
+import type { Db } from "@cpa-study/db"
 
 describe("Auth UseCase", () => {
   let repo: AuthRepository
+  let db: Db
   let testData: ReturnType<typeof seedTestData>
 
   beforeEach(() => {
-    const { db } = createTestDatabase()
-    testData = seedTestData(db)
+    const testDb = createTestDatabase()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    repo = createAuthRepository(db as any)
+    db = testDb.db as any as Db
+    testData = seedTestData(testDb.db)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    repo = createAuthRepository(db)
   })
 
   describe("handleOAuthCallback", () => {
@@ -67,7 +71,7 @@ describe("Auth UseCase", () => {
       const providers = createProvidersMap(mockProvider)
 
       const result = await handleOAuthCallback(
-        { repo, providers },
+        { repo, providers, db },
         "google",
         "auth-code-123"
       )
@@ -101,7 +105,7 @@ describe("Auth UseCase", () => {
       const providers = createProvidersMap(mockProvider)
 
       const result = await handleOAuthCallback(
-        { repo, providers },
+        { repo, providers, db },
         "google",
         "auth-code-123"
       )
@@ -127,7 +131,7 @@ describe("Auth UseCase", () => {
       const providers = createProvidersMap(mockProvider)
 
       const result = await handleOAuthCallback(
-        { repo, providers },
+        { repo, providers, db },
         "google",
         "auth-code-123"
       )
@@ -153,7 +157,7 @@ describe("Auth UseCase", () => {
       const providers = createProvidersMap(mockProvider)
 
       const result = await handleOAuthCallback(
-        { repo, providers },
+        { repo, providers, db },
         "invalid-provider",
         "auth-code-123"
       )
@@ -168,7 +172,7 @@ describe("Auth UseCase", () => {
       const providers = createProvidersMap(mockProvider)
 
       const result = await handleOAuthCallback(
-        { repo, providers },
+        { repo, providers, db },
         "google",
         "invalid-code"
       )
@@ -185,7 +189,7 @@ describe("Auth UseCase", () => {
       const providers = createProvidersMap(mockProvider)
 
       const result = await handleOAuthCallback(
-        { repo, providers },
+        { repo, providers, db },
         "google",
         "auth-code"
       )
@@ -200,7 +204,7 @@ describe("Auth UseCase", () => {
       const providers = createProvidersMap(mockProvider)
 
       const result = await handleOAuthCallback(
-        { repo, providers },
+        { repo, providers, db },
         "google",
         "auth-code"
       )

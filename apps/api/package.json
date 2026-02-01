@@ -12,6 +12,7 @@
   },
   "scripts": {
     "dev": "wrangler dev",
+    "dev:log": "wrangler dev 2>&1 | tee logs/api.log",
     "build": "wrangler deploy --dry-run",
     "deploy": "wrangler deploy",
     "typecheck": "tsc --noEmit",

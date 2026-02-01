@@ -2,9 +2,8 @@
 /**
  * テスト用ヘルパー関数
  */
-import { Hono } from "hono"
 import { z } from "zod"
-import type { Env, Variables } from "@/shared/types/env"
+import type { Env } from "@/shared/types/env"
 import { createTestDatabase, TestDatabase, seedTestData } from "./mocks/db"
 import { createMockR2Bucket } from "./mocks/r2"
 import * as schema from "@cpa-study/db/schema"
@@ -83,11 +82,13 @@ export const createAdditionalTestData = (db: TestDatabase, baseData: ReturnType<
     })
     .run()
 
-  // 追加の科目
+  // 追加の科目 (v2.1: userIdが必須)
   const subject2Id = "subject-2"
   db.insert(schema.subjects)
     .values({
       id: subject2Id,
+      userId: baseData.userId,
+      studyDomainId: baseData.studyDomainId,
       name: "管理会計論",
       description: "管理会計論の科目",
       displayOrder: 2,
@@ -96,11 +97,12 @@ export const createAdditionalTestData = (db: TestDatabase, baseData: ReturnType<
     })
     .run()
 
-  // 追加のカテゴリ（階層構造テスト用）
+  // 追加のカテゴリ（階層構造テスト用、v2.1: userIdが必須）
   const childCategoryId = "category-child-1"
   db.insert(schema.categories)
     .values({
       id: childCategoryId,
+      userId: baseData.userId,
       subjectId: baseData.subjectId,
       name: "子カテゴリ",
       depth: 1,
@@ -111,15 +113,16 @@ export const createAdditionalTestData = (db: TestDatabase, baseData: ReturnType<
     })
     .run()
 
-  // 追加の論点
+  // 追加の論点 (v2.1: userIdが必須)
   const topic2Id = "topic-2"
   db.insert(schema.topics)
     .values({
       id: topic2Id,
+      userId: baseData.userId,
       categoryId: baseData.categoryId,
       name: "棚卸資産",
       description: "棚卸資産の評価方法",
-      difficulty: "easy",
+      difficulty: "basic",
       displayOrder: 2,
       createdAt: now,
       updatedAt: now,
@@ -245,4 +248,132 @@ export const createProgressTestData = (db: TestDatabase, userId: string, topicId
     .run()
 
   return { progressId }
+}
+
+// v2.1用のテストデータ作成ヘルパー
+export const createTestStudyDomain = (
+  db: TestDatabase,
+  userId: string,
+  data: { name?: string; description?: string; emoji?: string; color?: string; deletedAt?: Date } = {}
+) => {
+  const id = `domain-${crypto.randomUUID().slice(0, 8)}`
+  const now = new Date()
+
+  db.insert(schema.studyDomains)
+    .values({
+      id,
+      userId,
+      name: data.name ?? "Test Domain",
+      description: data.description ?? null,
+      emoji: data.emoji ?? null,
+      color: data.color ?? null,
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: data.deletedAt ?? null,
+    })
+    .run()
+
+  return { id }
+}
+
+export const createTestSubject = (
+  db: TestDatabase,
+  userId: string,
+  studyDomainId: string,
+  data: { name?: string; description?: string; emoji?: string; color?: string; deletedAt?: Date } = {}
+) => {
+  const id = `subject-${crypto.randomUUID().slice(0, 8)}`
+  const now = new Date()
+
+  db.insert(schema.subjects)
+    .values({
+      id,
+      userId,
+      studyDomainId,
+      name: data.name ?? "Test Subject",
+      description: data.description ?? null,
+      emoji: data.emoji ?? null,
+      color: data.color ?? null,
+      displayOrder: 0,
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: data.deletedAt ?? null,
+    })
+    .run()
+
+  return { id }
+}
+
+export const createTestCategory = (
+  db: TestDatabase,
+  userId: string,
+  subjectId: string,
+  data: { name?: string; depth?: number; parentId?: string | null; deletedAt?: Date } = {}
+) => {
+  const id = `category-${crypto.randomUUID().slice(0, 8)}`
+  const now = new Date()
+
+  db.insert(schema.categories)
+    .values({
+      id,
+      userId,
+      subjectId,
+      name: data.name ?? "Test Category",
+      depth: data.depth ?? 1,
+      parentId: data.parentId ?? null,
+      displayOrder: 0,
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: data.deletedAt ?? null,
+    })
+    .run()
+
+  return { id }
+}
+
+export const createTestTopic = (
+  db: TestDatabase,
+  userId: string,
+  categoryId: string,
+  data: { name?: string; description?: string; difficulty?: string; deletedAt?: Date } = {}
+) => {
+  const id = `topic-${crypto.randomUUID().slice(0, 8)}`
+  const now = new Date()
+
+  db.insert(schema.topics)
+    .values({
+      id,
+      userId,
+      categoryId,
+      name: data.name ?? "Test Topic",
+      description: data.description ?? null,
+      difficulty: data.difficulty ?? null,
+      displayOrder: 0,
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: data.deletedAt ?? null,
+    })
+    .run()
+
+  return { id }
+}
+
+export const createTestUser = (
+  db: TestDatabase,
+  data: { email?: string; name?: string } = {}
+) => {
+  const id = `user-${crypto.randomUUID().slice(0, 8)}`
+  const now = new Date()
+
+  db.insert(schema.users)
+    .values({
+      id,
+      email: data.email ?? `${id}@example.com`,
+      name: data.name ?? "Test User",
+      createdAt: now,
+      updatedAt: now,
+    })
+    .run()
+
+  return { id }
 }

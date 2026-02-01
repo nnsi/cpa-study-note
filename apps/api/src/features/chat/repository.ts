@@ -1,6 +1,13 @@
 import { eq, and, desc, sql, inArray } from "drizzle-orm"
 import type { Db } from "@cpa-study/db"
-import { chatSessions, chatMessages } from "@cpa-study/db/schema"
+import {
+  chatSessions,
+  chatMessages,
+  topics,
+  categories,
+  subjects,
+  studyDomains,
+} from "@cpa-study/db/schema"
 
 export type ChatSession = {
   id: string
@@ -26,6 +33,26 @@ export type QuestionQualityStats = {
   surfaceCount: number
 }
 
+export type TopicWithHierarchy = {
+  topic: {
+    id: string
+    name: string
+    aiSystemPrompt: string | null
+  }
+  category: {
+    id: string
+    name: string
+  }
+  subject: {
+    id: string
+    name: string
+  }
+  studyDomain: {
+    id: string
+    name: string
+  }
+}
+
 export type SessionWithStats = {
   id: string
   userId: string
@@ -45,6 +72,7 @@ export type ChatRepository = {
   findSessionsWithStatsByTopic: (userId: string, topicId: string) => Promise<SessionWithStats[]>
   getSessionMessageCount: (sessionId: string) => Promise<number>
   getSessionQualityStats: (sessionId: string) => Promise<QuestionQualityStats>
+  getTopicWithHierarchy: (topicId: string) => Promise<TopicWithHierarchy | null>
   createMessage: (data: Omit<ChatMessage, "id" | "createdAt">) => Promise<ChatMessage>
   findMessageById: (id: string) => Promise<ChatMessage | null>
   findMessagesBySession: (sessionId: string) => Promise<ChatMessage[]>
@@ -188,6 +216,52 @@ export const createChatRepository = (db: Db): ChatRepository => ({
     }
 
     return { goodCount, surfaceCount }
+  },
+
+  getTopicWithHierarchy: async (topicId) => {
+    const result = await db
+      .select({
+        topicId: topics.id,
+        topicName: topics.name,
+        topicAiSystemPrompt: topics.aiSystemPrompt,
+        categoryId: categories.id,
+        categoryName: categories.name,
+        subjectId: subjects.id,
+        subjectName: subjects.name,
+        studyDomainId: studyDomains.id,
+        studyDomainName: studyDomains.name,
+      })
+      .from(topics)
+      .innerJoin(categories, eq(topics.categoryId, categories.id))
+      .innerJoin(subjects, eq(categories.subjectId, subjects.id))
+      .innerJoin(studyDomains, eq(subjects.studyDomainId, studyDomains.id))
+      .where(eq(topics.id, topicId))
+      .limit(1)
+
+    const row = result[0]
+    if (!row) {
+      return null
+    }
+
+    return {
+      topic: {
+        id: row.topicId,
+        name: row.topicName,
+        aiSystemPrompt: row.topicAiSystemPrompt,
+      },
+      category: {
+        id: row.categoryId,
+        name: row.categoryName,
+      },
+      subject: {
+        id: row.subjectId,
+        name: row.subjectName,
+      },
+      studyDomain: {
+        id: row.studyDomainId,
+        name: row.studyDomainName,
+      },
+    }
   },
 
   createMessage: async (data) => {

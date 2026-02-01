@@ -17,6 +17,7 @@ describe("Auth Domain Types", () => {
         name: "Test User",
         avatarUrl: "https://example.com/avatar.png",
         timezone: "Asia/Tokyo",
+        defaultStudyDomainId: "cpa",
         createdAt: new Date(),
         updatedAt: new Date(),
       }
@@ -26,6 +27,7 @@ describe("Auth Domain Types", () => {
       expect(user.name).toBe("Test User")
       expect(user.avatarUrl).toBe("https://example.com/avatar.png")
       expect(user.timezone).toBe("Asia/Tokyo")
+      expect(user.defaultStudyDomainId).toBe("cpa")
       expect(user.createdAt).toBeInstanceOf(Date)
       expect(user.updatedAt).toBeInstanceOf(Date)
     })
@@ -37,11 +39,13 @@ describe("Auth Domain Types", () => {
         name: "Test User",
         avatarUrl: null,
         timezone: "Asia/Tokyo",
+        defaultStudyDomainId: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       }
 
       expect(user.avatarUrl).toBeNull()
+      expect(user.defaultStudyDomainId).toBeNull()
     })
   })
 

@@ -23,9 +23,25 @@ export const createTestDatabase = (): {
       name TEXT NOT NULL,
       avatar_url TEXT,
       timezone TEXT NOT NULL DEFAULT 'Asia/Tokyo',
+      default_study_domain_id TEXT,
       created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL
+      updated_at INTEGER NOT NULL,
+      deleted_at INTEGER
     );
+
+    CREATE TABLE IF NOT EXISTS study_domains (
+      id TEXT PRIMARY KEY NOT NULL,
+      user_id TEXT NOT NULL REFERENCES users(id),
+      name TEXT NOT NULL,
+      description TEXT,
+      emoji TEXT,
+      color TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      deleted_at INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS study_domains_user_id_idx ON study_domains(user_id);
+    CREATE INDEX IF NOT EXISTS study_domains_user_deleted_idx ON study_domains(user_id, deleted_at);
 
     CREATE TABLE IF NOT EXISTS user_oauth_connections (
       id TEXT PRIMARY KEY NOT NULL,
@@ -47,26 +63,41 @@ export const createTestDatabase = (): {
 
     CREATE TABLE IF NOT EXISTS subjects (
       id TEXT PRIMARY KEY NOT NULL,
-      name TEXT NOT NULL UNIQUE,
+      user_id TEXT NOT NULL REFERENCES users(id),
+      study_domain_id TEXT NOT NULL REFERENCES study_domains(id) ON DELETE RESTRICT,
+      name TEXT NOT NULL,
       description TEXT,
+      emoji TEXT,
+      color TEXT,
       display_order INTEGER NOT NULL DEFAULT 0,
       created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL
+      updated_at INTEGER NOT NULL,
+      deleted_at INTEGER,
+      UNIQUE(study_domain_id, name)
     );
+    CREATE INDEX IF NOT EXISTS subjects_study_domain_id_idx ON subjects(study_domain_id);
+    CREATE INDEX IF NOT EXISTS subjects_user_id_idx ON subjects(user_id);
+    CREATE INDEX IF NOT EXISTS subjects_user_deleted_idx ON subjects(user_id, deleted_at);
 
     CREATE TABLE IF NOT EXISTS categories (
       id TEXT PRIMARY KEY NOT NULL,
+      user_id TEXT NOT NULL REFERENCES users(id),
       subject_id TEXT NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
       name TEXT NOT NULL,
       depth INTEGER NOT NULL,
       parent_id TEXT,
       display_order INTEGER NOT NULL DEFAULT 0,
       created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL
+      updated_at INTEGER NOT NULL,
+      deleted_at INTEGER
     );
+    CREATE INDEX IF NOT EXISTS categories_subject_id_idx ON categories(subject_id);
+    CREATE INDEX IF NOT EXISTS categories_user_id_idx ON categories(user_id);
+    CREATE INDEX IF NOT EXISTS categories_user_deleted_idx ON categories(user_id, deleted_at);
 
     CREATE TABLE IF NOT EXISTS topics (
       id TEXT PRIMARY KEY NOT NULL,
+      user_id TEXT NOT NULL REFERENCES users(id),
       category_id TEXT NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
       name TEXT NOT NULL,
       description TEXT,
@@ -75,8 +106,12 @@ export const createTestDatabase = (): {
       ai_system_prompt TEXT,
       display_order INTEGER NOT NULL DEFAULT 0,
       created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL
+      updated_at INTEGER NOT NULL,
+      deleted_at INTEGER
     );
+    CREATE INDEX IF NOT EXISTS topics_category_id_idx ON topics(category_id);
+    CREATE INDEX IF NOT EXISTS topics_user_id_idx ON topics(user_id);
+    CREATE INDEX IF NOT EXISTS topics_user_deleted_idx ON topics(user_id, deleted_at);
 
     CREATE TABLE IF NOT EXISTS user_topic_progress (
       id TEXT PRIMARY KEY NOT NULL,
@@ -163,11 +198,13 @@ export const createTestDatabase = (): {
 export const seedTestData = (db: TestDatabase) => {
   // テスト用の基本データを挿入
   const userId = "test-user-1"
+  const studyDomainId = "cpa"
   const subjectId = "subject-1"
   const categoryId = "category-1"
   const topicId = "topic-1"
   const now = new Date()
 
+  // ユーザーを最初に作成（study_domainsが参照するため）
   db.insert(schema.users)
     .values({
       id: userId,
@@ -178,9 +215,25 @@ export const seedTestData = (db: TestDatabase) => {
     })
     .run()
 
+  // 学習領域を作成
+  db.insert(schema.studyDomains)
+    .values({
+      id: studyDomainId,
+      userId: userId,
+      name: "公認会計士試験",
+      description: "公認会計士試験の学習",
+      emoji: "📚",
+      color: "indigo",
+      createdAt: now,
+      updatedAt: now,
+    })
+    .run()
+
   db.insert(schema.subjects)
     .values({
       id: subjectId,
+      userId: userId,
+      studyDomainId: studyDomainId,
       name: "財務会計論",
       description: "財務会計論の科目",
       displayOrder: 1,
@@ -192,6 +245,7 @@ export const seedTestData = (db: TestDatabase) => {
   db.insert(schema.categories)
     .values({
       id: categoryId,
+      userId: userId,
       subjectId,
       name: "計算",
       depth: 0,
@@ -205,15 +259,16 @@ export const seedTestData = (db: TestDatabase) => {
   db.insert(schema.topics)
     .values({
       id: topicId,
+      userId: userId,
       categoryId,
       name: "有価証券",
       description: "有価証券の評価と会計処理",
-      difficulty: "medium",
+      difficulty: "intermediate",
       displayOrder: 1,
       createdAt: now,
       updatedAt: now,
     })
     .run()
 
-  return { userId, subjectId, categoryId, topicId }
+  return { userId, studyDomainId, subjectId, categoryId, topicId }
 }

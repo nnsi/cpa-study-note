@@ -6,8 +6,10 @@ export const users = sqliteTable("users", {
   name: text("name").notNull(),
   avatarUrl: text("avatar_url"),
   timezone: text("timezone").notNull().default("Asia/Tokyo"),
+  defaultStudyDomainId: text("default_study_domain_id"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+  deletedAt: integer("deleted_at", { mode: "timestamp" }),
 })
 
 export const userOAuthConnections = sqliteTable(

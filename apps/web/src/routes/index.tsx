@@ -155,7 +155,7 @@ function DashboardPage({ user }: { user: User | null }) {
       </div>
 
       {/* クイックアクセス */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <QuickAccessCard
           to="/subjects"
           icon={
@@ -190,6 +190,18 @@ function DashboardPage({ user }: { user: User | null }) {
           title="ノート"
           description="学習の記録を確認"
           accentColor="amber"
+        />
+
+        <QuickAccessCard
+          to="/edit"
+          icon={
+            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 0 0-1.883 2.542l.857 6a2.25 2.25 0 0 0 2.227 1.932H19.05a2.25 2.25 0 0 0 2.227-1.932l.857-6a2.25 2.25 0 0 0-1.883-2.542m-16.5 0V6A2.25 2.25 0 0 1 6 3.75h3.879a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 0 1.06.44H18A2.25 2.25 0 0 1 20.25 9v.776" />
+            </svg>
+          }
+          title="科目の構造を編集"
+          description="学習領域・科目・単元を管理"
+          accentColor="crimson"
         />
       </div>
 
@@ -226,7 +238,7 @@ function QuickAccessCard({
   icon: React.ReactNode
   title: string
   description: string
-  accentColor: "indigo" | "amber" | "jade"
+  accentColor: "indigo" | "amber" | "jade" | "crimson"
 }) {
   const colorClasses = {
     indigo: {
@@ -243,6 +255,11 @@ function QuickAccessCard({
       bg: "bg-jade-100",
       text: "text-jade-600",
       gradient: "from-jade-500/10 to-transparent",
+    },
+    crimson: {
+      bg: "bg-crimson-50",
+      text: "text-crimson-600",
+      gradient: "from-crimson-500/10 to-transparent",
     },
   }
 
