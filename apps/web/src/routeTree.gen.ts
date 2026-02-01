@@ -16,6 +16,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SubjectsIndexRouteImport } from './routes/subjects/index'
 import { Route as NotesIndexRouteImport } from './routes/notes/index'
+import { Route as EditIndexRouteImport } from './routes/edit/index'
 import { Route as DomainsIndexRouteImport } from './routes/domains/index'
 import { Route as NotesNoteIdRouteImport } from './routes/notes/$noteId'
 import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
@@ -24,6 +25,7 @@ import { Route as SubjectsSubjectIdCategoryIdIndexRouteImport } from './routes/s
 import { Route as DomainsDomainIdSubjectsIndexRouteImport } from './routes/domains/$domainId/subjects/index'
 import { Route as SubjectsSubjectIdCategoryIdTopicIdRouteImport } from './routes/subjects/$subjectId/$categoryId/$topicId'
 import { Route as DomainsDomainIdSubjectsSubjectIdIndexRouteImport } from './routes/domains/$domainId/subjects/$subjectId/index'
+import { Route as DomainsDomainIdSubjectsSubjectIdEditRouteImport } from './routes/domains/$domainId/subjects/$subjectId/edit'
 import { Route as DomainsDomainIdSubjectsSubjectIdCategoryIdIndexRouteImport } from './routes/domains/$domainId/subjects/$subjectId/$categoryId/index'
 import { Route as DomainsDomainIdSubjectsSubjectIdCategoryIdTopicIdRouteImport } from './routes/domains/$domainId/subjects/$subjectId/$categoryId/$topicId'
 
@@ -60,6 +62,11 @@ const SubjectsIndexRoute = SubjectsIndexRouteImport.update({
 const NotesIndexRoute = NotesIndexRouteImport.update({
   id: '/notes/',
   path: '/notes/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EditIndexRoute = EditIndexRouteImport.update({
+  id: '/edit/',
+  path: '/edit/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DomainsIndexRoute = DomainsIndexRouteImport.update({
@@ -106,6 +113,12 @@ const DomainsDomainIdSubjectsSubjectIdIndexRoute =
     path: '/domains/$domainId/subjects/$subjectId/',
     getParentRoute: () => rootRouteImport,
   } as any)
+const DomainsDomainIdSubjectsSubjectIdEditRoute =
+  DomainsDomainIdSubjectsSubjectIdEditRouteImport.update({
+    id: '/domains/$domainId/subjects/$subjectId/edit',
+    path: '/domains/$domainId/subjects/$subjectId/edit',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const DomainsDomainIdSubjectsSubjectIdCategoryIdIndexRoute =
   DomainsDomainIdSubjectsSubjectIdCategoryIdIndexRouteImport.update({
     id: '/domains/$domainId/subjects/$subjectId/$categoryId/',
@@ -128,12 +141,14 @@ export interface FileRoutesByFullPath {
   '/auth/callback': typeof AuthCallbackRoute
   '/notes/$noteId': typeof NotesNoteIdRoute
   '/domains/': typeof DomainsIndexRoute
+  '/edit/': typeof EditIndexRoute
   '/notes/': typeof NotesIndexRoute
   '/subjects/': typeof SubjectsIndexRoute
   '/subjects/$subjectId/': typeof SubjectsSubjectIdIndexRoute
   '/subjects/$subjectId/$categoryId/$topicId': typeof SubjectsSubjectIdCategoryIdTopicIdRoute
   '/domains/$domainId/subjects/': typeof DomainsDomainIdSubjectsIndexRoute
   '/subjects/$subjectId/$categoryId/': typeof SubjectsSubjectIdCategoryIdIndexRoute
+  '/domains/$domainId/subjects/$subjectId/edit': typeof DomainsDomainIdSubjectsSubjectIdEditRoute
   '/domains/$domainId/subjects/$subjectId/': typeof DomainsDomainIdSubjectsSubjectIdIndexRoute
   '/domains/$domainId/subjects/$subjectId/$categoryId/$topicId': typeof DomainsDomainIdSubjectsSubjectIdCategoryIdTopicIdRoute
   '/domains/$domainId/subjects/$subjectId/$categoryId/': typeof DomainsDomainIdSubjectsSubjectIdCategoryIdIndexRoute
@@ -147,12 +162,14 @@ export interface FileRoutesByTo {
   '/auth/callback': typeof AuthCallbackRoute
   '/notes/$noteId': typeof NotesNoteIdRoute
   '/domains': typeof DomainsIndexRoute
+  '/edit': typeof EditIndexRoute
   '/notes': typeof NotesIndexRoute
   '/subjects': typeof SubjectsIndexRoute
   '/subjects/$subjectId': typeof SubjectsSubjectIdIndexRoute
   '/subjects/$subjectId/$categoryId/$topicId': typeof SubjectsSubjectIdCategoryIdTopicIdRoute
   '/domains/$domainId/subjects': typeof DomainsDomainIdSubjectsIndexRoute
   '/subjects/$subjectId/$categoryId': typeof SubjectsSubjectIdCategoryIdIndexRoute
+  '/domains/$domainId/subjects/$subjectId/edit': typeof DomainsDomainIdSubjectsSubjectIdEditRoute
   '/domains/$domainId/subjects/$subjectId': typeof DomainsDomainIdSubjectsSubjectIdIndexRoute
   '/domains/$domainId/subjects/$subjectId/$categoryId/$topicId': typeof DomainsDomainIdSubjectsSubjectIdCategoryIdTopicIdRoute
   '/domains/$domainId/subjects/$subjectId/$categoryId': typeof DomainsDomainIdSubjectsSubjectIdCategoryIdIndexRoute
@@ -167,12 +184,14 @@ export interface FileRoutesById {
   '/auth/callback': typeof AuthCallbackRoute
   '/notes/$noteId': typeof NotesNoteIdRoute
   '/domains/': typeof DomainsIndexRoute
+  '/edit/': typeof EditIndexRoute
   '/notes/': typeof NotesIndexRoute
   '/subjects/': typeof SubjectsIndexRoute
   '/subjects/$subjectId/': typeof SubjectsSubjectIdIndexRoute
   '/subjects/$subjectId/$categoryId/$topicId': typeof SubjectsSubjectIdCategoryIdTopicIdRoute
   '/domains/$domainId/subjects/': typeof DomainsDomainIdSubjectsIndexRoute
   '/subjects/$subjectId/$categoryId/': typeof SubjectsSubjectIdCategoryIdIndexRoute
+  '/domains/$domainId/subjects/$subjectId/edit': typeof DomainsDomainIdSubjectsSubjectIdEditRoute
   '/domains/$domainId/subjects/$subjectId/': typeof DomainsDomainIdSubjectsSubjectIdIndexRoute
   '/domains/$domainId/subjects/$subjectId/$categoryId/$topicId': typeof DomainsDomainIdSubjectsSubjectIdCategoryIdTopicIdRoute
   '/domains/$domainId/subjects/$subjectId/$categoryId/': typeof DomainsDomainIdSubjectsSubjectIdCategoryIdIndexRoute
@@ -188,12 +207,14 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/notes/$noteId'
     | '/domains/'
+    | '/edit/'
     | '/notes/'
     | '/subjects/'
     | '/subjects/$subjectId/'
     | '/subjects/$subjectId/$categoryId/$topicId'
     | '/domains/$domainId/subjects/'
     | '/subjects/$subjectId/$categoryId/'
+    | '/domains/$domainId/subjects/$subjectId/edit'
     | '/domains/$domainId/subjects/$subjectId/'
     | '/domains/$domainId/subjects/$subjectId/$categoryId/$topicId'
     | '/domains/$domainId/subjects/$subjectId/$categoryId/'
@@ -207,12 +228,14 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/notes/$noteId'
     | '/domains'
+    | '/edit'
     | '/notes'
     | '/subjects'
     | '/subjects/$subjectId'
     | '/subjects/$subjectId/$categoryId/$topicId'
     | '/domains/$domainId/subjects'
     | '/subjects/$subjectId/$categoryId'
+    | '/domains/$domainId/subjects/$subjectId/edit'
     | '/domains/$domainId/subjects/$subjectId'
     | '/domains/$domainId/subjects/$subjectId/$categoryId/$topicId'
     | '/domains/$domainId/subjects/$subjectId/$categoryId'
@@ -226,12 +249,14 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/notes/$noteId'
     | '/domains/'
+    | '/edit/'
     | '/notes/'
     | '/subjects/'
     | '/subjects/$subjectId/'
     | '/subjects/$subjectId/$categoryId/$topicId'
     | '/domains/$domainId/subjects/'
     | '/subjects/$subjectId/$categoryId/'
+    | '/domains/$domainId/subjects/$subjectId/edit'
     | '/domains/$domainId/subjects/$subjectId/'
     | '/domains/$domainId/subjects/$subjectId/$categoryId/$topicId'
     | '/domains/$domainId/subjects/$subjectId/$categoryId/'
@@ -246,12 +271,14 @@ export interface RootRouteChildren {
   AuthCallbackRoute: typeof AuthCallbackRoute
   NotesNoteIdRoute: typeof NotesNoteIdRoute
   DomainsIndexRoute: typeof DomainsIndexRoute
+  EditIndexRoute: typeof EditIndexRoute
   NotesIndexRoute: typeof NotesIndexRoute
   SubjectsIndexRoute: typeof SubjectsIndexRoute
   SubjectsSubjectIdIndexRoute: typeof SubjectsSubjectIdIndexRoute
   SubjectsSubjectIdCategoryIdTopicIdRoute: typeof SubjectsSubjectIdCategoryIdTopicIdRoute
   DomainsDomainIdSubjectsIndexRoute: typeof DomainsDomainIdSubjectsIndexRoute
   SubjectsSubjectIdCategoryIdIndexRoute: typeof SubjectsSubjectIdCategoryIdIndexRoute
+  DomainsDomainIdSubjectsSubjectIdEditRoute: typeof DomainsDomainIdSubjectsSubjectIdEditRoute
   DomainsDomainIdSubjectsSubjectIdIndexRoute: typeof DomainsDomainIdSubjectsSubjectIdIndexRoute
   DomainsDomainIdSubjectsSubjectIdCategoryIdTopicIdRoute: typeof DomainsDomainIdSubjectsSubjectIdCategoryIdTopicIdRoute
   DomainsDomainIdSubjectsSubjectIdCategoryIdIndexRoute: typeof DomainsDomainIdSubjectsSubjectIdCategoryIdIndexRoute
@@ -306,6 +333,13 @@ declare module '@tanstack/react-router' {
       path: '/notes'
       fullPath: '/notes/'
       preLoaderRoute: typeof NotesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/edit/': {
+      id: '/edit/'
+      path: '/edit'
+      fullPath: '/edit/'
+      preLoaderRoute: typeof EditIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/domains/': {
@@ -364,6 +398,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DomainsDomainIdSubjectsSubjectIdIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/domains/$domainId/subjects/$subjectId/edit': {
+      id: '/domains/$domainId/subjects/$subjectId/edit'
+      path: '/domains/$domainId/subjects/$subjectId/edit'
+      fullPath: '/domains/$domainId/subjects/$subjectId/edit'
+      preLoaderRoute: typeof DomainsDomainIdSubjectsSubjectIdEditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/domains/$domainId/subjects/$subjectId/$categoryId/': {
       id: '/domains/$domainId/subjects/$subjectId/$categoryId/'
       path: '/domains/$domainId/subjects/$subjectId/$categoryId'
@@ -390,6 +431,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthCallbackRoute: AuthCallbackRoute,
   NotesNoteIdRoute: NotesNoteIdRoute,
   DomainsIndexRoute: DomainsIndexRoute,
+  EditIndexRoute: EditIndexRoute,
   NotesIndexRoute: NotesIndexRoute,
   SubjectsIndexRoute: SubjectsIndexRoute,
   SubjectsSubjectIdIndexRoute: SubjectsSubjectIdIndexRoute,
@@ -397,6 +439,8 @@ const rootRouteChildren: RootRouteChildren = {
     SubjectsSubjectIdCategoryIdTopicIdRoute,
   DomainsDomainIdSubjectsIndexRoute: DomainsDomainIdSubjectsIndexRoute,
   SubjectsSubjectIdCategoryIdIndexRoute: SubjectsSubjectIdCategoryIdIndexRoute,
+  DomainsDomainIdSubjectsSubjectIdEditRoute:
+    DomainsDomainIdSubjectsSubjectIdEditRoute,
   DomainsDomainIdSubjectsSubjectIdIndexRoute:
     DomainsDomainIdSubjectsSubjectIdIndexRoute,
   DomainsDomainIdSubjectsSubjectIdCategoryIdTopicIdRoute:
