@@ -8,6 +8,7 @@ import type {
   SubcategoryNodeResponse,
   TopicNodeResponse,
 } from "@cpa-study/shared/schemas"
+import type { SimpleTransactionRunner } from "../../shared/lib/transaction"
 
 // Result type for operations
 type Result<T, E> = { ok: true; value: T } | { ok: false; error: E }
@@ -107,12 +108,20 @@ export const getSubjectTree = async (
 
 /**
  * Update the tree structure for a subject using diff-based update
+ *
+ * @param db - Database instance
+ * @param userId - User ID for ownership verification
+ * @param subjectId - Subject ID to update
+ * @param tree - Tree structure to apply
+ * @param txRunner - Optional transaction runner (for testing with better-sqlite3)
+ *                   If not provided, uses db.transaction() (works with D1)
  */
 export const updateSubjectTree = async (
   db: Db,
   userId: string,
   subjectId: string,
-  tree: UpdateTreeRequest
+  tree: UpdateTreeRequest,
+  txRunner?: SimpleTransactionRunner
 ): Promise<Result<void, TreeOperationError>> => {
   const now = new Date()
 
@@ -144,6 +153,8 @@ export const updateSubjectTree = async (
   }
 
   // 3. Validate category IDs (must belong to user and subject)
+  // Note: This includes soft-deleted categories for revival support
+  let validCategoryIdSet = new Set<string>()
   if (requestCategoryIds.size > 0) {
     const validCategories = await db
       .select({ id: categories.id })
@@ -156,7 +167,7 @@ export const updateSubjectTree = async (
         )
       )
 
-    const validCategoryIdSet = new Set(validCategories.map((c) => c.id))
+    validCategoryIdSet = new Set(validCategories.map((c) => c.id))
     for (const id of requestCategoryIds) {
       if (!validCategoryIdSet.has(id)) {
         return err("INVALID_ID")
@@ -165,6 +176,8 @@ export const updateSubjectTree = async (
   }
 
   // 4. Validate topic IDs (must belong to user and be in categories of this subject)
+  // Note: This includes soft-deleted topics for revival support
+  let validTopicIdSet = new Set<string>()
   if (requestTopicIds.size > 0) {
     const validTopics = await db
       .select({ id: topics.id })
@@ -178,7 +191,7 @@ export const updateSubjectTree = async (
         )
       )
 
-    const validTopicIdSet = new Set(validTopics.map((t) => t.id))
+    validTopicIdSet = new Set(validTopics.map((t) => t.id))
     for (const id of requestTopicIds) {
       if (!validTopicIdSet.has(id)) {
         return err("INVALID_ID")
@@ -202,105 +215,134 @@ export const updateSubjectTree = async (
       and(eq(categories.subjectId, subjectId), eq(topics.userId, userId), isNull(topics.deletedAt))
     )
 
-  // 6. Soft-delete categories not in request
-  for (const cat of existingCategories) {
-    if (!requestCategoryIds.has(cat.id)) {
-      await db.update(categories).set({ deletedAt: now }).where(eq(categories.id, cat.id))
-    }
-  }
+  // 6-8. Execute all mutations in a transaction for atomicity
+  // D1 uses batch() internally, better-sqlite3 requires sync transactions
+  const runInTransaction = txRunner
+    ? txRunner.run.bind(txRunner)
+    : // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (fn: (tx: Db) => Promise<void>) => (db as any).transaction(fn)
 
-  // 7. Soft-delete topics not in request
-  for (const topic of existingTopics) {
-    if (!requestTopicIds.has(topic.id)) {
-      await db.update(topics).set({ deletedAt: now }).where(eq(topics.id, topic.id))
-    }
-  }
-
-  // 8. Upsert categories and topics
-  for (const cat of tree.categories) {
-    const categoryId = cat.id ?? crypto.randomUUID()
-
-    // Upsert category (depth=1)
-    const existingCat = cat.id
-      ? await db.select({ id: categories.id }).from(categories).where(eq(categories.id, cat.id)).limit(1)
-      : []
-
-    if (existingCat.length > 0) {
-      // Update existing
-      await db
+  await runInTransaction(async (tx: Db) => {
+    // 6. Soft-delete categories not in request (bulk operation)
+    const categoriesToDelete = existingCategories
+      .filter((cat) => !requestCategoryIds.has(cat.id))
+      .map((cat) => cat.id)
+    if (categoriesToDelete.length > 0) {
+      await tx
         .update(categories)
-        .set({
-          name: cat.name,
-          displayOrder: cat.displayOrder,
-          updatedAt: now,
-          deletedAt: null, // Revive if soft-deleted
-        })
-        .where(eq(categories.id, categoryId))
-    } else {
-      // Insert new
-      await db.insert(categories).values({
-        id: categoryId,
-        userId,
-        subjectId,
-        name: cat.name,
-        depth: 1,
-        parentId: null,
-        displayOrder: cat.displayOrder,
-        createdAt: now,
-        updatedAt: now,
-        deletedAt: null,
-      })
+        .set({ deletedAt: now })
+        .where(inArray(categories.id, categoriesToDelete))
     }
 
-    for (const subcat of cat.subcategories) {
-      const subcategoryId = subcat.id ?? crypto.randomUUID()
+    // 7. Soft-delete topics not in request (bulk operation)
+    const topicsToDelete = existingTopics
+      .filter((topic) => !requestTopicIds.has(topic.id))
+      .map((topic) => topic.id)
+    if (topicsToDelete.length > 0) {
+      await tx
+        .update(topics)
+        .set({ deletedAt: now })
+        .where(inArray(topics.id, topicsToDelete))
+    }
 
-      // Upsert subcategory (depth=2)
-      const existingSubcat = subcat.id
-        ? await db.select({ id: categories.id }).from(categories).where(eq(categories.id, subcat.id)).limit(1)
-        : []
+    // 8. Upsert categories and topics
+    for (const cat of tree.categories) {
+      const categoryId = cat.id ?? crypto.randomUUID()
 
-      if (existingSubcat.length > 0) {
+      // Check if category exists using validation set (includes soft-deleted for revival)
+      const categoryExists = cat.id ? validCategoryIdSet.has(cat.id) : false
+
+      if (categoryExists) {
         // Update existing
-        await db
+        await tx
           .update(categories)
           .set({
-            name: subcat.name,
-            parentId: categoryId,
-            displayOrder: subcat.displayOrder,
+            name: cat.name,
+            depth: 1, // Ensure correct depth when moving nodes
+            parentId: null, // Top-level categories have no parent
+            displayOrder: cat.displayOrder,
             updatedAt: now,
             deletedAt: null, // Revive if soft-deleted
           })
-          .where(eq(categories.id, subcategoryId))
+          .where(eq(categories.id, categoryId))
       } else {
         // Insert new
-        await db.insert(categories).values({
-          id: subcategoryId,
+        await tx.insert(categories).values({
+          id: categoryId,
           userId,
           subjectId,
-          name: subcat.name,
-          depth: 2,
-          parentId: categoryId,
-          displayOrder: subcat.displayOrder,
+          name: cat.name,
+          depth: 1,
+          parentId: null,
+          displayOrder: cat.displayOrder,
           createdAt: now,
           updatedAt: now,
           deletedAt: null,
         })
       }
 
-      for (const topic of subcat.topics) {
-        const topicId = topic.id ?? crypto.randomUUID()
+      for (const subcat of cat.subcategories) {
+        const subcategoryId = subcat.id ?? crypto.randomUUID()
 
-        // Upsert topic
-        const existingTopic = topic.id
-          ? await db.select({ id: topics.id }).from(topics).where(eq(topics.id, topic.id)).limit(1)
-          : []
+        // Check if subcategory exists using validation set (includes soft-deleted for revival)
+        const subcategoryExists = subcat.id ? validCategoryIdSet.has(subcat.id) : false
 
-        if (existingTopic.length > 0) {
+        if (subcategoryExists) {
           // Update existing
-          await db
-            .update(topics)
+          await tx
+            .update(categories)
             .set({
+              name: subcat.name,
+              depth: 2, // Ensure correct depth when moving nodes
+              parentId: categoryId,
+              displayOrder: subcat.displayOrder,
+              updatedAt: now,
+              deletedAt: null, // Revive if soft-deleted
+            })
+            .where(eq(categories.id, subcategoryId))
+        } else {
+          // Insert new
+          await tx.insert(categories).values({
+            id: subcategoryId,
+            userId,
+            subjectId,
+            name: subcat.name,
+            depth: 2,
+            parentId: categoryId,
+            displayOrder: subcat.displayOrder,
+            createdAt: now,
+            updatedAt: now,
+            deletedAt: null,
+          })
+        }
+
+        for (const topic of subcat.topics) {
+          const topicId = topic.id ?? crypto.randomUUID()
+
+          // Check if topic exists using validation set (includes soft-deleted for revival)
+          const topicExists = topic.id ? validTopicIdSet.has(topic.id) : false
+
+          if (topicExists) {
+            // Update existing
+            await tx
+              .update(topics)
+              .set({
+                categoryId: subcategoryId,
+                name: topic.name,
+                description: topic.description ?? null,
+                difficulty: topic.difficulty ?? null,
+                topicType: topic.topicType ?? null,
+                aiSystemPrompt: topic.aiSystemPrompt ?? null,
+                displayOrder: topic.displayOrder,
+                updatedAt: now,
+                deletedAt: null, // Revive if soft-deleted
+              })
+              .where(eq(topics.id, topicId))
+          } else {
+            // Insert new
+            await tx.insert(topics).values({
+              id: topicId,
+              userId,
               categoryId: subcategoryId,
               name: topic.name,
               description: topic.description ?? null,
@@ -308,30 +350,15 @@ export const updateSubjectTree = async (
               topicType: topic.topicType ?? null,
               aiSystemPrompt: topic.aiSystemPrompt ?? null,
               displayOrder: topic.displayOrder,
+              createdAt: now,
               updatedAt: now,
-              deletedAt: null, // Revive if soft-deleted
+              deletedAt: null,
             })
-            .where(eq(topics.id, topicId))
-        } else {
-          // Insert new
-          await db.insert(topics).values({
-            id: topicId,
-            userId,
-            categoryId: subcategoryId,
-            name: topic.name,
-            description: topic.description ?? null,
-            difficulty: topic.difficulty ?? null,
-            topicType: topic.topicType ?? null,
-            aiSystemPrompt: topic.aiSystemPrompt ?? null,
-            displayOrder: topic.displayOrder,
-            createdAt: now,
-            updatedAt: now,
-            deletedAt: null,
-          })
+          }
         }
       }
     }
-  }
+  })
 
   return ok(undefined)
 }

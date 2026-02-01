@@ -14,13 +14,15 @@ import {
 } from "./usecase"
 import { getSubjectTree, updateSubjectTree } from "./tree"
 import { importCSV } from "./csv-import"
+import type { SimpleTransactionRunner } from "../../shared/lib/transaction"
 
 type SubjectDeps = {
   env: Env
   db: Db
+  txRunner?: SimpleTransactionRunner
 }
 
-export const subjectRoutes = ({ db }: SubjectDeps) => {
+export const subjectRoutes = ({ db, txRunner }: SubjectDeps) => {
   const subjectRepo = createSubjectRepository(db)
   const deps = { subjectRepo }
 
@@ -137,7 +139,7 @@ export const subjectRoutes = ({ db }: SubjectDeps) => {
         const user = c.get("user")
         const id = c.req.param("id")
         const data = c.req.valid("json")
-        const result = await updateSubjectTree(db, user.id, id, data)
+        const result = await updateSubjectTree(db, user.id, id, data, txRunner)
 
         if (!result.ok) {
           if (result.error === "NOT_FOUND") {
@@ -167,7 +169,7 @@ export const subjectRoutes = ({ db }: SubjectDeps) => {
         const id = c.req.param("id")
         const { csvContent } = c.req.valid("json")
 
-        const result = await importCSV(db, user.id, id, csvContent)
+        const result = await importCSV(db, user.id, id, csvContent, txRunner)
 
         if (!result.ok) {
           return c.json({ error: "科目が見つかりません" }, 404)

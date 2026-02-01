@@ -2,6 +2,7 @@ import type { Db } from "@cpa-study/db"
 import type { CSVImportResponse } from "@cpa-study/shared/schemas"
 import { parseCSV, convertToTree, mergeTree, type ParseError } from "./csv-parser"
 import { getSubjectTree, updateSubjectTree } from "./tree"
+import type { SimpleTransactionRunner } from "../../shared/lib/transaction"
 
 // Result type for operations
 type Result<T, E> = { ok: true; value: T } | { ok: false; error: E }
@@ -14,12 +15,19 @@ export type CSVImportError = "NOT_FOUND" | "FORBIDDEN"
 
 /**
  * Import CSV data into subject's tree (append mode)
+ *
+ * @param db - Database instance
+ * @param userId - User ID for ownership verification
+ * @param subjectId - Subject ID to import into
+ * @param csvContent - CSV content to import
+ * @param txRunner - Optional transaction runner (for testing with better-sqlite3)
  */
 export const importCSV = async (
   db: Db,
   userId: string,
   subjectId: string,
-  csvContent: string
+  csvContent: string,
+  txRunner?: SimpleTransactionRunner
 ): Promise<Result<CSVImportResponse, CSVImportError>> => {
   // 1. Get existing tree (also validates ownership)
   const existingTreeResult = await getSubjectTree(db, userId, subjectId)
@@ -64,7 +72,7 @@ export const importCSV = async (
   const mergedTree = mergeTree(existingTreeForMerge, importedTree)
 
   // 6. Update tree
-  const updateResult = await updateSubjectTree(db, userId, subjectId, mergedTree)
+  const updateResult = await updateSubjectTree(db, userId, subjectId, mergedTree, txRunner)
   if (!updateResult.ok) {
     // This shouldn't happen since we already validated ownership
     return err("NOT_FOUND")

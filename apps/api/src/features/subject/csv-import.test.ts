@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest"
-import { importCSV } from "./csv-import"
+import { importCSV as _importCSV } from "./csv-import"
 import { getSubjectTree } from "./tree"
 import { createTestDatabase, type TestDatabase } from "@/test/mocks/db"
 import {
@@ -9,13 +9,25 @@ import {
   createTestCategory,
   createTestTopic,
 } from "@/test/helpers"
+import { createMockSimpleTransactionRunner } from "@/shared/lib/transaction"
 
 describe("CSV Import", () => {
   let db: TestDatabase
+  // Wrapper for importCSV that injects the mock transaction runner
+  let importCSV: (
+    db: TestDatabase,
+    userId: string,
+    subjectId: string,
+    csvContent: string
+  ) => ReturnType<typeof _importCSV>
 
   beforeEach(() => {
     const result = createTestDatabase()
     db = result.db
+    // Use mock transaction runner for better-sqlite3 (which doesn't support async transactions)
+    const txRunner = createMockSimpleTransactionRunner(db)
+    importCSV = (db, userId, subjectId, csvContent) =>
+      _importCSV(db, userId, subjectId, csvContent, txRunner)
   })
 
   describe("importCSV", () => {

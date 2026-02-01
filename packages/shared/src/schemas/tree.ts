@@ -80,7 +80,10 @@ export type TreeResponse = z.infer<typeof treeResponseSchema>
 
 // CSV import request schema
 export const csvImportRequestSchema = z.object({
-  csvContent: z.string().min(1, "CSVデータは必須です"),
+  csvContent: z
+    .string()
+    .min(1, "CSVデータは必須です")
+    .max(1_000_000, "CSVは1MB以内にしてください"),
 })
 
 export type CSVImportRequest = z.infer<typeof csvImportRequestSchema>

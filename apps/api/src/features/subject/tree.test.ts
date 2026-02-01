@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest"
-import { getSubjectTree, updateSubjectTree } from "./tree"
+import { getSubjectTree, updateSubjectTree as _updateSubjectTree } from "./tree"
 import { createTestDatabase, type TestDatabase } from "@/test/mocks/db"
 import {
   createTestUser,
@@ -10,13 +10,26 @@ import {
 } from "@/test/helpers"
 import * as schema from "@cpa-study/db/schema"
 import { eq } from "drizzle-orm"
+import { createMockSimpleTransactionRunner } from "@/shared/lib/transaction"
+import type { UpdateTreeRequest } from "@cpa-study/shared/schemas"
 
 describe("Tree Operations", () => {
   let db: TestDatabase
+  // Wrapper for updateSubjectTree that injects the mock transaction runner
+  let updateSubjectTree: (
+    db: TestDatabase,
+    userId: string,
+    subjectId: string,
+    tree: UpdateTreeRequest
+  ) => ReturnType<typeof _updateSubjectTree>
 
   beforeEach(() => {
     const result = createTestDatabase()
     db = result.db
+    // Use mock transaction runner for better-sqlite3 (which doesn't support async transactions)
+    const txRunner = createMockSimpleTransactionRunner(db)
+    updateSubjectTree = (db, userId, subjectId, tree) =>
+      _updateSubjectTree(db, userId, subjectId, tree, txRunner)
   })
 
   describe("getSubjectTree", () => {

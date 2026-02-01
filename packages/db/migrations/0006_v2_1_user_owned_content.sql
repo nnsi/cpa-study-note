@@ -364,7 +364,24 @@ CREATE INDEX `topics_user_deleted_idx` ON `topics` (`user_id`, `deleted_at`);
 CREATE INDEX `topics_category_id_idx` ON `topics` (`category_id`);
 --> statement-breakpoint
 
--- Step 28: Drop migration mapping tables
+-- Step 28: Update users.default_study_domain_id to new domain ID
+-- Uses _domain_migration_map to find the corresponding new domain ID for each user
+UPDATE users
+SET default_study_domain_id = (
+  SELECT dmm.new_domain_id
+  FROM _domain_migration_map dmm
+  WHERE dmm.old_domain_id = users.default_study_domain_id
+    AND dmm.user_id = users.id
+)
+WHERE default_study_domain_id IS NOT NULL
+  AND EXISTS (
+    SELECT 1 FROM _domain_migration_map dmm
+    WHERE dmm.old_domain_id = users.default_study_domain_id
+      AND dmm.user_id = users.id
+  );
+--> statement-breakpoint
+
+-- Step 29: Drop migration mapping tables
 DROP TABLE `_topic_migration_map`;
 --> statement-breakpoint
 DROP TABLE `_category_migration_map`;
@@ -374,11 +391,11 @@ DROP TABLE `_subject_migration_map`;
 DROP TABLE `_domain_migration_map`;
 --> statement-breakpoint
 
--- Step 29: Drop user_study_domains table (no longer needed)
+-- Step 30: Drop user_study_domains table (no longer needed)
 DROP TABLE `user_study_domains`;
 --> statement-breakpoint
 
--- Step 30: Recreate users table with all required columns
+-- Step 31: Recreate users table with all required columns
 -- SQLite doesn't support DROP COLUMN directly before 3.35, so we recreate the table
 CREATE TABLE `users_new` (
 	`id` text PRIMARY KEY NOT NULL,
