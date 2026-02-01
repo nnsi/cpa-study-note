@@ -1,10 +1,11 @@
 import type { Db } from "@cpa-study/db"
 import type { Env } from "@/shared/types/env"
 import { subjectRoutes } from "./route"
-import { createSimpleTransactionRunner } from "@/shared/lib/transaction"
+import { createNoTransactionRunner } from "@/shared/lib/transaction"
 
 export const createSubjectFeature = (env: Env, db: Db) => {
-  const txRunner = createSimpleTransactionRunner(db)
+  // D1 does not support SQL transactions, use NoTransactionRunner
+  const txRunner = createNoTransactionRunner(db)
   return subjectRoutes({ env, db, txRunner })
 }
 

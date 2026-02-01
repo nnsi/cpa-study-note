@@ -30,11 +30,25 @@ export const createDrizzleTransactionRunner = (db: Db): TransactionRunner => ({
  *
  * For simpler use cases where you just need to wrap operations in a transaction
  * without the repository pattern.
+ *
+ * NOTE: Does NOT work with D1. Use createNoTransactionRunner for D1.
  */
 export const createSimpleTransactionRunner = (db: Db): SimpleTransactionRunner => ({
   async run<T>(operation: (tx: Db) => Promise<T>): Promise<T> {
     return db.transaction(async (tx) => {
       return operation(tx as unknown as Db)
     })
+  },
+})
+
+/**
+ * Creates a SimpleTransactionRunner that executes without transaction wrapping
+ *
+ * Use this for D1, which does not support SQL transactions (BEGIN/COMMIT).
+ * Operations are executed sequentially without atomicity guarantees.
+ */
+export const createNoTransactionRunner = (db: Db): SimpleTransactionRunner => ({
+  async run<T>(operation: (tx: Db) => Promise<T>): Promise<T> {
+    return operation(db)
   },
 })
