@@ -58,6 +58,13 @@
 - バックエンドは `Route → UseCase → Repository` の依存方向を守る
 - 単純なCRUDでも UseCase を経由する（「妥協」しない）
 
+## インフラ操作
+
+- **IaC管理リソースは直接操作しない**: D1、R2等のCloudflareリソースはTerraformで管理。`wrangler d1 delete/create` で直接操作すると、Terraform stateと実リソースが乖離し復旧が困難になる
+- **wrangler.tomlのIDはプレースホルダー**: `database_id`等はGitHub Actionsがデプロイ時に`vars.D1_DATABASE_ID`で置換する。固定値をコミットしない
+- **DB初期化はテーブル単位で**: DBを削除せず、テーブルをDROPしてマイグレーションを再適用する。ただし`d1_migrations`テーブルも削除すること（履歴がないと再適用時に衝突）
+- **リソース削除前にinfra/を確認**: `infra/*.tf` を見てIaC管理かどうか確認してから操作する
+
 ## 既知の落とし穴
 
 以下は過去の開発で実際に発生した問題。同じミスを繰り返さないこと。
@@ -72,6 +79,9 @@
 | セッション作成時に0件セッションが残る | 「作成」と「最初のメッセージ」が分離 | 最初のメッセージ送信時にセッション作成 |
 | SQLiteマイグレーションでカラムが消える | テーブル再作成時に既存カラムを含め忘れ | CREATE TABLE文に全カラムを明示的に列挙 |
 | dev-loginで外部キー制約違反 | 存在しないユーザーIDでトークン保存 | ユーザーが存在しない場合は自動作成 |
+| IaC管理のD1を`wrangler d1 delete`で削除 | Terraform管理を確認せず直接操作 | `infra/*.tf`を確認し、IaC管理ならTerraform経由で操作 |
+| CIでマイグレーション衝突 | `--file`で直接SQLを実行し`d1_migrations`に履歴が残らない | `wrangler d1 migrations apply`を使うか、履歴テーブルも含めて初期化 |
+| wrangler.tomlにdatabase_id固定値 | GitHub Actionsで置換されるプレースホルダーを上書き | `YOUR_STAGING_DATABASE_ID`等のプレースホルダーを維持 |
 
 ---
 

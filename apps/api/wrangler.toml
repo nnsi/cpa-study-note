@@ -30,7 +30,7 @@ name = "cpa-study-api-stg"
 [[env.staging.d1_databases]]
 binding = "DB"
 database_name = "cpa-study-db-stg"
-database_id = "ce8cc6ce-b130-43bc-a8ca-4fafe09208ef"
+database_id = "YOUR_STAGING_DATABASE_ID"
 migrations_dir = "../../packages/db/migrations"
 
 [[env.staging.r2_buckets]]
