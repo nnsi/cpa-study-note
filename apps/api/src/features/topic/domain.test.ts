@@ -9,6 +9,9 @@ import {
   subjectWithStatsSchema,
   categoryWithChildrenSchema,
   topicWithProgressSchema,
+  subjectResponseSchema,
+  categoryResponseSchema,
+  topicResponseSchema,
 } from "@cpa-study/shared/schemas"
 
 // Note: repository.ts defines internal types (Subject, Category, Topic, TopicProgress)
@@ -19,6 +22,7 @@ describe("Topic Domain Types", () => {
     it("should parse valid subject data", () => {
       const data = {
         id: "subject-123",
+        userId: "user-123",
         studyDomainId: "cpa",
         name: "Financial Accounting",
         description: "Introduction to financial accounting principles",
@@ -27,6 +31,7 @@ describe("Topic Domain Types", () => {
         displayOrder: 1,
         createdAt: "2024-01-15T10:00:00.000Z",
         updatedAt: "2024-01-15T10:00:00.000Z",
+        deletedAt: null,
       }
 
       const result = subjectSchema.safeParse(data)
@@ -39,12 +44,14 @@ describe("Topic Domain Types", () => {
         expect(result.data.studyDomainId).toBe("cpa")
         expect(result.data.emoji).toBe("📊")
         expect(result.data.color).toBe("indigo")
+        expect(result.data.userId).toBe("user-123")
       }
     })
 
     it("should accept null description", () => {
       const data = {
         id: "subject-123",
+        userId: "user-123",
         studyDomainId: "cpa",
         name: "Financial Accounting",
         description: null,
@@ -53,6 +60,7 @@ describe("Topic Domain Types", () => {
         displayOrder: 1,
         createdAt: "2024-01-15T10:00:00.000Z",
         updatedAt: "2024-01-15T10:00:00.000Z",
+        deletedAt: null,
       }
 
       const result = subjectSchema.safeParse(data)
@@ -74,6 +82,7 @@ describe("Topic Domain Types", () => {
     it("should parse valid category data", () => {
       const data = {
         id: "category-123",
+        userId: "user-123",
         subjectId: "subject-123",
         name: "Assets",
         depth: 0,
@@ -81,6 +90,7 @@ describe("Topic Domain Types", () => {
         displayOrder: 1,
         createdAt: "2024-01-15T10:00:00.000Z",
         updatedAt: "2024-01-15T10:00:00.000Z",
+        deletedAt: null,
       }
 
       const result = categorySchema.safeParse(data)
@@ -89,12 +99,14 @@ describe("Topic Domain Types", () => {
         expect(result.data.name).toBe("Assets")
         expect(result.data.depth).toBe(0)
         expect(result.data.parentId).toBeNull()
+        expect(result.data.userId).toBe("user-123")
       }
     })
 
     it("should parse nested category with parentId", () => {
       const data = {
         id: "category-456",
+        userId: "user-123",
         subjectId: "subject-123",
         name: "Current Assets",
         depth: 1,
@@ -102,6 +114,7 @@ describe("Topic Domain Types", () => {
         displayOrder: 1,
         createdAt: "2024-01-15T10:00:00.000Z",
         updatedAt: "2024-01-15T10:00:00.000Z",
+        deletedAt: null,
       }
 
       const result = categorySchema.safeParse(data)
@@ -117,6 +130,7 @@ describe("Topic Domain Types", () => {
     it("should parse valid topic data", () => {
       const data = {
         id: "topic-123",
+        userId: "user-123",
         categoryId: "category-123",
         name: "Depreciation Methods",
         description: "Understanding different depreciation methods",
@@ -126,6 +140,7 @@ describe("Topic Domain Types", () => {
         displayOrder: 1,
         createdAt: "2024-01-15T10:00:00.000Z",
         updatedAt: "2024-01-15T10:00:00.000Z",
+        deletedAt: null,
       }
 
       const result = topicSchema.safeParse(data)
@@ -133,12 +148,14 @@ describe("Topic Domain Types", () => {
       if (result.success) {
         expect(result.data.difficulty).toBe("intermediate")
         expect(result.data.topicType).toBe("calculation")
+        expect(result.data.userId).toBe("user-123")
       }
     })
 
     it("should accept null for optional fields", () => {
       const data = {
         id: "topic-123",
+        userId: "user-123",
         categoryId: "category-123",
         name: "Basic Concepts",
         description: null,
@@ -148,6 +165,7 @@ describe("Topic Domain Types", () => {
         displayOrder: 1,
         createdAt: "2024-01-15T10:00:00.000Z",
         updatedAt: "2024-01-15T10:00:00.000Z",
+        deletedAt: null,
       }
 
       const result = topicSchema.safeParse(data)
@@ -226,6 +244,7 @@ describe("Topic Domain Types", () => {
     it("should parse subject with stats", () => {
       const data = {
         id: "subject-123",
+        userId: "user-123",
         studyDomainId: "cpa",
         name: "Financial Accounting",
         description: null,
@@ -251,6 +270,7 @@ describe("Topic Domain Types", () => {
     it("should allow optional completedCount", () => {
       const data = {
         id: "subject-123",
+        userId: "user-123",
         studyDomainId: "cpa",
         name: "Financial Accounting",
         description: null,
@@ -272,6 +292,7 @@ describe("Topic Domain Types", () => {
     it("should parse category with children", () => {
       const data = {
         id: "category-123",
+        userId: "user-123",
         subjectId: "subject-123",
         name: "Assets",
         depth: 0,
@@ -282,6 +303,7 @@ describe("Topic Domain Types", () => {
         children: [
           {
             id: "category-456",
+            userId: "user-123",
             subjectId: "subject-123",
             name: "Current Assets",
             depth: 1,
@@ -304,6 +326,7 @@ describe("Topic Domain Types", () => {
     it("should parse category with topics", () => {
       const data = {
         id: "category-123",
+        userId: "user-123",
         subjectId: "subject-123",
         name: "Depreciation",
         depth: 0,
@@ -314,6 +337,7 @@ describe("Topic Domain Types", () => {
         topics: [
           {
             id: "topic-123",
+            userId: "user-123",
             categoryId: "category-123",
             name: "Straight-line Method",
             description: null,
@@ -340,6 +364,7 @@ describe("Topic Domain Types", () => {
     it("should parse topic with progress", () => {
       const data = {
         id: "topic-123",
+        userId: "user-123",
         categoryId: "category-123",
         name: "Depreciation Methods",
         description: null,
@@ -373,6 +398,7 @@ describe("Topic Domain Types", () => {
     it("should parse topic with null progress", () => {
       const data = {
         id: "topic-123",
+        userId: "user-123",
         categoryId: "category-123",
         name: "New Topic",
         description: null,
@@ -390,6 +416,62 @@ describe("Topic Domain Types", () => {
       if (result.success) {
         expect(result.data.progress).toBeNull()
       }
+    })
+  })
+
+  describe("Response schemas (omit deletedAt)", () => {
+    it("should parse subject response without deletedAt", () => {
+      const data = {
+        id: "subject-123",
+        userId: "user-123",
+        studyDomainId: "cpa",
+        name: "Financial Accounting",
+        description: null,
+        emoji: null,
+        color: null,
+        displayOrder: 1,
+        createdAt: "2024-01-15T10:00:00.000Z",
+        updatedAt: "2024-01-15T10:00:00.000Z",
+      }
+
+      const result = subjectResponseSchema.safeParse(data)
+      expect(result.success).toBe(true)
+    })
+
+    it("should parse category response without deletedAt", () => {
+      const data = {
+        id: "category-123",
+        userId: "user-123",
+        subjectId: "subject-123",
+        name: "Assets",
+        depth: 0,
+        parentId: null,
+        displayOrder: 1,
+        createdAt: "2024-01-15T10:00:00.000Z",
+        updatedAt: "2024-01-15T10:00:00.000Z",
+      }
+
+      const result = categoryResponseSchema.safeParse(data)
+      expect(result.success).toBe(true)
+    })
+
+    it("should parse topic response without deletedAt", () => {
+      const data = {
+        id: "topic-123",
+        userId: "user-123",
+        categoryId: "category-123",
+        name: "Depreciation",
+        description: null,
+        difficulty: null,
+        topicType: null,
+        aiSystemPrompt: null,
+        displayOrder: 1,
+        createdAt: "2024-01-15T10:00:00.000Z",
+        updatedAt: "2024-01-15T10:00:00.000Z",
+      }
+
+      const result = topicResponseSchema.safeParse(data)
+      expect(result.success).toBe(true)
     })
   })
 })

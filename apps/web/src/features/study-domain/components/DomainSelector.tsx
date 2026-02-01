@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react"
 import { Link, useNavigate } from "@tanstack/react-router"
 import { useCurrentDomain } from "../hooks/useCurrentDomain"
-import { useUserStudyDomains } from "../hooks/useUserStudyDomains"
+import { useStudyDomains } from "../hooks/useStudyDomains"
 import { getColorClass } from "@/lib/colorClasses"
 
 /**
@@ -13,7 +13,7 @@ export function DomainSelector() {
   const navigate = useNavigate()
 
   const { domainId, domain, isLoading: isLoadingCurrent } = useCurrentDomain()
-  const { userStudyDomains, isLoading: isLoadingDomains } = useUserStudyDomains()
+  const { studyDomains, isLoading: isLoadingDomains } = useStudyDomains()
 
   // 外側クリックでドロップダウンを閉じる
   useEffect(() => {
@@ -95,9 +95,9 @@ export function DomainSelector() {
       {/* ドロップダウンメニュー */}
       {isOpen && (
         <div className="absolute top-full left-0 mt-1 w-64 bg-white rounded-xl shadow-soft border border-ink-100 py-2 z-50 animate-fade-in">
-          {/* 参加中の学習領域一覧 */}
+          {/* 学習領域一覧 */}
           <div className="px-3 py-2">
-            <span className="label text-xs">参加中の学習領域</span>
+            <span className="label text-xs">学習領域</span>
           </div>
 
           {isLoadingDomains ? (
@@ -106,20 +106,19 @@ export function DomainSelector() {
                 <div key={i} className="h-10 skeleton rounded-lg" />
               ))}
             </div>
-          ) : userStudyDomains.length === 0 ? (
+          ) : studyDomains.length === 0 ? (
             <div className="px-3 py-4 text-center">
               <p className="text-sm text-ink-400">
-                参加中の学習領域がありません
+                学習領域がありません
               </p>
             </div>
           ) : (
             <ul role="listbox" className="px-1">
-              {userStudyDomains.map((userDomain) => {
-                const isSelected = userDomain.studyDomainId === domainId
-                const studyDomain = userDomain.studyDomain
+              {studyDomains.map((studyDomain) => {
+                const isSelected = studyDomain.id === domainId
 
                 return (
-                  <li key={userDomain.id}>
+                  <li key={studyDomain.id}>
                     <button
                       type="button"
                       role="option"
@@ -167,7 +166,7 @@ export function DomainSelector() {
           {/* 区切り線 */}
           <div className="my-2 divider" />
 
-          {/* 他の学習領域を追加リンク */}
+          {/* 学習領域の管理リンク */}
           <div className="px-1">
             <Link
               to="/domains"
@@ -185,7 +184,7 @@ export function DomainSelector() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                 </svg>
               </span>
-              <span className="text-sm font-medium">他の学習領域を追加</span>
+              <span className="text-sm font-medium">学習領域を管理</span>
             </Link>
           </div>
         </div>

@@ -8,6 +8,7 @@ export type TopicType = z.infer<typeof topicTypeSchema>
 
 export const subjectSchema = z.object({
   id: z.string(),
+  userId: z.string(),
   studyDomainId: z.string(),
   name: z.string(),
   description: z.string().nullable(),
@@ -16,12 +17,14 @@ export const subjectSchema = z.object({
   displayOrder: z.number(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
+  deletedAt: z.string().datetime().nullable(),
 })
 
 export type Subject = z.infer<typeof subjectSchema>
 
 export const categorySchema = z.object({
   id: z.string(),
+  userId: z.string(),
   subjectId: z.string(),
   name: z.string(),
   depth: z.number(),
@@ -29,12 +32,14 @@ export const categorySchema = z.object({
   displayOrder: z.number(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
+  deletedAt: z.string().datetime().nullable(),
 })
 
 export type Category = z.infer<typeof categorySchema>
 
 export const topicSchema = z.object({
   id: z.string(),
+  userId: z.string(),
   categoryId: z.string(),
   name: z.string(),
   description: z.string().nullable(),
@@ -44,6 +49,7 @@ export const topicSchema = z.object({
   displayOrder: z.number(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
+  deletedAt: z.string().datetime().nullable(),
 })
 
 export type Topic = z.infer<typeof topicSchema>
@@ -62,8 +68,18 @@ export const userTopicProgressSchema = z.object({
 
 export type UserTopicProgress = z.infer<typeof userTopicProgressSchema>
 
+// Response schemas - omit deletedAt for API responses
+export const subjectResponseSchema = subjectSchema.omit({ deletedAt: true })
+export type SubjectResponse = z.infer<typeof subjectResponseSchema>
+
+export const categoryResponseSchema = categorySchema.omit({ deletedAt: true })
+export type CategoryResponse = z.infer<typeof categoryResponseSchema>
+
+export const topicResponseSchema = topicSchema.omit({ deletedAt: true })
+export type TopicResponse = z.infer<typeof topicResponseSchema>
+
 // Response schemas with nested data
-export const subjectWithStatsSchema = subjectSchema.extend({
+export const subjectWithStatsSchema = subjectResponseSchema.extend({
   categoryCount: z.number(),
   topicCount: z.number(),
   completedCount: z.number().optional(),
@@ -71,18 +87,18 @@ export const subjectWithStatsSchema = subjectSchema.extend({
 
 export type SubjectWithStats = z.infer<typeof subjectWithStatsSchema>
 
-// 再帰型は先に定義
-export type CategoryWithChildren = Category & {
+// Type for recursive structure
+export type CategoryWithChildren = CategoryResponse & {
   children?: CategoryWithChildren[]
-  topics?: Topic[]
+  topics?: TopicResponse[]
 }
 
-export const categoryWithChildrenSchema: z.ZodType<CategoryWithChildren> = categorySchema.extend({
+export const categoryWithChildrenSchema: z.ZodType<CategoryWithChildren> = categoryResponseSchema.extend({
   children: z.array(z.lazy(() => categoryWithChildrenSchema)).optional(),
-  topics: z.array(topicSchema).optional(),
+  topics: z.array(topicResponseSchema).optional(),
 })
 
-export const topicWithProgressSchema = topicSchema.extend({
+export const topicWithProgressSchema = topicResponseSchema.extend({
   progress: userTopicProgressSchema.nullable(),
 })
 
@@ -147,3 +163,22 @@ export const topicFilterResponseSchema = z.object({
 })
 
 export type TopicFilterResponse = z.infer<typeof topicFilterResponseSchema>
+
+// Create/Update request schemas
+export const createSubjectRequestSchema = z.object({
+  name: z.string().min(1, "名前は必須です").max(200, "名前は200文字以内で入力してください"),
+  description: z.string().max(1000).optional(),
+  emoji: z.string().max(10).optional(),
+  color: z.string().max(50).optional(),
+})
+
+export type CreateSubjectRequest = z.infer<typeof createSubjectRequestSchema>
+
+export const updateSubjectRequestSchema = z.object({
+  name: z.string().min(1).max(200).optional(),
+  description: z.string().max(1000).nullable().optional(),
+  emoji: z.string().max(10).nullable().optional(),
+  color: z.string().max(50).nullable().optional(),
+})
+
+export type UpdateSubjectRequest = z.infer<typeof updateSubjectRequestSchema>

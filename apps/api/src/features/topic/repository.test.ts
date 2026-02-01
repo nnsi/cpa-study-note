@@ -30,7 +30,8 @@ describe("TopicRepository", () => {
       db.insert(schema.subjects)
         .values({
           id: "subject-2",
-          studyDomainId: "cpa",
+          studyDomainId: testData.studyDomainId,
+          userId: testData.userId,
           name: "管理会計論",
           description: "管理会計論の科目",
           displayOrder: 0, // 先に表示される
@@ -83,6 +84,7 @@ describe("TopicRepository", () => {
         .values({
           id: "category-2",
           subjectId: testData.subjectId,
+          userId: testData.userId,
           name: "理論",
           depth: 0,
           parentId: null,
@@ -95,6 +97,7 @@ describe("TopicRepository", () => {
         .values({
           id: "category-3",
           subjectId: testData.subjectId,
+          userId: testData.userId,
           name: "子カテゴリ",
           depth: 1,
           parentId: testData.categoryId,
@@ -119,7 +122,8 @@ describe("TopicRepository", () => {
       db.insert(schema.subjects)
         .values({
           id: "empty-subject",
-          studyDomainId: "cpa",
+          studyDomainId: testData.studyDomainId,
+          userId: testData.userId,
           name: "空の科目",
           displayOrder: 99,
           createdAt: now,
@@ -154,6 +158,7 @@ describe("TopicRepository", () => {
         .values({
           id: "topic-2",
           categoryId: testData.categoryId,
+          userId: testData.userId,
           name: "棚卸資産",
           description: "棚卸資産の会計処理",
           displayOrder: 0,
@@ -179,6 +184,7 @@ describe("TopicRepository", () => {
         .values({
           id: "empty-category",
           subjectId: testData.subjectId,
+          userId: testData.userId,
           name: "空のカテゴリ",
           depth: 0,
           displayOrder: 99,
@@ -342,6 +348,7 @@ describe("TopicRepository", () => {
         .values({
           id: "topic-another",
           categoryId: testData.categoryId,
+          userId: testData.userId,
           name: "別の論点",
           displayOrder: 10,
           createdAt: now,
@@ -383,7 +390,8 @@ describe("TopicRepository", () => {
       db.insert(schema.subjects)
         .values({
           id: "empty-subject-2",
-          studyDomainId: "cpa",
+          studyDomainId: testData.studyDomainId,
+          userId: testData.userId,
           name: "空の科目2",
           displayOrder: 100,
           createdAt: now,
@@ -404,6 +412,7 @@ describe("TopicRepository", () => {
         .values({
           id: "category-stats",
           subjectId: testData.subjectId,
+          userId: testData.userId,
           name: "統計用カテゴリ",
           depth: 0,
           displayOrder: 10,
@@ -415,6 +424,7 @@ describe("TopicRepository", () => {
         .values({
           id: "topic-stats-1",
           categoryId: "category-stats",
+          userId: testData.userId,
           name: "統計用論点1",
           displayOrder: 0,
           createdAt: now,
@@ -425,6 +435,7 @@ describe("TopicRepository", () => {
         .values({
           id: "topic-stats-2",
           categoryId: "category-stats",
+          userId: testData.userId,
           name: "統計用論点2",
           displayOrder: 1,
           createdAt: now,
@@ -579,6 +590,7 @@ describe("TopicRepository", () => {
         .values({
           id: "other-topic",
           categoryId: testData.categoryId,
+          userId: testData.userId,
           name: "別の論点",
           displayOrder: 10,
           createdAt: now,

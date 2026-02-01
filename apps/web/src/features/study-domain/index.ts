@@ -1,20 +1,21 @@
 // API functions
 export {
-  getPublicStudyDomains,
+  getStudyDomains,
   getStudyDomain,
-  getUserStudyDomains,
-  joinStudyDomain,
-  leaveStudyDomain,
+  createStudyDomain,
+  updateStudyDomain,
+  deleteStudyDomain,
 } from "./api"
-export type { StudyDomain, UserStudyDomain } from "./api"
+export type { StudyDomain, CreateStudyDomainInput, UpdateStudyDomainInput } from "./api"
 
 // Hooks
 export { useCurrentDomain } from "./hooks/useCurrentDomain"
 export {
-  useUserStudyDomains,
-  useJoinStudyDomain,
-  useLeaveStudyDomain,
-} from "./hooks/useUserStudyDomains"
+  useStudyDomains,
+  useCreateStudyDomain,
+  useUpdateStudyDomain,
+  useDeleteStudyDomain,
+} from "./hooks/useStudyDomains"
 
 // Components
 export { DomainSelector } from "./components"

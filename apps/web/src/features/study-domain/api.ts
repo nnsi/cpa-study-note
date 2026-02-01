@@ -2,28 +2,34 @@ import { api } from "@/lib/api-client"
 
 export type StudyDomain = {
   id: string
+  userId: string
   name: string
   description: string | null
   emoji: string | null
   color: string | null
-  isPublic: boolean
   createdAt: string
   updatedAt: string
 }
 
-export type UserStudyDomain = {
-  id: string
-  userId: string
-  studyDomainId: string
-  joinedAt: string
-  studyDomain: StudyDomain
+export type CreateStudyDomainInput = {
+  name: string
+  description?: string
+  emoji?: string
+  color?: string
 }
 
-export const getPublicStudyDomains = async (): Promise<{
+export type UpdateStudyDomainInput = {
+  name?: string
+  description?: string
+  emoji?: string
+  color?: string
+}
+
+export const getStudyDomains = async (): Promise<{
   studyDomains: StudyDomain[]
 }> => {
   const res = await api.api["study-domains"].$get()
-  if (!res.ok) throw new Error("Failed to fetch public study domains")
+  if (!res.ok) throw new Error("Failed to fetch study domains")
   return res.json()
 }
 
@@ -37,30 +43,43 @@ export const getStudyDomain = async (
   return res.json()
 }
 
-export const getUserStudyDomains = async (): Promise<{
-  userStudyDomains: UserStudyDomain[]
-}> => {
-  const res = await api.api.me["study-domains"].$get()
-  if (!res.ok) throw new Error("Failed to fetch user study domains")
-  return res.json()
-}
-
-export const joinStudyDomain = async (
-  id: string
-): Promise<{ userStudyDomain: UserStudyDomain }> => {
-  const res = await api.api.me["study-domains"][":id"].join.$post({
-    param: { id },
+export const createStudyDomain = async (
+  data: CreateStudyDomainInput
+): Promise<{ studyDomain: StudyDomain }> => {
+  const res = await api.api["study-domains"].$post({
+    json: data,
   })
-  if (!res.ok) throw new Error("Failed to join study domain")
+  if (!res.ok) {
+    const error = await res.json()
+    throw new Error((error as { error?: string }).error ?? "Failed to create study domain")
+  }
   return res.json()
 }
 
-export const leaveStudyDomain = async (
+export const updateStudyDomain = async (
+  id: string,
+  data: UpdateStudyDomainInput
+): Promise<{ studyDomain: StudyDomain }> => {
+  const res = await api.api["study-domains"][":id"].$patch({
+    param: { id },
+    json: data,
+  })
+  if (!res.ok) {
+    const error = await res.json()
+    throw new Error((error as { error?: string }).error ?? "Failed to update study domain")
+  }
+  return res.json()
+}
+
+export const deleteStudyDomain = async (
   id: string
 ): Promise<{ success: boolean }> => {
-  const res = await api.api.me["study-domains"][":id"].leave.$delete({
+  const res = await api.api["study-domains"][":id"].$delete({
     param: { id },
   })
-  if (!res.ok) throw new Error("Failed to leave study domain")
+  if (!res.ok) {
+    const error = await res.json()
+    throw new Error((error as { error?: string }).error ?? "Failed to delete study domain")
+  }
   return res.json()
 }

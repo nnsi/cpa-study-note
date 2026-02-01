@@ -1,32 +1,25 @@
-import { eq, and, sql } from "drizzle-orm"
+import { eq, and, isNull, sql } from "drizzle-orm"
 import type { Db } from "@cpa-study/db"
-import { studyDomains, userStudyDomains, subjects, users } from "@cpa-study/db/schema"
+import { studyDomains, subjects } from "@cpa-study/db/schema"
 
 export type StudyDomain = {
   id: string
+  userId: string
   name: string
   description: string | null
   emoji: string | null
   color: string | null
-  isPublic: boolean
   createdAt: Date
   updatedAt: Date
-}
-
-export type UserStudyDomain = {
-  id: string
-  userId: string
-  studyDomainId: string
-  joinedAt: Date
+  deletedAt: Date | null
 }
 
 export type CreateStudyDomainInput = {
-  id: string
+  userId: string
   name: string
   description?: string | null
   emoji?: string | null
   color?: string | null
-  isPublic?: boolean
 }
 
 export type UpdateStudyDomainInput = {
@@ -34,7 +27,6 @@ export type UpdateStudyDomainInput = {
   description?: string | null
   emoji?: string | null
   color?: string | null
-  isPublic?: boolean
 }
 
 export type CanDeleteResult = {
@@ -43,59 +35,54 @@ export type CanDeleteResult = {
 }
 
 export type StudyDomainRepository = {
-  findAllPublic: () => Promise<StudyDomain[]>
-  findById: (id: string) => Promise<StudyDomain | null>
-  create: (data: CreateStudyDomainInput) => Promise<StudyDomain>
-  update: (id: string, data: UpdateStudyDomainInput) => Promise<StudyDomain | null>
-  remove: (id: string) => Promise<boolean>
-  canDeleteStudyDomain: (id: string) => Promise<CanDeleteResult>
-  findByUserId: (userId: string) => Promise<(UserStudyDomain & { studyDomain: StudyDomain })[]>
-  joinDomain: (userId: string, studyDomainId: string) => Promise<UserStudyDomain>
-  leaveDomain: (userId: string, studyDomainId: string) => Promise<boolean>
-  findUserStudyDomain: (userId: string, studyDomainId: string) => Promise<UserStudyDomain | null>
-  clearUserDefaultDomainIfMatches: (userId: string, studyDomainId: string) => Promise<boolean>
+  findByUserId: (userId: string) => Promise<StudyDomain[]>
+  findById: (id: string, userId: string) => Promise<StudyDomain | null>
+  create: (data: CreateStudyDomainInput) => Promise<{ id: string }>
+  update: (id: string, userId: string, data: UpdateStudyDomainInput) => Promise<StudyDomain | null>
+  softDelete: (id: string, userId: string) => Promise<boolean>
+  canDeleteStudyDomain: (id: string, userId: string) => Promise<CanDeleteResult>
 }
 
 export const createStudyDomainRepository = (db: Db): StudyDomainRepository => ({
-  findAllPublic: async () => {
+  findByUserId: async (userId) => {
     return db
       .select()
       .from(studyDomains)
-      .where(eq(studyDomains.isPublic, true))
-      .orderBy(studyDomains.name)
+      .where(and(eq(studyDomains.userId, userId), isNull(studyDomains.deletedAt)))
+      .orderBy(studyDomains.createdAt)
   },
 
-  findById: async (id) => {
+  findById: async (id, userId) => {
     const result = await db
       .select()
       .from(studyDomains)
-      .where(eq(studyDomains.id, id))
+      .where(and(eq(studyDomains.id, id), eq(studyDomains.userId, userId), isNull(studyDomains.deletedAt)))
       .limit(1)
     return result[0] ?? null
   },
 
   create: async (data) => {
+    const id = crypto.randomUUID()
     const now = new Date()
-    const newDomain: StudyDomain = {
-      id: data.id,
+
+    await db.insert(studyDomains).values({
+      id,
+      userId: data.userId,
       name: data.name,
       description: data.description ?? null,
       emoji: data.emoji ?? null,
       color: data.color ?? null,
-      isPublic: data.isPublic ?? true,
       createdAt: now,
       updatedAt: now,
-    }
-
-    await db.insert(studyDomains).values(newDomain)
-    return newDomain
+    })
+    return { id }
   },
 
-  update: async (id, data) => {
+  update: async (id, userId, data) => {
     const existing = await db
       .select()
       .from(studyDomains)
-      .where(eq(studyDomains.id, id))
+      .where(and(eq(studyDomains.id, id), eq(studyDomains.userId, userId), isNull(studyDomains.deletedAt)))
       .limit(1)
 
     if (!existing[0]) {
@@ -109,12 +96,11 @@ export const createStudyDomainRepository = (db: Db): StudyDomainRepository => ({
     if (data.description !== undefined) updates.description = data.description
     if (data.emoji !== undefined) updates.emoji = data.emoji
     if (data.color !== undefined) updates.color = data.color
-    if (data.isPublic !== undefined) updates.isPublic = data.isPublic
 
     await db
       .update(studyDomains)
       .set(updates)
-      .where(eq(studyDomains.id, id))
+      .where(and(eq(studyDomains.id, id), eq(studyDomains.userId, userId)))
 
     return {
       ...existing[0],
@@ -122,16 +108,43 @@ export const createStudyDomainRepository = (db: Db): StudyDomainRepository => ({
     }
   },
 
-  remove: async (id) => {
-    await db.delete(studyDomains).where(eq(studyDomains.id, id))
+  softDelete: async (id, userId) => {
+    // First check if the domain exists and belongs to user (not deleted)
+    const existing = await db
+      .select({ id: studyDomains.id })
+      .from(studyDomains)
+      .where(and(eq(studyDomains.id, id), eq(studyDomains.userId, userId), isNull(studyDomains.deletedAt)))
+      .limit(1)
+
+    if (!existing[0]) {
+      return false
+    }
+
+    const now = new Date()
+    await db
+      .update(studyDomains)
+      .set({ deletedAt: now })
+      .where(and(eq(studyDomains.id, id), eq(studyDomains.userId, userId)))
+
     return true
   },
 
-  canDeleteStudyDomain: async (id) => {
+  canDeleteStudyDomain: async (id, userId) => {
+    // First check if the domain exists and belongs to user
+    const domain = await db
+      .select()
+      .from(studyDomains)
+      .where(and(eq(studyDomains.id, id), eq(studyDomains.userId, userId), isNull(studyDomains.deletedAt)))
+      .limit(1)
+
+    if (!domain[0]) {
+      return { canDelete: true } // Doesn't exist or doesn't belong to user
+    }
+
     const subjectCount = await db
       .select({ count: sql<number>`count(*)` })
       .from(subjects)
-      .where(eq(subjects.studyDomainId, id))
+      .where(and(eq(subjects.studyDomainId, id), eq(subjects.userId, userId), isNull(subjects.deletedAt)))
 
     const count = subjectCount[0]?.count ?? 0
     if (count > 0) {
@@ -141,79 +154,5 @@ export const createStudyDomainRepository = (db: Db): StudyDomainRepository => ({
       }
     }
     return { canDelete: true }
-  },
-
-  findByUserId: async (userId) => {
-    const result = await db
-      .select({
-        id: userStudyDomains.id,
-        userId: userStudyDomains.userId,
-        studyDomainId: userStudyDomains.studyDomainId,
-        joinedAt: userStudyDomains.joinedAt,
-        studyDomain: studyDomains,
-      })
-      .from(userStudyDomains)
-      .innerJoin(studyDomains, eq(userStudyDomains.studyDomainId, studyDomains.id))
-      .where(eq(userStudyDomains.userId, userId))
-      .orderBy(userStudyDomains.joinedAt)
-
-    return result
-  },
-
-  joinDomain: async (userId, studyDomainId) => {
-    const id = crypto.randomUUID()
-    const now = new Date()
-
-    const newRecord: UserStudyDomain = {
-      id,
-      userId,
-      studyDomainId,
-      joinedAt: now,
-    }
-
-    await db.insert(userStudyDomains).values(newRecord)
-    return newRecord
-  },
-
-  leaveDomain: async (userId, studyDomainId) => {
-    // Only delete the user_study_domains record
-    // Keep learning history (userTopicProgress, chatSessions, notes, etc.) per design doc "痕跡を残す" principle
-    await db
-      .delete(userStudyDomains)
-      .where(
-        and(
-          eq(userStudyDomains.userId, userId),
-          eq(userStudyDomains.studyDomainId, studyDomainId)
-        )
-      )
-    return true
-  },
-
-  findUserStudyDomain: async (userId, studyDomainId) => {
-    const result = await db
-      .select()
-      .from(userStudyDomains)
-      .where(
-        and(
-          eq(userStudyDomains.userId, userId),
-          eq(userStudyDomains.studyDomainId, studyDomainId)
-        )
-      )
-      .limit(1)
-    return result[0] ?? null
-  },
-
-  clearUserDefaultDomainIfMatches: async (userId, studyDomainId) => {
-    // Clear user's defaultStudyDomainId if it matches the domain being left
-    await db
-      .update(users)
-      .set({ defaultStudyDomainId: null, updatedAt: new Date() })
-      .where(
-        and(
-          eq(users.id, userId),
-          eq(users.defaultStudyDomainId, studyDomainId)
-        )
-      )
-    return true
   },
 })

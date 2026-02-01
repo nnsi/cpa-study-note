@@ -1,46 +1,34 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
-import { api } from "@/lib/api-client"
 import { requireAuth } from "@/lib/auth"
 import { PageWrapper } from "@/components/layout"
+import { getSubject, getSubjectTree, type CategoryNode } from "@/features/subject/api"
+import { getStudyDomain } from "@/features/study-domain/api"
 
 export const Route = createFileRoute("/domains/$domainId/subjects/$subjectId/")({
   beforeLoad: requireAuth,
   component: SubjectDetailPage,
 })
 
-type CategoryNode = {
-  id: string
-  name: string
-  depth: number
-  topicCount: number
-  understoodCount: number
-  children: CategoryNode[]
-}
-
 function SubjectDetailPage() {
   const { domainId, subjectId } = Route.useParams()
 
-  const { data: subject } = useQuery({
-    queryKey: ["subjects", subjectId],
-    queryFn: async () => {
-      const res = await api.api.subjects[":subjectId"].$get({
-        param: { subjectId },
-      })
-      if (!res.ok) throw new Error(`科目の取得に失敗しました (${res.status})`)
-      return res.json()
-    },
+  // Fetch domain info
+  const { data: domainData } = useQuery({
+    queryKey: ["study-domain", domainId],
+    queryFn: () => getStudyDomain(domainId),
   })
 
-  const { data: categories, isLoading } = useQuery({
-    queryKey: ["subjects", subjectId, "categories"],
-    queryFn: async () => {
-      const res = await api.api.subjects[":subjectId"].categories.$get({
-        param: { subjectId },
-      })
-      if (!res.ok) throw new Error(`単元の取得に失敗しました (${res.status})`)
-      return res.json()
-    },
+  // Fetch subject info
+  const { data: subjectData } = useQuery({
+    queryKey: ["subject", subjectId],
+    queryFn: () => getSubject(subjectId),
+  })
+
+  // Fetch tree
+  const { data: treeData, isLoading } = useQuery({
+    queryKey: ["subject-tree", subjectId],
+    queryFn: () => getSubjectTree(subjectId),
   })
 
   if (isLoading) {
@@ -55,53 +43,65 @@ function SubjectDetailPage() {
     )
   }
 
+  const categories = treeData?.tree.categories ?? []
+
   return (
     <PageWrapper>
-      <div className="mb-6">
-        <Link
-          to="/domains/$domainId/subjects"
-          params={{ domainId }}
-          className="text-indigo-600 hover:underline text-sm"
-        >
-          ← 科目一覧
-        </Link>
-        <h1 className="text-2xl font-bold text-ink-900 mt-2">
-          {subject?.subject.name}
-        </h1>
-      </div>
+      <div className="space-y-6 animate-fade-in">
+        {/* Header with breadcrumb */}
+        <div className="ornament-line pb-4">
+          <div className="flex items-center gap-2 text-sm text-ink-500 mb-1">
+            <Link to="/domains" className="hover:text-indigo-600 transition-colors">
+              学習領域
+            </Link>
+            <span>/</span>
+            <Link
+              to="/domains/$domainId/subjects"
+              params={{ domainId }}
+              className="hover:text-indigo-600 transition-colors"
+            >
+              {domainData?.studyDomain.name ?? "..."}
+            </Link>
+            <span>/</span>
+            <span>{subjectData?.subject.name ?? "..."}</span>
+          </div>
+          <h1 className="heading-serif text-2xl lg:text-3xl">
+            {subjectData?.subject.name ?? "科目"}
+          </h1>
+        </div>
 
-      <div className="space-y-2">
-        {categories?.categories.map((category) => (
-          <CategoryItem
-            key={category.id}
-            category={category}
-            domainId={domainId}
-            subjectId={subjectId}
-          />
-        ))}
+        {categories.length === 0 ? (
+          <div className="card p-12 text-center">
+            <div className="size-16 rounded-2xl bg-gradient-to-br from-indigo-100 to-indigo-50 flex items-center justify-center mx-auto mb-6">
+              <svg className="size-8 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" />
+              </svg>
+            </div>
+            <h3 className="heading-serif text-lg text-ink-700 mb-2">
+              単元がありません
+            </h3>
+            <p className="text-sm text-ink-500 mb-6">
+              CSVインポートまたはエディタで単元・論点を追加してください
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {categories.map((category) => (
+              <CategorySection
+                key={category.id}
+                category={category}
+                domainId={domainId}
+                subjectId={subjectId}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </PageWrapper>
   )
 }
 
-// 単元と子単元の合計を計算
-function getTotalCounts(category: CategoryNode): {
-  topicCount: number
-  understoodCount: number
-} {
-  let topicCount = category.topicCount
-  let understoodCount = category.understoodCount
-
-  for (const child of category.children) {
-    const childCounts = getTotalCounts(child)
-    topicCount += childCounts.topicCount
-    understoodCount += childCounts.understoodCount
-  }
-
-  return { topicCount, understoodCount }
-}
-
-function CategoryItem({
+function CategorySection({
   category,
   domainId,
   subjectId,
@@ -110,64 +110,71 @@ function CategoryItem({
   domainId: string
   subjectId: string
 }) {
-  const hasChildren = category.children.length > 0
-  const paddingLeft = category.depth * 16
-  const totals = getTotalCounts(category)
-
-  // 子単元がある場合はリンクにしない（クリックしても遷移しない）
-  const itemContent = (
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-2">
-        <span className="text-ink-400">
-          {hasChildren ? "📂" : "📄"}
-        </span>
-        <span className="text-ink-800">{category.name}</span>
-      </div>
-      {totals.topicCount > 0 && (
-        <span
-          className={`text-sm ${
-            totals.understoodCount === totals.topicCount
-              ? "text-jade-600 font-medium"
-              : "text-ink-500"
-          }`}
-        >
-          {totals.understoodCount}/{totals.topicCount}
-        </span>
-      )}
-    </div>
+  const totalTopics = category.subcategories.reduce(
+    (sum, sub) => sum + sub.topics.length,
+    0
   )
 
   return (
-    <div>
-      {hasChildren ? (
-        <div
-          className="block py-3.5 px-4 rounded-xl"
-          style={{ paddingLeft: paddingLeft + 16 }}
-        >
-          {itemContent}
+    <div className="card overflow-hidden">
+      {/* Category Header */}
+      <div className="bg-gradient-to-r from-indigo-50 to-transparent px-5 py-4 border-b border-ink-100">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-lg">📂</span>
+            <h2 className="font-semibold text-ink-900">{category.name}</h2>
+          </div>
+          <span className="text-sm text-ink-500">
+            {category.subcategories.length} 中単元 / {totalTopics} 論点
+          </span>
         </div>
-      ) : (
-        <Link
-          to="/domains/$domainId/subjects/$subjectId/$categoryId"
-          params={{ domainId, subjectId, categoryId: category.id }}
-          className="block py-3.5 px-4 rounded-xl hover:bg-ink-50 transition-colors"
-          style={{ paddingLeft: paddingLeft + 16 }}
-        >
-          {itemContent}
-        </Link>
-      )}
-      {hasChildren && (
-        <div>
-          {category.children.map((child) => (
-            <CategoryItem
-              key={child.id}
-              category={child}
-              domainId={domainId}
-              subjectId={subjectId}
-            />
-          ))}
-        </div>
-      )}
+      </div>
+
+      {/* Subcategories */}
+      <div className="divide-y divide-ink-100">
+        {category.subcategories.map((subcategory) => (
+          <div key={subcategory.id} className="p-4">
+            <div className="flex items-center gap-2 text-ink-600 mb-3">
+              <span>📁</span>
+              <span className="font-medium">{subcategory.name}</span>
+              <span className="text-sm text-ink-400">({subcategory.topics.length})</span>
+            </div>
+
+            {/* Topics */}
+            <div className="ml-6 space-y-1.5">
+              {subcategory.topics.map((topic) => (
+                <Link
+                  key={topic.id}
+                  to="/domains/$domainId/subjects/$subjectId/$categoryId/$topicId"
+                  params={{
+                    domainId,
+                    subjectId,
+                    categoryId: subcategory.id,
+                    topicId: topic.id,
+                  }}
+                  className="flex items-center gap-2 py-2 px-3 rounded-lg hover:bg-ink-50 transition-colors group"
+                >
+                  <span className="text-ink-300 group-hover:text-indigo-500">📄</span>
+                  <span className="text-ink-700 group-hover:text-indigo-600 transition-colors">
+                    {topic.name}
+                  </span>
+                  {topic.difficulty && (
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${
+                      topic.difficulty === "basic"
+                        ? "bg-jade-100 text-jade-700"
+                        : topic.difficulty === "intermediate"
+                        ? "bg-amber-100 text-amber-700"
+                        : "bg-crimson-100 text-crimson-700"
+                    }`}>
+                      {topic.difficulty === "basic" ? "基礎" : topic.difficulty === "intermediate" ? "標準" : "応用"}
+                    </span>
+                  )}
+                </Link>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

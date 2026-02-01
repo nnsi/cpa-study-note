@@ -43,6 +43,13 @@
       "when": 1769878814300,
       "tag": "0005_rare_carnage",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1769950000000,
+      "tag": "0006_v2_1_user_owned_content",
+      "breakpoints": true
     }
   ]
 }

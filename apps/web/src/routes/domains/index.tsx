@@ -1,9 +1,16 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { api } from "@/lib/api-client"
+import { useState } from "react"
 import { requireAuth } from "@/lib/auth"
 import { PageWrapper } from "@/components/layout"
 import { getColorClass } from "@/lib/colorClasses"
+import {
+  getStudyDomains,
+  createStudyDomain,
+  deleteStudyDomain,
+  type StudyDomain,
+  type CreateStudyDomainInput,
+} from "@/features/study-domain/api"
 
 export const Route = createFileRoute("/domains/")({
   beforeLoad: requireAuth,
@@ -13,60 +20,37 @@ export const Route = createFileRoute("/domains/")({
 function DomainsPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [domainToDelete, setDomainToDelete] = useState<StudyDomain | null>(null)
 
-  // Fetch public study domains
+  // Fetch user's study domains
   const {
-    data: publicDomainsData,
-    isLoading: isLoadingPublic,
-    error: publicError,
+    data: domainsData,
+    isLoading,
+    error,
   } = useQuery({
     queryKey: ["study-domains"],
-    queryFn: async () => {
-      const res = await api.api["study-domains"].$get()
-      if (!res.ok) throw new Error(`学習領域の取得に失敗しました (${res.status})`)
-      return res.json()
+    queryFn: getStudyDomains,
+  })
+
+  // Create study domain mutation
+  const createMutation = useMutation({
+    mutationFn: createStudyDomain,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["study-domains"] })
+      setIsCreateModalOpen(false)
+      navigate({ to: "/domains/$domainId/subjects", params: { domainId: data.studyDomain.id } })
     },
   })
 
-  // Fetch user's joined study domains
-  const {
-    data: userDomainsData,
-    isLoading: isLoadingUser,
-  } = useQuery({
-    queryKey: ["user-study-domains"],
-    queryFn: async () => {
-      const res = await api.api.me["study-domains"].$get()
-      if (!res.ok) throw new Error(`参加中の学習領域の取得に失敗しました (${res.status})`)
-      return res.json()
+  // Delete study domain mutation
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteStudyDomain(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["study-domains"] })
+      setDomainToDelete(null)
     },
   })
-
-  // Join study domain mutation
-  const joinMutation = useMutation({
-    mutationFn: async (domainId: string) => {
-      const res = await api.api.me["study-domains"][":id"].join.$post({
-        param: { id: domainId },
-      })
-      if (!res.ok) {
-        const error = await res.json()
-        throw new Error((error as { error?: string }).error ?? "参加に失敗しました")
-      }
-      return res.json()
-    },
-    onSuccess: (_, domainId) => {
-      // Invalidate queries to refresh the data
-      queryClient.invalidateQueries({ queryKey: ["user-study-domains"] })
-      // Redirect to the domain's subjects page
-      navigate({ to: "/domains/$domainId/subjects", params: { domainId } })
-    },
-  })
-
-  // Set of joined domain IDs for quick lookup
-  const joinedDomainIds = new Set(
-    userDomainsData?.userStudyDomains.map((ud) => ud.studyDomainId) ?? []
-  )
-
-  const isLoading = isLoadingPublic || isLoadingUser
 
   if (isLoading) {
     return (
@@ -83,7 +67,7 @@ function DomainsPage() {
     )
   }
 
-  if (publicError) {
+  if (error) {
     return (
       <PageWrapper>
         <div className="card p-6 text-center">
@@ -98,13 +82,23 @@ function DomainsPage() {
     )
   }
 
-  const domains = publicDomainsData?.studyDomains ?? []
+  const domains = domainsData?.studyDomains ?? []
 
   return (
     <PageWrapper>
       <div className="space-y-6 animate-fade-in">
-        <div className="ornament-line pb-4">
-          <h1 className="heading-serif text-2xl lg:text-3xl">学習領域を探す</h1>
+        <div className="flex items-center justify-between ornament-line pb-4">
+          <h1 className="heading-serif text-2xl lg:text-3xl">学習領域</h1>
+          <button
+            type="button"
+            onClick={() => setIsCreateModalOpen(true)}
+            className="btn-primary flex items-center gap-2"
+          >
+            <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            新規作成
+          </button>
         </div>
 
         {domains.length === 0 ? (
@@ -115,94 +109,290 @@ function DomainsPage() {
               </svg>
             </div>
             <h3 className="heading-serif text-lg text-ink-700 mb-2">
-              公開中の学習領域がありません
+              学習領域がありません
             </h3>
-            <p className="text-sm text-ink-500">
-              学習領域が公開されるまでお待ちください
+            <p className="text-sm text-ink-500 mb-6">
+              最初の学習領域を作成して、学習を始めましょう
             </p>
+            <button
+              type="button"
+              onClick={() => setIsCreateModalOpen(true)}
+              className="btn-primary"
+            >
+              学習領域を作成
+            </button>
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
-            {domains.map((domain, index) => {
-              const isJoined = joinedDomainIds.has(domain.id)
-              const isJoining = joinMutation.isPending && joinMutation.variables === domain.id
-
-              return (
-                <div
-                  key={domain.id}
-                  className="card-hover p-5 animate-fade-in-up"
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
-                  <div className="relative flex items-start gap-4">
-                    {/* Icon */}
-                    <div className={`size-14 rounded-xl ${getColorClass(domain.color)} flex items-center justify-center flex-shrink-0`}>
-                      <span className="text-3xl">{domain.emoji ?? "📚"}</span>
-                    </div>
-
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h2 className="font-semibold text-ink-900 text-lg">
-                          {domain.name}
-                        </h2>
-                        {isJoined && (
-                          <span className="badge-primary text-xs">
-                            参加中
-                          </span>
-                        )}
-                      </div>
-                      {domain.description && (
-                        <p className="text-sm text-ink-500 line-clamp-2 mb-3">
-                          {domain.description}
-                        </p>
-                      )}
-
-                      {/* Action Button */}
-                      {isJoined ? (
-                        <button
-                          type="button"
-                          onClick={() => navigate({ to: "/domains/$domainId/subjects", params: { domainId: domain.id } })}
-                          className="btn-secondary text-sm px-4 py-1.5"
-                        >
-                          学習を続ける
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => joinMutation.mutate(domain.id)}
-                          disabled={isJoining}
-                          className="btn-primary text-sm px-4 py-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {isJoining ? (
-                            <span className="flex items-center gap-2">
-                              <svg className="animate-spin size-4" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                              </svg>
-                              参加中...
-                            </span>
-                          ) : (
-                            "参加する"
-                          )}
-                        </button>
-                      )}
-                    </div>
+            {domains.map((domain, index) => (
+              <div
+                key={domain.id}
+                className="card-hover p-5 animate-fade-in-up"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                <div className="relative flex items-start gap-4">
+                  {/* Icon */}
+                  <div className={`size-14 rounded-xl ${getColorClass(domain.color)} flex items-center justify-center flex-shrink-0`}>
+                    <span className="text-3xl">{domain.emoji ?? "📚"}</span>
                   </div>
 
-                  {/* Error message */}
-                  {joinMutation.isError && joinMutation.variables === domain.id && (
-                    <div className="mt-3 p-2 bg-crimson-50 rounded-lg">
-                      <p className="text-sm text-crimson-600">
-                        {joinMutation.error?.message ?? "参加に失敗しました"}
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <h2 className="font-semibold text-ink-900 text-lg mb-1">
+                      {domain.name}
+                    </h2>
+                    {domain.description && (
+                      <p className="text-sm text-ink-500 line-clamp-2 mb-3">
+                        {domain.description}
                       </p>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => navigate({ to: "/domains/$domainId/subjects", params: { domainId: domain.id } })}
+                        className="btn-primary text-sm px-4 py-1.5"
+                      >
+                        開く
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDomainToDelete(domain)}
+                        className="btn-secondary text-sm px-3 py-1.5 text-crimson-600 hover:bg-crimson-50"
+                      >
+                        <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                        </svg>
+                      </button>
                     </div>
-                  )}
+                  </div>
                 </div>
-              )
-            })}
+              </div>
+            ))}
           </div>
         )}
       </div>
+
+      {/* Create Modal */}
+      {isCreateModalOpen && (
+        <CreateDomainModal
+          onClose={() => setIsCreateModalOpen(false)}
+          onSubmit={(data) => createMutation.mutate(data)}
+          isLoading={createMutation.isPending}
+          error={createMutation.error?.message}
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {domainToDelete && (
+        <DeleteConfirmModal
+          domain={domainToDelete}
+          onClose={() => setDomainToDelete(null)}
+          onConfirm={() => deleteMutation.mutate(domainToDelete.id)}
+          isLoading={deleteMutation.isPending}
+          error={deleteMutation.error?.message}
+        />
+      )}
     </PageWrapper>
+  )
+}
+
+function CreateDomainModal({
+  onClose,
+  onSubmit,
+  isLoading,
+  error,
+}: {
+  onClose: () => void
+  onSubmit: (data: CreateStudyDomainInput) => void
+  isLoading: boolean
+  error?: string
+}) {
+  const [name, setName] = useState("")
+  const [description, setDescription] = useState("")
+  const [emoji, setEmoji] = useState("")
+  const [color, setColor] = useState<string | null>(null)
+
+  const colors = [
+    { value: "indigo", label: "藍色" },
+    { value: "jade", label: "翠色" },
+    { value: "amber", label: "琥珀" },
+    { value: "crimson", label: "紅色" },
+  ]
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!name.trim()) return
+    onSubmit({
+      name: name.trim(),
+      description: description.trim() || undefined,
+      emoji: emoji.trim() || undefined,
+      color: color ?? undefined,
+    })
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-ink-900/50" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6 animate-fade-in">
+        <h2 className="heading-serif text-xl mb-6">学習領域を作成</h2>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="name" className="block text-sm font-medium text-ink-700 mb-1">
+              名前 <span className="text-crimson-500">*</span>
+            </label>
+            <input
+              type="text"
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="例: 公認会計士試験"
+              className="input w-full"
+              required
+            />
+          </div>
+
+          <div>
+            <label htmlFor="description" className="block text-sm font-medium text-ink-700 mb-1">
+              説明
+            </label>
+            <textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="学習領域の説明（任意）"
+              className="input w-full h-20 resize-none"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="emoji" className="block text-sm font-medium text-ink-700 mb-1">
+              アイコン（絵文字）
+            </label>
+            <input
+              type="text"
+              id="emoji"
+              value={emoji}
+              onChange={(e) => setEmoji(e.target.value)}
+              placeholder="📚"
+              className="input w-20"
+              maxLength={4}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-ink-700 mb-2">
+              カラー
+            </label>
+            <div className="flex gap-2">
+              {colors.map((c) => (
+                <button
+                  key={c.value}
+                  type="button"
+                  onClick={() => setColor(c.value)}
+                  className={`size-10 rounded-xl ${getColorClass(c.value)} border-2 transition-all ${
+                    color === c.value ? "border-ink-900 scale-110" : "border-transparent"
+                  }`}
+                  title={c.label}
+                />
+              ))}
+              <button
+                type="button"
+                onClick={() => setColor(null)}
+                className={`size-10 rounded-xl bg-ink-100 border-2 transition-all ${
+                  color === null ? "border-ink-900 scale-110" : "border-transparent"
+                }`}
+                title="なし"
+              />
+            </div>
+          </div>
+
+          {error && (
+            <div className="p-3 bg-crimson-50 rounded-lg">
+              <p className="text-sm text-crimson-600">{error}</p>
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn-secondary flex-1"
+              disabled={isLoading}
+            >
+              キャンセル
+            </button>
+            <button
+              type="submit"
+              className="btn-primary flex-1"
+              disabled={isLoading || !name.trim()}
+            >
+              {isLoading ? "作成中..." : "作成"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+function DeleteConfirmModal({
+  domain,
+  onClose,
+  onConfirm,
+  isLoading,
+  error,
+}: {
+  domain: StudyDomain
+  onClose: () => void
+  onConfirm: () => void
+  isLoading: boolean
+  error?: string
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-ink-900/50" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-6 animate-fade-in">
+        <div className="text-center mb-6">
+          <div className="size-12 rounded-xl bg-crimson-400/10 flex items-center justify-center mx-auto mb-4">
+            <svg className="size-6 text-crimson-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+            </svg>
+          </div>
+          <h2 className="heading-serif text-lg mb-2">学習領域を削除</h2>
+          <p className="text-sm text-ink-500">
+            「{domain.name}」を削除しますか？<br />
+            この操作は取り消せません。
+          </p>
+        </div>
+
+        {error && (
+          <div className="p-3 bg-crimson-50 rounded-lg mb-4">
+            <p className="text-sm text-crimson-600">{error}</p>
+          </div>
+        )}
+
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="btn-secondary flex-1"
+            disabled={isLoading}
+          >
+            キャンセル
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="btn-primary flex-1 bg-crimson-500 hover:bg-crimson-600"
+            disabled={isLoading}
+          >
+            {isLoading ? "削除中..." : "削除"}
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }

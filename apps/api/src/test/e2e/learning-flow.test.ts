@@ -84,6 +84,7 @@ describe("E2E: Learning Flow", () => {
     // 追加のテストデータを挿入
     ctx.db.insert(schema.subjects).values({
       id: "subject-2",
+      userId: ctx.testData.userId,
       studyDomainId: "cpa",
       name: "管理会計論",
       displayOrder: 2,
@@ -93,6 +94,7 @@ describe("E2E: Learning Flow", () => {
 
     ctx.db.insert(schema.categories).values({
       id: "category-2",
+      userId: ctx.testData.userId,
       subjectId: "subject-1",
       name: "理論",
       depth: 0,
@@ -105,6 +107,7 @@ describe("E2E: Learning Flow", () => {
     ctx.db.insert(schema.topics).values([
       {
         id: "topic-2",
+        userId: ctx.testData.userId,
         categoryId: "category-1",
         name: "棚卸資産",
         description: "棚卸資産の評価と会計処理",
@@ -114,6 +117,7 @@ describe("E2E: Learning Flow", () => {
       },
       {
         id: "topic-3",
+        userId: ctx.testData.userId,
         categoryId: "category-2",
         name: "収益認識",
         description: "収益認識の5ステップモデル",
