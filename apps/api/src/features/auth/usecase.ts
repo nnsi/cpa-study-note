@@ -3,10 +3,13 @@ import type { User, AuthError, OAuthUserInfo } from "./domain"
 import type { AuthRepository } from "./repository"
 import type { createProviders } from "./providers"
 import type { User as EnvUser } from "@/shared/types/env"
+import type { Db } from "@cpa-study/db"
+import { createSampleDataForNewUser } from "./sample-data"
 
 type AuthDeps = {
   repo: AuthRepository
   providers: ReturnType<typeof createProviders>
+  db: Db
 }
 
 type RefreshDeps = {
@@ -74,6 +77,17 @@ export const handleOAuthCallback = async (
     provider: providerName,
     providerId: oauthUser.providerId,
   })
+
+  // Create sample data for new user
+  try {
+    const { studyDomainId } = await createSampleDataForNewUser(deps.db, newUser.id)
+    // Update user's default study domain
+    await deps.repo.updateUser(newUser.id, { defaultStudyDomainId: studyDomainId })
+    newUser.defaultStudyDomainId = studyDomainId
+  } catch (error) {
+    // Log but don't fail - user can still use the app without sample data
+    console.error("Failed to create sample data for new user:", error)
+  }
 
   return ok({ user: newUser, isNewUser: true })
 }

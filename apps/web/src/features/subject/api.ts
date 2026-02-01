@@ -183,15 +183,9 @@ export const importCSV = async (
   imported: { categories: number; subcategories: number; topics: number }
   errors: Array<{ line: number; message: string }>
 }> => {
-  // Use fetch directly since Hono client doesn't support raw text body
-  const baseUrl = import.meta.env.VITE_API_BASE_URL ?? ""
-  const res = await fetch(`${baseUrl}/api/subjects/${id}/import`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "text/csv",
-    },
-    body: csvContent,
-    credentials: "include",
+  const res = await api.api.subjects[":id"].import.$post({
+    param: { id },
+    json: { csvContent },
   })
   if (!res.ok) {
     const error = await res.json()

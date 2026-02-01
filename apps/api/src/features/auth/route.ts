@@ -113,7 +113,7 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
       }
 
       const result = await handleOAuthCallback(
-        { repo, providers },
+        { repo, providers, db },
         providerName,
         code
       )

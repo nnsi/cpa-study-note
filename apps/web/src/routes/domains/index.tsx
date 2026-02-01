@@ -7,9 +7,11 @@ import { getColorClass } from "@/lib/colorClasses"
 import {
   getStudyDomains,
   createStudyDomain,
+  updateStudyDomain,
   deleteStudyDomain,
   type StudyDomain,
   type CreateStudyDomainInput,
+  type UpdateStudyDomainInput,
 } from "@/features/study-domain/api"
 
 export const Route = createFileRoute("/domains/")({
@@ -21,6 +23,7 @@ function DomainsPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [domainToEdit, setDomainToEdit] = useState<StudyDomain | null>(null)
   const [domainToDelete, setDomainToDelete] = useState<StudyDomain | null>(null)
 
   // Fetch user's study domains
@@ -40,6 +43,16 @@ function DomainsPage() {
       queryClient.invalidateQueries({ queryKey: ["study-domains"] })
       setIsCreateModalOpen(false)
       navigate({ to: "/domains/$domainId/subjects", params: { domainId: data.studyDomain.id } })
+    },
+  })
+
+  // Update study domain mutation
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateStudyDomainInput }) =>
+      updateStudyDomain(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["study-domains"] })
+      setDomainToEdit(null)
     },
   })
 
@@ -158,8 +171,19 @@ function DomainsPage() {
                       </button>
                       <button
                         type="button"
+                        onClick={() => setDomainToEdit(domain)}
+                        className="btn-secondary text-sm px-3 py-1.5"
+                        title="編集"
+                      >
+                        <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => setDomainToDelete(domain)}
                         className="btn-secondary text-sm px-3 py-1.5 text-crimson-600 hover:bg-crimson-50"
+                        title="削除"
                       >
                         <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
@@ -181,6 +205,17 @@ function DomainsPage() {
           onSubmit={(data) => createMutation.mutate(data)}
           isLoading={createMutation.isPending}
           error={createMutation.error?.message}
+        />
+      )}
+
+      {/* Edit Modal */}
+      {domainToEdit && (
+        <EditDomainModal
+          domain={domainToEdit}
+          onClose={() => setDomainToEdit(null)}
+          onSubmit={(data) => updateMutation.mutate({ id: domainToEdit.id, data })}
+          isLoading={updateMutation.isPending}
+          error={updateMutation.error?.message}
         />
       )}
 
@@ -330,6 +365,148 @@ function CreateDomainModal({
               disabled={isLoading || !name.trim()}
             >
               {isLoading ? "作成中..." : "作成"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+function EditDomainModal({
+  domain,
+  onClose,
+  onSubmit,
+  isLoading,
+  error,
+}: {
+  domain: StudyDomain
+  onClose: () => void
+  onSubmit: (data: UpdateStudyDomainInput) => void
+  isLoading: boolean
+  error?: string
+}) {
+  const [name, setName] = useState(domain.name)
+  const [description, setDescription] = useState(domain.description ?? "")
+  const [emoji, setEmoji] = useState(domain.emoji ?? "")
+  const [color, setColor] = useState<string | null>(domain.color)
+
+  const colors = [
+    { value: "indigo", label: "藍色" },
+    { value: "jade", label: "翠色" },
+    { value: "amber", label: "琥珀" },
+    { value: "crimson", label: "紅色" },
+  ]
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!name.trim()) return
+    onSubmit({
+      name: name.trim(),
+      description: description.trim() || undefined,
+      emoji: emoji.trim() || undefined,
+      color: color ?? undefined,
+    })
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-ink-900/50" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6 animate-fade-in">
+        <h2 className="heading-serif text-xl mb-6">学習領域を編集</h2>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="edit-name" className="block text-sm font-medium text-ink-700 mb-1">
+              名前 <span className="text-crimson-500">*</span>
+            </label>
+            <input
+              type="text"
+              id="edit-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="例: 公認会計士試験"
+              className="input w-full"
+              required
+            />
+          </div>
+
+          <div>
+            <label htmlFor="edit-description" className="block text-sm font-medium text-ink-700 mb-1">
+              説明
+            </label>
+            <textarea
+              id="edit-description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="学習領域の説明（任意）"
+              className="input w-full h-20 resize-none"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="edit-emoji" className="block text-sm font-medium text-ink-700 mb-1">
+              アイコン（絵文字）
+            </label>
+            <input
+              type="text"
+              id="edit-emoji"
+              value={emoji}
+              onChange={(e) => setEmoji(e.target.value)}
+              placeholder="📚"
+              className="input w-20"
+              maxLength={4}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-ink-700 mb-2">
+              カラー
+            </label>
+            <div className="flex gap-2">
+              {colors.map((c) => (
+                <button
+                  key={c.value}
+                  type="button"
+                  onClick={() => setColor(c.value)}
+                  className={`size-10 rounded-xl ${getColorClass(c.value)} border-2 transition-all ${
+                    color === c.value ? "border-ink-900 scale-110" : "border-transparent"
+                  }`}
+                  title={c.label}
+                />
+              ))}
+              <button
+                type="button"
+                onClick={() => setColor(null)}
+                className={`size-10 rounded-xl bg-ink-100 border-2 transition-all ${
+                  color === null ? "border-ink-900 scale-110" : "border-transparent"
+                }`}
+                title="なし"
+              />
+            </div>
+          </div>
+
+          {error && (
+            <div className="p-3 bg-crimson-50 rounded-lg">
+              <p className="text-sm text-crimson-600">{error}</p>
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn-secondary flex-1"
+              disabled={isLoading}
+            >
+              キャンセル
+            </button>
+            <button
+              type="submit"
+              className="btn-primary flex-1"
+              disabled={isLoading || !name.trim()}
+            >
+              {isLoading ? "保存中..." : "保存"}
             </button>
           </div>
         </form>

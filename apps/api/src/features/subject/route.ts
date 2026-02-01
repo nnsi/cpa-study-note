@@ -1,7 +1,7 @@
 import { Hono } from "hono"
 import { zValidator } from "@hono/zod-validator"
 import type { Db } from "@cpa-study/db"
-import { createSubjectRequestSchema, updateSubjectRequestSchema, updateTreeRequestSchema } from "@cpa-study/shared/schemas"
+import { createSubjectRequestSchema, updateSubjectRequestSchema, updateTreeRequestSchema, csvImportRequestSchema } from "@cpa-study/shared/schemas"
 import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
 import { createSubjectRepository } from "./repository"
@@ -158,25 +158,24 @@ export const subjectRoutes = ({ db }: SubjectDeps) => {
     )
 
     // Import CSV data
-    .post("/subjects/:id/import", authMiddleware, async (c) => {
-      const user = c.get("user")
-      const id = c.req.param("id")
+    .post(
+      "/subjects/:id/import",
+      authMiddleware,
+      zValidator("json", csvImportRequestSchema),
+      async (c) => {
+        const user = c.get("user")
+        const id = c.req.param("id")
+        const { csvContent } = c.req.valid("json")
 
-      // Get raw CSV content from body
-      const csvContent = await c.req.text()
+        const result = await importCSV(db, user.id, id, csvContent)
 
-      if (!csvContent || csvContent.trim().length === 0) {
-        return c.json({ error: "CSVデータが空です" }, 400)
+        if (!result.ok) {
+          return c.json({ error: "科目が見つかりません" }, 404)
+        }
+
+        return c.json(result.value)
       }
-
-      const result = await importCSV(db, user.id, id, csvContent)
-
-      if (!result.ok) {
-        return c.json({ error: "科目が見つかりません" }, 404)
-      }
-
-      return c.json(result.value)
-    })
+    )
 
   return app
 }

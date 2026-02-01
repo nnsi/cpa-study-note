@@ -78,6 +78,13 @@ export const treeResponseSchema = z.object({
 
 export type TreeResponse = z.infer<typeof treeResponseSchema>
 
+// CSV import request schema
+export const csvImportRequestSchema = z.object({
+  csvContent: z.string().min(1, "CSVデータは必須です"),
+})
+
+export type CSVImportRequest = z.infer<typeof csvImportRequestSchema>
+
 // CSV import response schema
 export const csvImportResponseSchema = z.object({
   success: z.boolean(),
