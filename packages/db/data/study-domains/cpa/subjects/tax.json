@@ -1,0 +1,279 @@
+{
+  "id": "tax",
+  "name": "租税法",
+  "description": "法人税法・所得税法・消費税法を含む",
+  "emoji": "📓",
+  "color": "violet",
+  "displayOrder": 5,
+  "categories": [
+    {
+      "id": "tax-corporate",
+      "name": "法人税法",
+      "displayOrder": 1,
+      "subcategories": [
+        {
+          "id": "tax-corporate-taxpayer",
+          "name": "納税義務者",
+          "displayOrder": 1,
+          "topics": []
+        },
+        {
+          "id": "tax-corporate-calculation",
+          "name": "課税所得の計算",
+          "displayOrder": 2,
+          "topics": [
+            { "name": "課税所得の計算と企業会計の関係" },
+            { "name": "確定決算主義" },
+            { "name": "資本金等の額" },
+            { "name": "利益積立金額" }
+          ]
+        },
+        {
+          "id": "tax-corporate-income",
+          "name": "益金の額の計算",
+          "displayOrder": 3,
+          "topics": [
+            { "name": "資産の販売" },
+            { "name": "資産の譲渡" },
+            { "name": "役務の提供" },
+            { "name": "無償取引" },
+            { "name": "受取配当等" },
+            { "name": "資産の評価益" }
+          ]
+        },
+        {
+          "id": "tax-corporate-deduction",
+          "name": "損金の額の計算",
+          "displayOrder": 4,
+          "topics": [
+            { "name": "売上原価" },
+            { "name": "販売費" },
+            { "name": "一般管理費" },
+            { "name": "資産の評価損" },
+            { "name": "給与" },
+            { "name": "保険料" },
+            { "name": "寄附金" },
+            { "name": "交際費" },
+            { "name": "租税公課" },
+            { "name": "貸倒損失" },
+            { "name": "減価償却" },
+            { "name": "圧縮記帳" },
+            { "name": "引当金" },
+            { "name": "準備金" },
+            { "name": "借地権" }
+          ]
+        },
+        {
+          "id": "tax-corporate-special",
+          "name": "特殊取引等",
+          "displayOrder": 5,
+          "topics": [
+            { "name": "長期大規模工事" },
+            { "name": "リース取引" },
+            { "name": "有価証券の時価評価損益" },
+            { "name": "デリバティブ取引" },
+            { "name": "ヘッジ処理" },
+            { "name": "外貨建取引の換算" },
+            { "name": "ストックオプション" },
+            { "name": "完全支配関係法人間取引" }
+          ]
+        },
+        {
+          "id": "tax-corporate-reorganization",
+          "name": "組織再編成に係る所得の計算",
+          "displayOrder": 6,
+          "topics": []
+        },
+        {
+          "id": "tax-corporate-related",
+          "name": "同族会社",
+          "displayOrder": 7,
+          "topics": [
+            { "name": "同族会社の行為計算の否認" }
+          ]
+        },
+        {
+          "id": "tax-corporate-loss",
+          "name": "欠損金の取扱い",
+          "displayOrder": 8,
+          "topics": []
+        },
+        {
+          "id": "tax-corporate-amount",
+          "name": "税額の計算",
+          "displayOrder": 9,
+          "topics": []
+        },
+        {
+          "id": "tax-corporate-credit",
+          "name": "税額控除",
+          "displayOrder": 10,
+          "topics": [
+            { "name": "外国税額控除" }
+          ]
+        },
+        {
+          "id": "tax-corporate-filing",
+          "name": "申告・納付・還付等",
+          "displayOrder": 11,
+          "topics": []
+        },
+        {
+          "id": "tax-corporate-foreign",
+          "name": "外国法人の法人税",
+          "displayOrder": 12,
+          "topics": []
+        }
+      ]
+    },
+    {
+      "id": "tax-income",
+      "name": "所得税法",
+      "displayOrder": 2,
+      "subcategories": [
+        {
+          "id": "tax-income-taxpayer",
+          "name": "納税義務者と課税所得の範囲",
+          "displayOrder": 1,
+          "topics": []
+        },
+        {
+          "id": "tax-income-exempt",
+          "name": "非課税所得",
+          "displayOrder": 2,
+          "topics": []
+        },
+        {
+          "id": "tax-income-types",
+          "name": "各種所得の区分と計算",
+          "displayOrder": 3,
+          "topics": [
+            { "name": "利子所得" },
+            { "name": "配当所得" },
+            { "name": "不動産所得" },
+            { "name": "事業所得" },
+            { "name": "給与所得" },
+            { "name": "退職所得" },
+            { "name": "山林所得" },
+            { "name": "譲渡所得" },
+            { "name": "一時所得" },
+            { "name": "雑所得" }
+          ]
+        },
+        {
+          "id": "tax-income-revenue",
+          "name": "収入金額と必要経費",
+          "displayOrder": 4,
+          "topics": []
+        },
+        {
+          "id": "tax-income-offset",
+          "name": "損益通算と損失の繰越控除",
+          "displayOrder": 5,
+          "topics": []
+        },
+        {
+          "id": "tax-income-deduction",
+          "name": "所得控除",
+          "displayOrder": 6,
+          "topics": []
+        },
+        {
+          "id": "tax-income-amount",
+          "name": "税額の計算",
+          "displayOrder": 7,
+          "topics": [
+            { "name": "復興特別所得税" }
+          ]
+        },
+        {
+          "id": "tax-income-credit",
+          "name": "税額控除",
+          "displayOrder": 8,
+          "topics": [
+            { "name": "外国税額控除" }
+          ]
+        },
+        {
+          "id": "tax-income-filing",
+          "name": "申告・納付・還付等",
+          "displayOrder": 9,
+          "topics": []
+        },
+        {
+          "id": "tax-income-nonresident",
+          "name": "非居住者及び法人の納税義務",
+          "displayOrder": 10,
+          "topics": []
+        },
+        {
+          "id": "tax-income-withholding",
+          "name": "源泉徴収",
+          "displayOrder": 11,
+          "topics": []
+        }
+      ]
+    },
+    {
+      "id": "tax-consumption",
+      "name": "消費税法",
+      "displayOrder": 3,
+      "subcategories": [
+        {
+          "id": "tax-consumption-taxpayer",
+          "name": "納税義務者",
+          "displayOrder": 1,
+          "topics": []
+        },
+        {
+          "id": "tax-consumption-period",
+          "name": "課税期間と基準期間",
+          "displayOrder": 2,
+          "topics": []
+        },
+        {
+          "id": "tax-consumption-transaction",
+          "name": "課税取引と非課税取引",
+          "displayOrder": 3,
+          "topics": []
+        },
+        {
+          "id": "tax-consumption-export",
+          "name": "輸出免税",
+          "displayOrder": 4,
+          "topics": []
+        },
+        {
+          "id": "tax-consumption-base",
+          "name": "課税標準と税率",
+          "displayOrder": 5,
+          "topics": []
+        },
+        {
+          "id": "tax-consumption-input",
+          "name": "課税売上割合と仕入税額控除",
+          "displayOrder": 6,
+          "topics": []
+        },
+        {
+          "id": "tax-consumption-credit",
+          "name": "その他の税額控除",
+          "displayOrder": 7,
+          "topics": []
+        },
+        {
+          "id": "tax-consumption-simplified",
+          "name": "簡易課税制度",
+          "displayOrder": 8,
+          "topics": []
+        },
+        {
+          "id": "tax-consumption-filing",
+          "name": "申告・納付・還付等",
+          "displayOrder": 9,
+          "topics": []
+        }
+      ]
+    }
+  ]
+}

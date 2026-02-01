@@ -30,6 +30,7 @@ describe("TopicRepository", () => {
       db.insert(schema.subjects)
         .values({
           id: "subject-2",
+          studyDomainId: "cpa",
           name: "管理会計論",
           description: "管理会計論の科目",
           displayOrder: 0, // 先に表示される
@@ -118,6 +119,7 @@ describe("TopicRepository", () => {
       db.insert(schema.subjects)
         .values({
           id: "empty-subject",
+          studyDomainId: "cpa",
           name: "空の科目",
           displayOrder: 99,
           createdAt: now,
@@ -381,6 +383,7 @@ describe("TopicRepository", () => {
       db.insert(schema.subjects)
         .values({
           id: "empty-subject-2",
+          studyDomainId: "cpa",
           name: "空の科目2",
           displayOrder: 100,
           createdAt: now,

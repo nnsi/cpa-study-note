@@ -31,6 +31,7 @@ export const authMiddleware = createMiddleware<AuthContext>(async (c, next) => {
       name: payload.name as string,
       avatarUrl: (payload.avatarUrl as string) || null,
       timezone: (payload.timezone as string) || "Asia/Tokyo",
+      defaultStudyDomainId: (payload.defaultStudyDomainId as string) || null,
     }
 
     c.set("user", user)
@@ -50,6 +51,7 @@ const getDevUser = (c: { req: { header: (name: string) => string | undefined }; 
     name: userName,
     avatarUrl: null,
     timezone: "Asia/Tokyo",
+    defaultStudyDomainId: null,
   }
 }
 
@@ -79,6 +81,7 @@ export const optionalAuthMiddleware = createMiddleware<AuthContext>(
         name: payload.name as string,
         avatarUrl: (payload.avatarUrl as string) || null,
         timezone: (payload.timezone as string) || "Asia/Tokyo",
+        defaultStudyDomainId: (payload.defaultStudyDomainId as string) || null,
       }
 
       c.set("user", user)

@@ -64,6 +64,7 @@ export const createAuthRepository = (db: Db): AuthRepository => ({
       name: user.name,
       avatarUrl: user.avatarUrl,
       timezone,
+      defaultStudyDomainId: null,
       createdAt: now,
       updatedAt: now,
     }

@@ -26,6 +26,7 @@ export type User = {
   name: string
   avatarUrl: string | null
   timezone: string
+  defaultStudyDomainId: string | null
   createdAt: Date
   updatedAt: Date
 }

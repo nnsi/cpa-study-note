@@ -1,89 +1,71 @@
-import { readFileSync, readdirSync } from "fs"
+import { readFileSync, readdirSync, existsSync } from "fs"
 import { join } from "path"
 
-type CsvRow = {
-  subjectName: string
-  largeCategory: string
-  mediumCategory: string
-  smallCategory: string
-}
-
-const CSV_DIR = join(process.cwd(), "..", "..", "csv")
+const DATA_DIR = join(process.cwd(), "data", "study-domains")
 
 const generateId = () => crypto.randomUUID()
 
 const now = new Date()
 
-const parseCsv = (content: string): CsvRow[] => {
-  const lines = content.trim().split("\n")
-  const header = lines[0]
-  const dataLines = lines.slice(1)
-
-  return dataLines.map((line) => {
-    const values = line.split(",").map((v) => v.trim())
-    return {
-      subjectName: values[0] || "",
-      largeCategory: values[1] || "",
-      mediumCategory: values[2] || "",
-      smallCategory: values[3] || "",
-    }
-  })
+// Types for JSON data
+type TopicJson = {
+  name: string
+  difficulty?: string
+  topicType?: string
 }
 
-const devUsers = [
-  {
-    id: "test-user-1",
-    email: "test1@example.com",
-    name: "テストユーザー1",
-    avatar_url: null,
-    created_at: now,
-    updated_at: now,
-  },
-  {
-    id: "test-user-2",
-    email: "test2@example.com",
-    name: "テストユーザー2",
-    avatar_url: null,
-    created_at: now,
-    updated_at: now,
-  },
-  {
-    id: "test-admin",
-    email: "admin@example.com",
-    name: "管理者テスト",
-    avatar_url: null,
-    created_at: now,
-    updated_at: now,
-  },
-]
+type SubcategoryJson = {
+  id: string
+  name: string
+  displayOrder: number
+  topics: TopicJson[]
+}
 
-// 科目の定義（表示順序順）
-// 短答式: 財務会計論、管理会計論、監査論、企業法
-// 論文式選択: 租税法、経営学、経済学、民法、統計学
-const subjectDefinitions: { name: string; slug: string }[] = [
-  { name: "財務会計論", slug: "financial" },
-  { name: "管理会計論", slug: "management" },
-  { name: "監査論", slug: "audit" },
-  { name: "企業法", slug: "corporate" },
-  { name: "租税法", slug: "tax" },
-  { name: "経営学", slug: "business" },
-  { name: "経済学", slug: "economics" },
-  { name: "民法", slug: "civil" },
-  { name: "統計学", slug: "statistics" },
-]
+type CategoryJson = {
+  id: string
+  name: string
+  displayOrder: number
+  subcategories: SubcategoryJson[]
+}
 
-const subjectSlugMap = Object.fromEntries(
-  subjectDefinitions.map((s) => [s.name, s.slug])
-)
-
-const subjectOrderMap = Object.fromEntries(
-  subjectDefinitions.map((s, i) => [s.name, i])
-)
-
-type SubjectData = {
+type SubjectJson = {
   id: string
   name: string
   description: string | null
+  emoji: string
+  color: string
+  displayOrder: number
+  categories: CategoryJson[]
+}
+
+type DomainJson = {
+  id: string
+  name: string
+  description: string | null
+  emoji: string
+  color: string
+  isPublic: boolean
+}
+
+// DB row types
+type StudyDomainData = {
+  id: string
+  name: string
+  description: string | null
+  emoji: string | null
+  color: string | null
+  is_public: number
+  created_at: Date
+  updated_at: Date
+}
+
+type SubjectData = {
+  id: string
+  study_domain_id: string
+  name: string
+  description: string | null
+  emoji: string | null
+  color: string | null
   display_order: number
   created_at: Date
   updated_at: Date
@@ -113,124 +95,201 @@ type TopicData = {
   updated_at: Date
 }
 
+type UserData = {
+  id: string
+  email: string
+  name: string
+  avatar_url: string | null
+  default_study_domain_id: string | null
+  created_at: Date
+  updated_at: Date
+}
+
+type UserStudyDomainData = {
+  id: string
+  user_id: string
+  study_domain_id: string
+  joined_at: Date
+}
+
+const devUsers: UserData[] = [
+  {
+    id: "test-user-1",
+    email: "test1@example.com",
+    name: "テストユーザー1",
+    avatar_url: null,
+    default_study_domain_id: "cpa",
+    created_at: now,
+    updated_at: now,
+  },
+  {
+    id: "test-user-2",
+    email: "test2@example.com",
+    name: "テストユーザー2",
+    avatar_url: null,
+    default_study_domain_id: "cpa",
+    created_at: now,
+    updated_at: now,
+  },
+  {
+    id: "test-admin",
+    email: "admin@example.com",
+    name: "管理者テスト",
+    avatar_url: null,
+    default_study_domain_id: "cpa",
+    created_at: now,
+    updated_at: now,
+  },
+]
+
+const loadDomainJson = (domainDir: string): DomainJson => {
+  const domainPath = join(domainDir, "domain.json")
+  const content = readFileSync(domainPath, "utf-8")
+  return JSON.parse(content)
+}
+
+const loadSubjectJson = (subjectPath: string): SubjectJson => {
+  const content = readFileSync(subjectPath, "utf-8")
+  return JSON.parse(content)
+}
+
 const generateSeedData = () => {
+  const studyDomains: StudyDomainData[] = []
   const subjects: SubjectData[] = []
   const categories: CategoryData[] = []
   const topics: TopicData[] = []
+  const userStudyDomains: UserStudyDomainData[] = []
 
-  const subjectMap = new Map<string, string>()
-  const largeCategoryMap = new Map<string, string>()
-  const mediumCategoryMap = new Map<string, string>()
+  // Scan study-domains directory
+  if (!existsSync(DATA_DIR)) {
+    console.error(`Data directory not found: ${DATA_DIR}`)
+    return { users: devUsers, studyDomains, userStudyDomains, subjects, categories, topics }
+  }
 
-  const csvFiles = readdirSync(CSV_DIR).filter((f) => f.endsWith(".csv"))
+  const domainDirs = readdirSync(DATA_DIR, { withFileTypes: true })
+    .filter((d) => d.isDirectory())
+    .map((d) => d.name)
 
-  for (const csvFile of csvFiles) {
-    const content = readFileSync(join(CSV_DIR, csvFile), "utf-8")
-    const rows = parseCsv(content)
+  for (const domainDirName of domainDirs) {
+    const domainDir = join(DATA_DIR, domainDirName)
 
-    let largeCategoryOrder = 0
-    let mediumCategoryOrder = 0
-    let topicOrder = 0
+    // Load domain.json
+    const domainJson = loadDomainJson(domainDir)
+    studyDomains.push({
+      id: domainJson.id,
+      name: domainJson.name,
+      description: domainJson.description,
+      emoji: domainJson.emoji,
+      color: domainJson.color,
+      is_public: domainJson.isPublic ? 1 : 0,
+      created_at: now,
+      updated_at: now,
+    })
 
-    for (const row of rows) {
-      if (!row.subjectName || !row.largeCategory || !row.mediumCategory) continue
+    // Load subjects from subjects/ directory
+    const subjectsDir = join(domainDir, "subjects")
+    if (!existsSync(subjectsDir)) {
+      continue
+    }
 
-      // Subject
-      if (!subjectMap.has(row.subjectName)) {
-        const slug = subjectSlugMap[row.subjectName] || generateId()
-        const subjectId = `subject-${slug}`
-        subjectMap.set(row.subjectName, subjectId)
-        subjects.push({
-          id: subjectId,
-          name: row.subjectName,
-          description: null,
-          display_order: subjectOrderMap[row.subjectName] ?? 999,
-          created_at: now,
-          updated_at: now,
-        })
-      }
-      const subjectId = subjectMap.get(row.subjectName)!
+    const subjectFiles = readdirSync(subjectsDir)
+      .filter((f) => f.endsWith(".json"))
 
-      // Large Category (depth=1)
-      const largeCategoryKey = `${subjectId}:${row.largeCategory}`
-      if (!largeCategoryMap.has(largeCategoryKey)) {
-        const categoryId = generateId()
-        largeCategoryMap.set(largeCategoryKey, categoryId)
+    for (const subjectFile of subjectFiles) {
+      const subjectJson = loadSubjectJson(join(subjectsDir, subjectFile))
+      const subjectId = `subject-${subjectJson.id}`
+
+      subjects.push({
+        id: subjectId,
+        study_domain_id: domainJson.id,
+        name: subjectJson.name,
+        description: subjectJson.description,
+        emoji: subjectJson.emoji,
+        color: subjectJson.color,
+        display_order: subjectJson.displayOrder,
+        created_at: now,
+        updated_at: now,
+      })
+
+      // Process categories (large categories = depth 1)
+      for (const categoryJson of subjectJson.categories) {
+        const largeCategoryId = generateId()
+
         categories.push({
-          id: categoryId,
+          id: largeCategoryId,
           subject_id: subjectId,
-          name: row.largeCategory,
+          name: categoryJson.name,
           depth: 1,
           parent_id: null,
-          display_order: largeCategoryOrder++,
+          display_order: categoryJson.displayOrder,
           created_at: now,
           updated_at: now,
         })
-      }
-      const largeCategoryId = largeCategoryMap.get(largeCategoryKey)!
 
-      // Medium Category (depth=2)
-      const mediumCategoryKey = `${largeCategoryId}:${row.mediumCategory}`
-      if (!mediumCategoryMap.has(mediumCategoryKey)) {
-        const categoryId = generateId()
-        mediumCategoryMap.set(mediumCategoryKey, categoryId)
-        categories.push({
-          id: categoryId,
-          subject_id: subjectId,
-          name: row.mediumCategory,
-          depth: 2,
-          parent_id: largeCategoryId,
-          display_order: mediumCategoryOrder++,
-          created_at: now,
-          updated_at: now,
-        })
-      }
-      const mediumCategoryId = mediumCategoryMap.get(mediumCategoryKey)!
+        // Process subcategories (medium categories = depth 2)
+        for (const subcategoryJson of categoryJson.subcategories) {
+          const mediumCategoryId = generateId()
 
-      // Topic (from small category or medium category itself)
-      if (row.smallCategory) {
-        const topicKey = `${mediumCategoryId}:${row.smallCategory}`
-        const existingTopic = topics.find(
-          (t) => t.category_id === mediumCategoryId && t.name === row.smallCategory
-        )
-        if (!existingTopic) {
-          topics.push({
-            id: generateId(),
-            category_id: mediumCategoryId,
-            name: row.smallCategory,
-            description: null,
-            difficulty: null,
-            topic_type: null,
-            ai_system_prompt: null,
-            display_order: topicOrder++,
+          categories.push({
+            id: mediumCategoryId,
+            subject_id: subjectId,
+            name: subcategoryJson.name,
+            depth: 2,
+            parent_id: largeCategoryId,
+            display_order: subcategoryJson.displayOrder,
             created_at: now,
             updated_at: now,
           })
-        }
-      } else {
-        // Medium category itself is a topic
-        const existingTopic = topics.find(
-          (t) => t.category_id === mediumCategoryId && t.name === row.mediumCategory
-        )
-        if (!existingTopic) {
-          topics.push({
-            id: generateId(),
-            category_id: mediumCategoryId,
-            name: row.mediumCategory,
-            description: null,
-            difficulty: null,
-            topic_type: null,
-            ai_system_prompt: null,
-            display_order: topicOrder++,
-            created_at: now,
-            updated_at: now,
-          })
+
+          // Process topics
+          if (subcategoryJson.topics.length === 0) {
+            // If no topics, the subcategory name itself becomes a topic
+            topics.push({
+              id: generateId(),
+              category_id: mediumCategoryId,
+              name: subcategoryJson.name,
+              description: null,
+              difficulty: null,
+              topic_type: null,
+              ai_system_prompt: null,
+              display_order: 0,
+              created_at: now,
+              updated_at: now,
+            })
+          } else {
+            // Create topics from the topics array
+            let topicOrder = 0
+            for (const topicJson of subcategoryJson.topics) {
+              topics.push({
+                id: generateId(),
+                category_id: mediumCategoryId,
+                name: topicJson.name,
+                description: null,
+                difficulty: topicJson.difficulty || null,
+                topic_type: topicJson.topicType || null,
+                ai_system_prompt: null,
+                display_order: topicOrder++,
+                created_at: now,
+                updated_at: now,
+              })
+            }
+          }
         }
       }
     }
   }
 
-  return { users: devUsers, subjects, categories, topics }
+  // Create user_study_domains for dev users
+  for (const user of devUsers) {
+    userStudyDomains.push({
+      id: generateId(),
+      user_id: user.id,
+      study_domain_id: "cpa",
+      joined_at: now,
+    })
+  }
+
+  return { users: devUsers, studyDomains, userStudyDomains, subjects, categories, topics }
 }
 
 const formatValue = (value: unknown): string => {
@@ -261,19 +320,34 @@ const generateInsertSQL = (table: string, data: Record<string, unknown>[], batch
 }
 
 const main = () => {
-  const { users, subjects, categories, topics } = generateSeedData()
+  const { users, studyDomains, userStudyDomains, subjects, categories, topics } = generateSeedData()
 
-  let sql = "-- Seed data generated from CSV files\n\n"
+  let sql = "-- Seed data generated from JSON files\n\n"
 
+  sql += "-- Study Domains\n"
+  sql += generateInsertSQL("study_domains", studyDomains)
+
+  sql += "-- Users\n"
   sql += generateInsertSQL("users", users)
+
+  sql += "-- User Study Domains\n"
+  sql += generateInsertSQL("user_study_domains", userStudyDomains)
+
+  sql += "-- Subjects\n"
   sql += generateInsertSQL("subjects", subjects)
+
+  sql += "-- Categories\n"
   sql += generateInsertSQL("categories", categories)
+
+  sql += "-- Topics\n"
   sql += generateInsertSQL("topics", topics)
 
   console.log(sql)
 
   console.error(`\nGenerated seed data:`)
+  console.error(`- Study Domains: ${studyDomains.length}`)
   console.error(`- Users: ${users.length}`)
+  console.error(`- User Study Domains: ${userStudyDomains.length}`)
   console.error(`- Subjects: ${subjects.length}`)
   console.error(`- Categories: ${categories.length}`)
   console.error(`- Topics: ${topics.length}`)

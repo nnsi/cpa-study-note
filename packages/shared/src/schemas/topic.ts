@@ -8,8 +8,11 @@ export type TopicType = z.infer<typeof topicTypeSchema>
 
 export const subjectSchema = z.object({
   id: z.string(),
+  studyDomainId: z.string(),
   name: z.string(),
   description: z.string().nullable(),
+  emoji: z.string().nullable(),
+  color: z.string().nullable(),
   displayOrder: z.number(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),

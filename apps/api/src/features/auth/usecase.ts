@@ -123,6 +123,7 @@ export const refreshAccessToken = async (
     name: user.name,
     avatarUrl: user.avatarUrl,
     timezone: user.timezone,
+    defaultStudyDomainId: user.defaultStudyDomainId,
   }
   const accessToken = await generateAccessToken(envUser, jwtSecret)
 

@@ -19,8 +19,11 @@ describe("Topic Domain Types", () => {
     it("should parse valid subject data", () => {
       const data = {
         id: "subject-123",
+        studyDomainId: "cpa",
         name: "Financial Accounting",
         description: "Introduction to financial accounting principles",
+        emoji: "📊",
+        color: "indigo",
         displayOrder: 1,
         createdAt: "2024-01-15T10:00:00.000Z",
         updatedAt: "2024-01-15T10:00:00.000Z",
@@ -33,14 +36,20 @@ describe("Topic Domain Types", () => {
         expect(result.data.description).toBe(
           "Introduction to financial accounting principles"
         )
+        expect(result.data.studyDomainId).toBe("cpa")
+        expect(result.data.emoji).toBe("📊")
+        expect(result.data.color).toBe("indigo")
       }
     })
 
     it("should accept null description", () => {
       const data = {
         id: "subject-123",
+        studyDomainId: "cpa",
         name: "Financial Accounting",
         description: null,
+        emoji: null,
+        color: null,
         displayOrder: 1,
         createdAt: "2024-01-15T10:00:00.000Z",
         updatedAt: "2024-01-15T10:00:00.000Z",
@@ -217,8 +226,11 @@ describe("Topic Domain Types", () => {
     it("should parse subject with stats", () => {
       const data = {
         id: "subject-123",
+        studyDomainId: "cpa",
         name: "Financial Accounting",
         description: null,
+        emoji: "📊",
+        color: "indigo",
         displayOrder: 1,
         createdAt: "2024-01-15T10:00:00.000Z",
         updatedAt: "2024-01-15T10:00:00.000Z",
@@ -239,8 +251,11 @@ describe("Topic Domain Types", () => {
     it("should allow optional completedCount", () => {
       const data = {
         id: "subject-123",
+        studyDomainId: "cpa",
         name: "Financial Accounting",
         description: null,
+        emoji: null,
+        color: null,
         displayOrder: 1,
         createdAt: "2024-01-15T10:00:00.000Z",
         updatedAt: "2024-01-15T10:00:00.000Z",

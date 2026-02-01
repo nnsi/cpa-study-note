@@ -188,8 +188,9 @@ export async function* sendMessage(
     return
   }
 
-  const topic = await deps.topicRepo.findTopicById(session.topicId)
-  if (!topic) {
+  // トピックと階層情報を取得
+  const hierarchy = await deps.chatRepo.getTopicWithHierarchy(session.topicId)
+  if (!hierarchy) {
     yield { type: "error", error: "Topic not found" }
     return
   }
@@ -211,7 +212,12 @@ export async function* sendMessage(
   const messages: AIMessage[] = []
 
   // システムプロンプト
-  const systemPrompt = buildSystemPrompt(topic.name, topic.aiSystemPrompt)
+  const systemPrompt = buildSystemPrompt({
+    studyDomainName: hierarchy.studyDomain.name,
+    subjectName: hierarchy.subject.name,
+    topicName: hierarchy.topic.name,
+    customPrompt: hierarchy.topic.aiSystemPrompt,
+  })
   messages.push({ role: "system", content: systemPrompt })
 
   // 過去のやり取りを追加（最新のユーザーメッセージを除く）
@@ -280,8 +286,9 @@ export async function* sendMessageWithNewSession(
   deps: ChatDeps,
   input: SendMessageWithNewSessionInput
 ): AsyncIterable<StreamChunk & { sessionId?: string }> {
-  const topic = await deps.topicRepo.findTopicById(input.topicId)
-  if (!topic) {
+  // トピックと階層情報を取得
+  const hierarchy = await deps.chatRepo.getTopicWithHierarchy(input.topicId)
+  if (!hierarchy) {
     yield { type: "error", error: "Topic not found" }
     return
   }
@@ -309,7 +316,12 @@ export async function* sendMessageWithNewSession(
   const messages: AIMessage[] = []
 
   // システムプロンプト
-  const systemPrompt = buildSystemPrompt(topic.name, topic.aiSystemPrompt)
+  const systemPrompt = buildSystemPrompt({
+    studyDomainName: hierarchy.studyDomain.name,
+    subjectName: hierarchy.subject.name,
+    topicName: hierarchy.topic.name,
+    customPrompt: hierarchy.topic.aiSystemPrompt,
+  })
   messages.push({ role: "system", content: systemPrompt })
 
   // 現在のユーザーメッセージ

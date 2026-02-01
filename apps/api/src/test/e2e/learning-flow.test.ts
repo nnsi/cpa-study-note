@@ -84,6 +84,7 @@ describe("E2E: Learning Flow", () => {
     // 追加のテストデータを挿入
     ctx.db.insert(schema.subjects).values({
       id: "subject-2",
+      studyDomainId: "cpa",
       name: "管理会計論",
       displayOrder: 2,
       createdAt: now,

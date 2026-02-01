@@ -1,21 +1,33 @@
 import { Link } from "@tanstack/react-router"
 import { useAuthStore, logout } from "@/lib/auth"
+import { DomainSelector } from "@/features/study-domain"
 
 export const Header = () => {
   const { user, isAuthenticated } = useAuthStore()
+  const loggedIn = isAuthenticated()
 
   return (
     <header className="sticky top-0 z-50 h-18 glass border-b border-ink-100">
       <div className="h-full max-w-7xl mx-auto px-4 lg:px-8 flex items-center justify-between">
-        {/* ロゴ */}
-        <Link to="/" className="flex items-center group">
-          <span className="text-xl font-serif font-semibold text-ink-900 tracking-tight group-hover:text-indigo-700 transition-colors">
-            InkTopik
-          </span>
-        </Link>
+        {/* ロゴ + 学習領域セレクタ */}
+        <div className="flex items-center gap-4">
+          <Link to="/" className="flex items-center group">
+            <span className="text-xl font-serif font-semibold text-ink-900 tracking-tight group-hover:text-indigo-700 transition-colors">
+              InkTopik
+            </span>
+          </Link>
+
+          {/* 学習領域セレクタ（ログイン時のみ） */}
+          {loggedIn && (
+            <>
+              <span className="text-ink-200">/</span>
+              <DomainSelector />
+            </>
+          )}
+        </div>
 
         {/* ユーザー情報 */}
-        {isAuthenticated() && user && (
+        {loggedIn && user && (
           <div className="flex items-center gap-4">
             <div className="hidden sm:flex flex-col items-end">
               <span className="text-sm font-medium text-ink-700">

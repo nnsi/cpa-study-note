@@ -16,11 +16,16 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SubjectsIndexRouteImport } from './routes/subjects/index'
 import { Route as NotesIndexRouteImport } from './routes/notes/index'
+import { Route as DomainsIndexRouteImport } from './routes/domains/index'
 import { Route as NotesNoteIdRouteImport } from './routes/notes/$noteId'
 import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
 import { Route as SubjectsSubjectIdIndexRouteImport } from './routes/subjects/$subjectId/index'
 import { Route as SubjectsSubjectIdCategoryIdIndexRouteImport } from './routes/subjects/$subjectId/$categoryId/index'
+import { Route as DomainsDomainIdSubjectsIndexRouteImport } from './routes/domains/$domainId/subjects/index'
 import { Route as SubjectsSubjectIdCategoryIdTopicIdRouteImport } from './routes/subjects/$subjectId/$categoryId/$topicId'
+import { Route as DomainsDomainIdSubjectsSubjectIdIndexRouteImport } from './routes/domains/$domainId/subjects/$subjectId/index'
+import { Route as DomainsDomainIdSubjectsSubjectIdCategoryIdIndexRouteImport } from './routes/domains/$domainId/subjects/$subjectId/$categoryId/index'
+import { Route as DomainsDomainIdSubjectsSubjectIdCategoryIdTopicIdRouteImport } from './routes/domains/$domainId/subjects/$subjectId/$categoryId/$topicId'
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
@@ -57,6 +62,11 @@ const NotesIndexRoute = NotesIndexRouteImport.update({
   path: '/notes/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DomainsIndexRoute = DomainsIndexRouteImport.update({
+  id: '/domains/',
+  path: '/domains/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const NotesNoteIdRoute = NotesNoteIdRouteImport.update({
   id: '/notes/$noteId',
   path: '/notes/$noteId',
@@ -78,10 +88,34 @@ const SubjectsSubjectIdCategoryIdIndexRoute =
     path: '/subjects/$subjectId/$categoryId/',
     getParentRoute: () => rootRouteImport,
   } as any)
+const DomainsDomainIdSubjectsIndexRoute =
+  DomainsDomainIdSubjectsIndexRouteImport.update({
+    id: '/domains/$domainId/subjects/',
+    path: '/domains/$domainId/subjects/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const SubjectsSubjectIdCategoryIdTopicIdRoute =
   SubjectsSubjectIdCategoryIdTopicIdRouteImport.update({
     id: '/subjects/$subjectId/$categoryId/$topicId',
     path: '/subjects/$subjectId/$categoryId/$topicId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const DomainsDomainIdSubjectsSubjectIdIndexRoute =
+  DomainsDomainIdSubjectsSubjectIdIndexRouteImport.update({
+    id: '/domains/$domainId/subjects/$subjectId/',
+    path: '/domains/$domainId/subjects/$subjectId/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const DomainsDomainIdSubjectsSubjectIdCategoryIdIndexRoute =
+  DomainsDomainIdSubjectsSubjectIdCategoryIdIndexRouteImport.update({
+    id: '/domains/$domainId/subjects/$subjectId/$categoryId/',
+    path: '/domains/$domainId/subjects/$subjectId/$categoryId/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const DomainsDomainIdSubjectsSubjectIdCategoryIdTopicIdRoute =
+  DomainsDomainIdSubjectsSubjectIdCategoryIdTopicIdRouteImport.update({
+    id: '/domains/$domainId/subjects/$subjectId/$categoryId/$topicId',
+    path: '/domains/$domainId/subjects/$subjectId/$categoryId/$topicId',
     getParentRoute: () => rootRouteImport,
   } as any)
 
@@ -93,11 +127,16 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/notes/$noteId': typeof NotesNoteIdRoute
+  '/domains/': typeof DomainsIndexRoute
   '/notes/': typeof NotesIndexRoute
   '/subjects/': typeof SubjectsIndexRoute
   '/subjects/$subjectId/': typeof SubjectsSubjectIdIndexRoute
   '/subjects/$subjectId/$categoryId/$topicId': typeof SubjectsSubjectIdCategoryIdTopicIdRoute
+  '/domains/$domainId/subjects/': typeof DomainsDomainIdSubjectsIndexRoute
   '/subjects/$subjectId/$categoryId/': typeof SubjectsSubjectIdCategoryIdIndexRoute
+  '/domains/$domainId/subjects/$subjectId/': typeof DomainsDomainIdSubjectsSubjectIdIndexRoute
+  '/domains/$domainId/subjects/$subjectId/$categoryId/$topicId': typeof DomainsDomainIdSubjectsSubjectIdCategoryIdTopicIdRoute
+  '/domains/$domainId/subjects/$subjectId/$categoryId/': typeof DomainsDomainIdSubjectsSubjectIdCategoryIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -107,11 +146,16 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/notes/$noteId': typeof NotesNoteIdRoute
+  '/domains': typeof DomainsIndexRoute
   '/notes': typeof NotesIndexRoute
   '/subjects': typeof SubjectsIndexRoute
   '/subjects/$subjectId': typeof SubjectsSubjectIdIndexRoute
   '/subjects/$subjectId/$categoryId/$topicId': typeof SubjectsSubjectIdCategoryIdTopicIdRoute
+  '/domains/$domainId/subjects': typeof DomainsDomainIdSubjectsIndexRoute
   '/subjects/$subjectId/$categoryId': typeof SubjectsSubjectIdCategoryIdIndexRoute
+  '/domains/$domainId/subjects/$subjectId': typeof DomainsDomainIdSubjectsSubjectIdIndexRoute
+  '/domains/$domainId/subjects/$subjectId/$categoryId/$topicId': typeof DomainsDomainIdSubjectsSubjectIdCategoryIdTopicIdRoute
+  '/domains/$domainId/subjects/$subjectId/$categoryId': typeof DomainsDomainIdSubjectsSubjectIdCategoryIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -122,11 +166,16 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/notes/$noteId': typeof NotesNoteIdRoute
+  '/domains/': typeof DomainsIndexRoute
   '/notes/': typeof NotesIndexRoute
   '/subjects/': typeof SubjectsIndexRoute
   '/subjects/$subjectId/': typeof SubjectsSubjectIdIndexRoute
   '/subjects/$subjectId/$categoryId/$topicId': typeof SubjectsSubjectIdCategoryIdTopicIdRoute
+  '/domains/$domainId/subjects/': typeof DomainsDomainIdSubjectsIndexRoute
   '/subjects/$subjectId/$categoryId/': typeof SubjectsSubjectIdCategoryIdIndexRoute
+  '/domains/$domainId/subjects/$subjectId/': typeof DomainsDomainIdSubjectsSubjectIdIndexRoute
+  '/domains/$domainId/subjects/$subjectId/$categoryId/$topicId': typeof DomainsDomainIdSubjectsSubjectIdCategoryIdTopicIdRoute
+  '/domains/$domainId/subjects/$subjectId/$categoryId/': typeof DomainsDomainIdSubjectsSubjectIdCategoryIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -138,11 +187,16 @@ export interface FileRouteTypes {
     | '/terms'
     | '/auth/callback'
     | '/notes/$noteId'
+    | '/domains/'
     | '/notes/'
     | '/subjects/'
     | '/subjects/$subjectId/'
     | '/subjects/$subjectId/$categoryId/$topicId'
+    | '/domains/$domainId/subjects/'
     | '/subjects/$subjectId/$categoryId/'
+    | '/domains/$domainId/subjects/$subjectId/'
+    | '/domains/$domainId/subjects/$subjectId/$categoryId/$topicId'
+    | '/domains/$domainId/subjects/$subjectId/$categoryId/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -152,11 +206,16 @@ export interface FileRouteTypes {
     | '/terms'
     | '/auth/callback'
     | '/notes/$noteId'
+    | '/domains'
     | '/notes'
     | '/subjects'
     | '/subjects/$subjectId'
     | '/subjects/$subjectId/$categoryId/$topicId'
+    | '/domains/$domainId/subjects'
     | '/subjects/$subjectId/$categoryId'
+    | '/domains/$domainId/subjects/$subjectId'
+    | '/domains/$domainId/subjects/$subjectId/$categoryId/$topicId'
+    | '/domains/$domainId/subjects/$subjectId/$categoryId'
   id:
     | '__root__'
     | '/'
@@ -166,11 +225,16 @@ export interface FileRouteTypes {
     | '/terms'
     | '/auth/callback'
     | '/notes/$noteId'
+    | '/domains/'
     | '/notes/'
     | '/subjects/'
     | '/subjects/$subjectId/'
     | '/subjects/$subjectId/$categoryId/$topicId'
+    | '/domains/$domainId/subjects/'
     | '/subjects/$subjectId/$categoryId/'
+    | '/domains/$domainId/subjects/$subjectId/'
+    | '/domains/$domainId/subjects/$subjectId/$categoryId/$topicId'
+    | '/domains/$domainId/subjects/$subjectId/$categoryId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -181,11 +245,16 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
   NotesNoteIdRoute: typeof NotesNoteIdRoute
+  DomainsIndexRoute: typeof DomainsIndexRoute
   NotesIndexRoute: typeof NotesIndexRoute
   SubjectsIndexRoute: typeof SubjectsIndexRoute
   SubjectsSubjectIdIndexRoute: typeof SubjectsSubjectIdIndexRoute
   SubjectsSubjectIdCategoryIdTopicIdRoute: typeof SubjectsSubjectIdCategoryIdTopicIdRoute
+  DomainsDomainIdSubjectsIndexRoute: typeof DomainsDomainIdSubjectsIndexRoute
   SubjectsSubjectIdCategoryIdIndexRoute: typeof SubjectsSubjectIdCategoryIdIndexRoute
+  DomainsDomainIdSubjectsSubjectIdIndexRoute: typeof DomainsDomainIdSubjectsSubjectIdIndexRoute
+  DomainsDomainIdSubjectsSubjectIdCategoryIdTopicIdRoute: typeof DomainsDomainIdSubjectsSubjectIdCategoryIdTopicIdRoute
+  DomainsDomainIdSubjectsSubjectIdCategoryIdIndexRoute: typeof DomainsDomainIdSubjectsSubjectIdCategoryIdIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -239,6 +308,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NotesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/domains/': {
+      id: '/domains/'
+      path: '/domains'
+      fullPath: '/domains/'
+      preLoaderRoute: typeof DomainsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/notes/$noteId': {
       id: '/notes/$noteId'
       path: '/notes/$noteId'
@@ -267,11 +343,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SubjectsSubjectIdCategoryIdIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/domains/$domainId/subjects/': {
+      id: '/domains/$domainId/subjects/'
+      path: '/domains/$domainId/subjects'
+      fullPath: '/domains/$domainId/subjects/'
+      preLoaderRoute: typeof DomainsDomainIdSubjectsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/subjects/$subjectId/$categoryId/$topicId': {
       id: '/subjects/$subjectId/$categoryId/$topicId'
       path: '/subjects/$subjectId/$categoryId/$topicId'
       fullPath: '/subjects/$subjectId/$categoryId/$topicId'
       preLoaderRoute: typeof SubjectsSubjectIdCategoryIdTopicIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/domains/$domainId/subjects/$subjectId/': {
+      id: '/domains/$domainId/subjects/$subjectId/'
+      path: '/domains/$domainId/subjects/$subjectId'
+      fullPath: '/domains/$domainId/subjects/$subjectId/'
+      preLoaderRoute: typeof DomainsDomainIdSubjectsSubjectIdIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/domains/$domainId/subjects/$subjectId/$categoryId/': {
+      id: '/domains/$domainId/subjects/$subjectId/$categoryId/'
+      path: '/domains/$domainId/subjects/$subjectId/$categoryId'
+      fullPath: '/domains/$domainId/subjects/$subjectId/$categoryId/'
+      preLoaderRoute: typeof DomainsDomainIdSubjectsSubjectIdCategoryIdIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/domains/$domainId/subjects/$subjectId/$categoryId/$topicId': {
+      id: '/domains/$domainId/subjects/$subjectId/$categoryId/$topicId'
+      path: '/domains/$domainId/subjects/$subjectId/$categoryId/$topicId'
+      fullPath: '/domains/$domainId/subjects/$subjectId/$categoryId/$topicId'
+      preLoaderRoute: typeof DomainsDomainIdSubjectsSubjectIdCategoryIdTopicIdRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -285,12 +389,20 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   AuthCallbackRoute: AuthCallbackRoute,
   NotesNoteIdRoute: NotesNoteIdRoute,
+  DomainsIndexRoute: DomainsIndexRoute,
   NotesIndexRoute: NotesIndexRoute,
   SubjectsIndexRoute: SubjectsIndexRoute,
   SubjectsSubjectIdIndexRoute: SubjectsSubjectIdIndexRoute,
   SubjectsSubjectIdCategoryIdTopicIdRoute:
     SubjectsSubjectIdCategoryIdTopicIdRoute,
+  DomainsDomainIdSubjectsIndexRoute: DomainsDomainIdSubjectsIndexRoute,
   SubjectsSubjectIdCategoryIdIndexRoute: SubjectsSubjectIdCategoryIdIndexRoute,
+  DomainsDomainIdSubjectsSubjectIdIndexRoute:
+    DomainsDomainIdSubjectsSubjectIdIndexRoute,
+  DomainsDomainIdSubjectsSubjectIdCategoryIdTopicIdRoute:
+    DomainsDomainIdSubjectsSubjectIdCategoryIdTopicIdRoute,
+  DomainsDomainIdSubjectsSubjectIdCategoryIdIndexRoute:
+    DomainsDomainIdSubjectsSubjectIdCategoryIdIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -1,14 +1,27 @@
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core"
+import { sqliteTable, text, integer, unique, index } from "drizzle-orm/sqlite-core"
 import { users } from "./users"
+import { studyDomains } from "./studyDomain"
 
-export const subjects = sqliteTable("subjects", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull().unique(),
-  description: text("description"),
-  displayOrder: integer("display_order").notNull().default(0),
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
-})
+export const subjects = sqliteTable(
+  "subjects",
+  {
+    id: text("id").primaryKey(),
+    studyDomainId: text("study_domain_id")
+      .notNull()
+      .references(() => studyDomains.id, { onDelete: "restrict" }),
+    name: text("name").notNull(),
+    description: text("description"),
+    emoji: text("emoji"),
+    color: text("color"),
+    displayOrder: integer("display_order").notNull().default(0),
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+  },
+  (table) => [
+    unique().on(table.studyDomainId, table.name),
+    index("subjects_study_domain_id_idx").on(table.studyDomainId),
+  ]
+)
 
 export const categories = sqliteTable("categories", {
   id: text("id").primaryKey(),

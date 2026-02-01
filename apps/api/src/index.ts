@@ -9,6 +9,10 @@ import { createNoteFeature } from "./features/note"
 import { createImageFeature } from "./features/image"
 import { createMetricsFeature } from "./features/metrics"
 import {
+  createStudyDomainFeature,
+  createUserStudyDomainFeature,
+} from "./features/study-domain"
+import {
   createRateLimitStore,
   createRateLimiterFactory,
   RateLimiterDO,
@@ -101,6 +105,8 @@ const createApp = (env: Env) => {
     .route("/api/notes", createNoteFeature(env, db))
     .route("/api/images", createImageFeature(env, db))
     .route("/api/metrics", createMetricsFeature(env, db))
+    .route("/api/study-domains", createStudyDomainFeature(env, db))
+    .route("/api/me/study-domains", createUserStudyDomainFeature(env, db))
     .get("/api/health", (c) => c.json({ status: "ok" }))
 
   return app

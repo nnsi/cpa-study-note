@@ -88,6 +88,7 @@ export const createAdditionalTestData = (db: TestDatabase, baseData: ReturnType<
   db.insert(schema.subjects)
     .values({
       id: subject2Id,
+      studyDomainId: "cpa",
       name: "管理会計論",
       description: "管理会計論の科目",
       displayOrder: 2,

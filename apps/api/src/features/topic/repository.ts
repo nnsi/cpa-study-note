@@ -21,7 +21,7 @@ export type RecentTopicRow = {
 
 export type TopicRepository = {
   // Subjects
-  findAllSubjects: () => Promise<Subject[]>
+  findAllSubjects: (studyDomainId?: string) => Promise<Subject[]>
   findSubjectById: (id: string) => Promise<Subject | null>
   getSubjectStats: (subjectId: string) => Promise<SubjectStats>
 
@@ -77,8 +77,11 @@ type CategoryProgressCount = {
 
 type Subject = {
   id: string
+  studyDomainId: string
   name: string
   description: string | null
+  emoji: string | null
+  color: string | null
   displayOrder: number
   createdAt: Date
   updatedAt: Date
@@ -175,7 +178,14 @@ export type FilteredTopicRow = {
 }
 
 export const createTopicRepository = (db: Db): TopicRepository => ({
-  findAllSubjects: async () => {
+  findAllSubjects: async (studyDomainId) => {
+    if (studyDomainId) {
+      return db
+        .select()
+        .from(subjects)
+        .where(eq(subjects.studyDomainId, studyDomainId))
+        .orderBy(subjects.displayOrder)
+    }
     return db.select().from(subjects).orderBy(subjects.displayOrder)
   },
 

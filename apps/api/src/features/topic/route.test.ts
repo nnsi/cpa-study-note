@@ -22,7 +22,10 @@ const subjectsListSchema = z.object({
   subjects: z.array(
     z.object({
       id: z.string(),
+      studyDomainId: z.string(),
       name: z.string(),
+      emoji: z.string().nullable(),
+      color: z.string().nullable(),
       categoryCount: z.number(),
       topicCount: z.number(),
     })
@@ -32,7 +35,10 @@ const subjectsListSchema = z.object({
 const subjectDetailSchema = z.object({
   subject: z.object({
     id: z.string(),
+    studyDomainId: z.string(),
     name: z.string(),
+    emoji: z.string().nullable(),
+    color: z.string().nullable(),
     categoryCount: z.number(),
   }),
 })
@@ -182,6 +188,24 @@ describe("Topic Routes", () => {
       expect(subject1!.name).toBe("財務会計論")
       expect(subject1!.categoryCount).toBeGreaterThanOrEqual(1)
       expect(subject1!.topicCount).toBeGreaterThanOrEqual(1)
+    })
+
+    it("studyDomainIdでフィルタリングできる", async () => {
+      const res = await app.request("/subjects?studyDomainId=cpa")
+
+      expect(res.status).toBe(200)
+      const body = await parseJson(res, subjectsListSchema)
+      expect(body.subjects).toBeDefined()
+      // cpa学習領域に属する科目のみ返される
+      expect(body.subjects.length).toBeGreaterThanOrEqual(1)
+    })
+
+    it("存在しないstudyDomainIdの場合は空配列を返す", async () => {
+      const res = await app.request("/subjects?studyDomainId=non-existent")
+
+      expect(res.status).toBe(200)
+      const body = await parseJson(res, subjectsListSchema)
+      expect(body.subjects).toEqual([])
     })
   })
 
