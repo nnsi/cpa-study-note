@@ -193,3 +193,30 @@ export const importCSV = async (
   }
   return res.json()
 }
+
+// Search types
+export type TopicSearchResult = {
+  id: string
+  name: string
+  description: string | null
+  categoryId: string
+  categoryName: string
+  subjectId: string
+  subjectName: string
+  studyDomainId: string
+}
+
+export const searchTopics = async (
+  query: string,
+  studyDomainId: string,
+  limit: number = 20
+): Promise<TopicSearchResult[]> => {
+  const res = await api.api.subjects.search.$get({
+    query: { q: query, limit: String(limit), studyDomainId },
+  })
+  if (!res.ok) {
+    throw new Error("検索に失敗しました")
+  }
+  const data = await res.json()
+  return data.results
+}
