@@ -1,7 +1,7 @@
 import { Hono } from "hono"
 import { zValidator } from "@hono/zod-validator"
-import { z } from "zod"
 import type { Db } from "@cpa-study/db"
+import { createSessionRequestSchema, sendMessageRequestSchema } from "@cpa-study/shared/schemas"
 import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
 import { createAIAdapter, streamToSSE, resolveAIConfig } from "@/shared/lib/ai"
@@ -35,7 +35,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
     .post(
       "/sessions",
       authMiddleware,
-      zValidator("json", z.object({ topicId: z.string() })),
+      zValidator("json", createSessionRequestSchema),
       async (c) => {
         const user = c.get("user")
         const { topicId } = c.req.valid("json")
@@ -100,14 +100,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
     .post(
       "/sessions/:sessionId/messages/stream",
       authMiddleware,
-      zValidator(
-        "json",
-        z.object({
-          content: z.string().min(1).max(10000),
-          imageId: z.string().optional(),
-          ocrResult: z.string().max(50000).optional(),
-        })
-      ),
+      zValidator("json", sendMessageRequestSchema),
       async (c) => {
         const sessionId = c.req.param("sessionId")
         const user = c.get("user")
@@ -137,14 +130,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
     .post(
       "/topics/:topicId/messages/stream",
       authMiddleware,
-      zValidator(
-        "json",
-        z.object({
-          content: z.string().min(1).max(10000),
-          imageId: z.string().optional(),
-          ocrResult: z.string().max(50000).optional(),
-        })
-      ),
+      zValidator("json", sendMessageRequestSchema),
       async (c) => {
         const topicId = c.req.param("topicId")
         const user = c.get("user")

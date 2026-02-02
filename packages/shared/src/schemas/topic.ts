@@ -222,3 +222,17 @@ export const topicSearchResponseSchema = z.object({
 })
 
 export type TopicSearchResponse = z.infer<typeof topicSearchResponseSchema>
+
+// Progress update request schema
+export const updateProgressRequestSchema = z.object({
+  understood: z.boolean().optional(),
+})
+
+export type UpdateProgressRequest = z.infer<typeof updateProgressRequestSchema>
+
+// Subject list query schema
+export const listSubjectsQuerySchema = z.object({
+  studyDomainId: z.string().optional(),
+})
+
+export type ListSubjectsQuery = z.infer<typeof listSubjectsQuerySchema>

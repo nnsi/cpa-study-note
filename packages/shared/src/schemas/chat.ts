@@ -39,9 +39,20 @@ export type CreateSessionRequest = z.infer<typeof createSessionRequestSchema>
 export const sendMessageRequestSchema = z.object({
   content: z.string().min(1).max(10000),
   imageId: z.string().optional(),
+  ocrResult: z.string().max(50000).optional(),
 })
 
 export type SendMessageRequest = z.infer<typeof sendMessageRequestSchema>
+
+// Chat SSE Stream chunk types (includes session_created for new session flow)
+export const chatStreamChunkSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("text"), content: z.string() }),
+  z.object({ type: z.literal("done"), messageId: z.string().optional() }),
+  z.object({ type: z.literal("error"), error: z.string() }),
+  z.object({ type: z.literal("session_created"), sessionId: z.string() }),
+])
+
+export type ChatStreamChunk = z.infer<typeof chatStreamChunkSchema>
 
 // Response schemas
 export const chatSessionResponseSchema = chatSessionSchema
@@ -49,3 +60,10 @@ export const chatSessionResponseSchema = chatSessionSchema
 export const chatMessageResponseSchema = chatMessageSchema
 
 export const chatMessagesResponseSchema = z.array(chatMessageSchema)
+
+// API response wrapper (for { messages: [...] } format)
+export const chatMessagesWrapperResponseSchema = z.object({
+  messages: z.array(chatMessageSchema),
+})
+
+export type ChatMessagesWrapperResponse = z.infer<typeof chatMessagesWrapperResponseSchema>

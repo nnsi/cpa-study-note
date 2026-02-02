@@ -56,12 +56,12 @@ GitHub > Settings > Developer settings > Personal access tokens > Fine-grained t
 
 ## 3. Terraform 実行
 
-- [ ] **Plan 実行**
+- [x] **Plan 実行**
   - Actions > Infrastructure > Run workflow
   - action: `plan`
   - 内容確認
 
-- [ ] **Apply 実行**
+- [x] **Apply 実行**
   - Actions > Infrastructure > Run workflow
   - action: `apply`
   - GH_PAT が設定されていれば `D1_DATABASE_ID` が自動で Environment Variables に設定される

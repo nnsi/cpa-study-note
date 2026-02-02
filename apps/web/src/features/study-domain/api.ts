@@ -76,11 +76,11 @@ export const deleteStudyDomain = async (id: string): Promise<{ success: boolean 
 
 export const bulkImportCSV = async (
   studyDomainId: string,
-  csv: string
+  csvContent: string
 ): Promise<BulkCSVImportResult> => {
   const res = await api.api["study-domains"][":id"]["import-csv"].$post({
     param: { id: studyDomainId },
-    json: { csv },
+    json: { csvContent },
   })
   if (!res.ok) {
     const error = await res.json()

@@ -73,3 +73,10 @@ export type GetDailyMetricsRequest = z.infer<typeof getDailyMetricsRequestSchema
 export const dailyMetricsResponseSchema = z.array(dailyMetricSchema)
 
 export type DailyMetricsResponse = z.infer<typeof dailyMetricsResponseSchema>
+
+// API response wrapper (for { metrics: [...] } format)
+export const dailyMetricsWrapperResponseSchema = z.object({
+  metrics: z.array(dailyMetricSchema),
+})
+
+export type DailyMetricsWrapperResponse = z.infer<typeof dailyMetricsWrapperResponseSchema>

@@ -1,10 +1,10 @@
 import { Hono } from "hono"
 import { zValidator } from "@hono/zod-validator"
-import { z } from "zod"
 import type { Db } from "@cpa-study/db"
 import {
   createStudyDomainRequestSchema,
   updateStudyDomainRequestSchema,
+  csvImportRequestSchema,
 } from "@cpa-study/shared/schemas"
 import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
@@ -91,23 +91,18 @@ export const studyDomainRoutes = ({ db }: StudyDomainDeps) => {
     .post(
       "/:id/import-csv",
       authMiddleware,
-      zValidator(
-        "json",
-        z.object({
-          csv: z.string().min(1, "CSVデータは必須です").max(1_000_000, "CSVは1MB以内にしてください"),
-        })
-      ),
+      zValidator("json", csvImportRequestSchema),
       async (c) => {
         const user = c.get("user")
         const id = c.req.param("id")
-        const { csv } = c.req.valid("json")
+        const { csvContent } = c.req.valid("json")
 
         try {
           const subjectRepo = createSubjectRepository(db)
           const txRunner = createNoTransactionRunner(db)
           const treeDeps = { subjectRepo, db, txRunner }
 
-          const result = await bulkImportCSVToStudyDomain(treeDeps, user.id, id, csv)
+          const result = await bulkImportCSVToStudyDomain(treeDeps, user.id, id, csvContent)
           return handleResult(c, result)
         } catch (e) {
           console.error("Import error:", e)

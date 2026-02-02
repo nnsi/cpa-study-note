@@ -2,6 +2,7 @@ import { Hono } from "hono"
 import { zValidator } from "@hono/zod-validator"
 import { z } from "zod"
 import type { Db } from "@cpa-study/db"
+import { getDailyMetricsRequestSchema, dateStringSchema } from "@cpa-study/shared/schemas"
 import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
 import { createMetricsRepository } from "./repository"
@@ -28,13 +29,7 @@ export const metricsRoutes = ({ env, db }: MetricsDeps) => {
     .get(
       "/daily",
       authMiddleware,
-      zValidator(
-        "query",
-        z.object({
-          from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-          to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-        })
-      ),
+      zValidator("query", getDailyMetricsRequestSchema),
       async (c) => {
         const user = c.get("user")
         const { from, to } = c.req.valid("query")
@@ -58,12 +53,7 @@ export const metricsRoutes = ({ env, db }: MetricsDeps) => {
     .post(
       "/snapshot/:date",
       authMiddleware,
-      zValidator(
-        "param",
-        z.object({
-          date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-        })
-      ),
+      zValidator("param", z.object({ date: dateStringSchema })),
       async (c) => {
         const user = c.get("user")
         const { date } = c.req.valid("param")

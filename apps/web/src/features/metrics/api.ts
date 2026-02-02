@@ -1,15 +1,13 @@
-import { z } from "zod"
 import { api } from "@/lib/api-client"
-import { dailyMetricSchema, type DailyMetric } from "@cpa-study/shared/schemas"
+import {
+  dailyMetricsWrapperResponseSchema,
+  type DailyMetric,
+  type DailyMetricsWrapperResponse,
+} from "@cpa-study/shared/schemas"
 
 export type { DailyMetric }
 
-// APIレスポンスは { metrics: DailyMetric[] } の形式
-const dailyMetricsApiResponseSchema = z.object({
-  metrics: z.array(dailyMetricSchema),
-})
-
-export type DailyMetricsResponse = z.infer<typeof dailyMetricsApiResponseSchema>
+export type DailyMetricsResponse = DailyMetricsWrapperResponse
 
 export const getDailyMetrics = async (
   from: string,
@@ -20,5 +18,5 @@ export const getDailyMetrics = async (
   })
   if (!res.ok) throw new Error("Failed to fetch daily metrics")
   const data = await res.json()
-  return dailyMetricsApiResponseSchema.parse(data)
+  return dailyMetricsWrapperResponseSchema.parse(data)
 }

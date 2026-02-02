@@ -1,6 +1,5 @@
 import { Hono } from "hono"
 import { zValidator } from "@hono/zod-validator"
-import { z } from "zod"
 import type { Db } from "@cpa-study/db"
 import {
   createSubjectRequestSchema,
@@ -9,6 +8,8 @@ import {
   csvImportRequestSchema,
   topicFilterRequestSchema,
   topicSearchRequestSchema,
+  updateProgressRequestSchema,
+  listSubjectsQuerySchema,
 } from "@cpa-study/shared/schemas"
 import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
@@ -56,7 +57,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectDeps) => {
     .get(
       "/subjects",
       authMiddleware,
-      zValidator("query", z.object({ studyDomainId: z.string().optional() })),
+      zValidator("query", listSubjectsQuerySchema),
       async (c) => {
         const { studyDomainId: explicitStudyDomainId } = c.req.valid("query")
         const user = c.get("user")
@@ -279,7 +280,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectDeps) => {
     .put(
       "/subjects/:subjectId/topics/:topicId/progress",
       authMiddleware,
-      zValidator("json", z.object({ understood: z.boolean().optional() })),
+      zValidator("json", updateProgressRequestSchema),
       async (c) => {
         const subjectId = c.req.param("subjectId")
         const topicId = c.req.param("topicId")

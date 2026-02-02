@@ -8,6 +8,13 @@ import { z } from "zod"
 import { ok, err, type Result } from "@/shared/lib/result"
 import { notFound, forbidden, badRequest, internalError, type AppError } from "@/shared/lib/errors"
 
+// LLM output parsing schema for note summary
+const noteSummaryParseSchema = z.object({
+  summary: z.string().default(""),
+  keyPoints: z.array(z.string()).default([]),
+  stumbledPoints: z.array(z.string()).default([]),
+})
+
 type NoteDeps = {
   noteRepo: NoteRepository
   chatRepo: ChatRepository
@@ -147,12 +154,6 @@ ${conversationText}${goodQuestionsSection}
     return err(internalError("AI要約の生成に失敗しました。再度お試しください。"))
   }
 
-  const noteSummarySchema = z.object({
-    summary: z.string().default(""),
-    keyPoints: z.array(z.string()).default([]),
-    stumbledPoints: z.array(z.string()).default([]),
-  })
-
   // パース失敗時のフォールバック: コードブロック除去後の生テキストをaiSummaryに設定
   const fallbackSummary = {
     summary: stripCodeBlock(aiResult.content),
@@ -160,7 +161,7 @@ ${conversationText}${goodQuestionsSection}
     stumbledPoints: [] as string[],
   }
 
-  const parsed = parseLLMJson(aiResult.content, noteSummarySchema, fallbackSummary)
+  const parsed = parseLLMJson(aiResult.content, noteSummaryParseSchema, fallbackSummary)
   const aiSummary = parsed.summary
   const keyPoints = parsed.keyPoints
   const stumbledPoints = parsed.stumbledPoints
@@ -359,12 +360,6 @@ ${conversationText}${goodQuestionsSection}
     return err(internalError("AI要約の生成に失敗しました。再度お試しください。"))
   }
 
-  const noteSummarySchema = z.object({
-    summary: z.string().default(""),
-    keyPoints: z.array(z.string()).default([]),
-    stumbledPoints: z.array(z.string()).default([]),
-  })
-
   // パース失敗時のフォールバック: コードブロック除去後の生テキストをaiSummaryに設定
   const fallbackSummary = {
     summary: stripCodeBlock(aiResult.content),
@@ -372,7 +367,7 @@ ${conversationText}${goodQuestionsSection}
     stumbledPoints: [] as string[],
   }
 
-  const parsed = parseLLMJson(aiResult.content, noteSummarySchema, fallbackSummary)
+  const parsed = parseLLMJson(aiResult.content, noteSummaryParseSchema, fallbackSummary)
   const aiSummary = parsed.summary
   const keyPoints = parsed.keyPoints
   const stumbledPoints = parsed.stumbledPoints
