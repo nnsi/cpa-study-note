@@ -1,24 +1,7 @@
 import { api } from "@/lib/api-client"
+import type { FilteredTopic, TopicFilterParams } from "@cpa-study/shared"
 
-export type TopicFilterParams = {
-  minSessionCount?: number
-  daysSinceLastChat?: number
-  understood?: boolean
-  hasPostCheckChat?: boolean
-  minGoodQuestionCount?: number
-}
-
-export type FilteredTopic = {
-  id: string
-  name: string
-  categoryId: string
-  subjectId: string
-  subjectName: string
-  sessionCount: number
-  lastChatAt: string | null
-  understood: boolean
-  goodQuestionCount: number
-}
+export type { FilteredTopic, TopicFilterParams }
 
 export const filterTopics = async (
   params: TopicFilterParams

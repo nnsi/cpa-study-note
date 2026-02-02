@@ -1,5 +1,6 @@
 import { api } from "@/lib/api-client"
 
+// 単一科目の基本情報（GET /subjects/:id, POST, PUT で使用）
 export type Subject = {
   id: string
   userId: string
@@ -11,6 +12,21 @@ export type Subject = {
   displayOrder: number
   createdAt: string
   updatedAt: string
+}
+
+// 科目一覧で返される統計付き情報（GET /subjects で使用）
+export type SubjectWithStats = {
+  id: string
+  studyDomainId: string
+  name: string
+  description: string | null
+  emoji: string | null
+  color: string | null
+  displayOrder: number
+  createdAt: string
+  updatedAt: string
+  categoryCount: number
+  topicCount: number
 }
 
 export type CreateSubjectInput = {
@@ -86,12 +102,11 @@ export type UpdateTreeInput = {
 }
 
 // API functions
-export const getSubjects = async (domainId: string): Promise<{ subjects: Subject[] }> => {
-  const res = await api.api["study-domains"][":domainId"].subjects.$get({
-    param: { domainId },
+export const getSubjects = async (domainId: string): Promise<{ subjects: SubjectWithStats[] }> => {
+  const res = await api.api.subjects.$get({
+    query: { studyDomainId: domainId },
   })
   if (!res.ok) {
-    if (res.status === 404) throw new Error("学習領域が見つかりません")
     throw new Error("科目の取得に失敗しました")
   }
   return res.json()

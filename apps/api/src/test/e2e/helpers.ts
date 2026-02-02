@@ -4,7 +4,7 @@
 import { Hono } from "hono"
 import { cors } from "hono/cors"
 import { createAuthFeature } from "@/features/auth"
-import { createTopicFeature } from "@/features/topic"
+import { createSubjectFeature } from "@/features/subject"
 import { createChatFeature } from "@/features/chat"
 import { createNoteFeature } from "@/features/note"
 import { createImageFeature } from "@/features/image"
@@ -46,10 +46,11 @@ export const setupTestEnv = (): TestContext => {
   }
 
   // Create app with all features
+  // Note: Subject feature is mounted at /api (not /api/subjects) to match production index.ts
   const app = new Hono<{ Bindings: Env; Variables: Variables }>()
     .use("*", cors())
     .route("/api/auth", createAuthFeature(env, db as unknown as Parameters<typeof createAuthFeature>[1]))
-    .route("/api/subjects", createTopicFeature(env, db as unknown as Parameters<typeof createTopicFeature>[1]))
+    .route("/api", createSubjectFeature(env, db as unknown as Parameters<typeof createSubjectFeature>[1]))
     .route("/api/chat", createChatFeature(env, db as unknown as Parameters<typeof createChatFeature>[1]))
     .route("/api/notes", createNoteFeature(env, db as unknown as Parameters<typeof createNoteFeature>[1]))
     .route("/api/images", createImageFeature(env, db as unknown as Parameters<typeof createImageFeature>[1]))

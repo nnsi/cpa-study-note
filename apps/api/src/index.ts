@@ -4,7 +4,6 @@ import { secureHeaders } from "hono/secure-headers"
 import { logger } from "./shared/middleware/logger"
 import { createDb } from "@cpa-study/db"
 import { createAuthFeature } from "./features/auth"
-import { createTopicFeature } from "./features/topic"
 import { createChatFeature } from "./features/chat"
 import { createNoteFeature } from "./features/note"
 import { createImageFeature } from "./features/image"
@@ -107,7 +106,6 @@ const createApp = (env: Env) => {
     // rateLimitApplied フラグにより、上記で適用済みの場合はスキップされる
     .use("/api/*", limiter.lenient())
     .route("/api/auth", createAuthFeature(env, db))
-    .route("/api/subjects", createTopicFeature(env, db))
     .route("/api/chat", createChatFeature(env, db))
     .route("/api/notes", createNoteFeature(env, db))
     .route("/api/images", createImageFeature(env, db))

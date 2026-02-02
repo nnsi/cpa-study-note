@@ -6,7 +6,7 @@ import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
 import { createAIAdapter, streamToSSE, resolveAIConfig } from "@/shared/lib/ai"
 import { createChatRepository } from "./repository"
-import { createTopicRepository } from "../topic/repository"
+import { createSubjectRepository } from "../subject/repository"
 import {
   createSession,
   getSession,
@@ -16,6 +16,7 @@ import {
   sendMessage,
   sendMessageWithNewSession,
   evaluateQuestion,
+  listGoodQuestionsByTopic,
 } from "./usecase"
 
 type ChatDeps = {
@@ -25,7 +26,7 @@ type ChatDeps = {
 
 export const chatRoutes = ({ env, db }: ChatDeps) => {
   const chatRepo = createChatRepository(db)
-  const topicRepo = createTopicRepository(db)
+  const subjectRepo = createSubjectRepository(db)
   const aiConfig = resolveAIConfig(env.ENVIRONMENT)
 
   const app = new Hono<{ Bindings: Env; Variables: Variables }>()
@@ -39,7 +40,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         const { topicId } = c.req.valid("json")
 
         const result = await createSession(
-          { chatRepo, topicRepo },
+          { chatRepo, subjectRepo },
           user.id,
           topicId
         )
@@ -63,6 +64,20 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         const sessions = await listSessionsByTopic({ chatRepo }, user.id, topicId)
 
         return c.json({ sessions })
+      }
+    )
+
+    // 論点ごとのgood質問一覧（N+1解消用バッチ取得）
+    .get(
+      "/topics/:topicId/good-questions",
+      authMiddleware,
+      async (c) => {
+        const topicId = c.req.param("topicId")
+        const user = c.get("user")
+
+        const questions = await listGoodQuestionsByTopic({ chatRepo }, user.id, topicId)
+
+        return c.json({ questions })
       }
     )
 
@@ -117,7 +132,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         })
 
         const stream = sendMessage(
-          { chatRepo, topicRepo, aiAdapter, aiConfig },
+          { chatRepo, subjectRepo, aiAdapter, aiConfig },
           {
             sessionId,
             userId: user.id,
@@ -154,7 +169,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         })
 
         const stream = sendMessageWithNewSession(
-          { chatRepo, topicRepo, aiAdapter, aiConfig },
+          { chatRepo, subjectRepo, aiAdapter, aiConfig },
           {
             topicId,
             userId: user.id,
@@ -185,7 +200,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
       })
 
       const quality = await evaluateQuestion(
-        { chatRepo, topicRepo, aiAdapter, aiConfig },
+        { chatRepo, subjectRepo, aiAdapter, aiConfig },
         messageId,
         result.content
       )

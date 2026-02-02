@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest"
 import { createSubjectRepository, type SubjectRepository } from "./repository"
 import { createTestDatabase, type TestDatabase } from "@/test/mocks/db"
-import { createTestUser, createTestStudyDomain, createTestSubject, createTestCategory } from "@/test/helpers"
+import { createTestUser, createTestStudyDomain, createTestSubject, createTestCategory, createTestTopic } from "@/test/helpers"
 
 describe("SubjectRepository", () => {
   let db: TestDatabase
@@ -431,6 +431,106 @@ describe("SubjectRepository", () => {
       const { id: userId } = createTestUser(db)
 
       const result = await repo.verifyStudyDomainOwnership("non-existent-id", userId)
+
+      expect(result).toBe(false)
+    })
+  })
+
+  describe("verifyCategoryBelongsToSubject", () => {
+    it("should return true if category belongs to subject", async () => {
+      const { id: userId } = createTestUser(db)
+      const { id: domainId } = createTestStudyDomain(db, userId)
+      const { id: subjectId } = createTestSubject(db, userId, domainId)
+      const { id: categoryId } = createTestCategory(db, userId, subjectId)
+
+      const result = await repo.verifyCategoryBelongsToSubject(categoryId, subjectId, userId)
+
+      expect(result).toBe(true)
+    })
+
+    it("should return false if category belongs to different subject", async () => {
+      const { id: userId } = createTestUser(db)
+      const { id: domainId } = createTestStudyDomain(db, userId)
+      const { id: subject1Id } = createTestSubject(db, userId, domainId, { name: "Subject 1" })
+      const { id: subject2Id } = createTestSubject(db, userId, domainId, { name: "Subject 2" })
+      const { id: categoryId } = createTestCategory(db, userId, subject1Id)
+
+      const result = await repo.verifyCategoryBelongsToSubject(categoryId, subject2Id, userId)
+
+      expect(result).toBe(false)
+    })
+
+    it("should return false if category is soft-deleted", async () => {
+      const { id: userId } = createTestUser(db)
+      const { id: domainId } = createTestStudyDomain(db, userId)
+      const { id: subjectId } = createTestSubject(db, userId, domainId)
+      const { id: categoryId } = createTestCategory(db, userId, subjectId, { deletedAt: new Date() })
+
+      const result = await repo.verifyCategoryBelongsToSubject(categoryId, subjectId, userId)
+
+      expect(result).toBe(false)
+    })
+
+    it("should return false for other user's category", async () => {
+      const { id: user1Id } = createTestUser(db)
+      const { id: user2Id } = createTestUser(db)
+      const { id: domainId } = createTestStudyDomain(db, user1Id)
+      const { id: subjectId } = createTestSubject(db, user1Id, domainId)
+      const { id: categoryId } = createTestCategory(db, user1Id, subjectId)
+
+      const result = await repo.verifyCategoryBelongsToSubject(categoryId, subjectId, user2Id)
+
+      expect(result).toBe(false)
+    })
+  })
+
+  describe("verifyTopicBelongsToSubject", () => {
+    it("should return true if topic belongs to subject", async () => {
+      const { id: userId } = createTestUser(db)
+      const { id: domainId } = createTestStudyDomain(db, userId)
+      const { id: subjectId } = createTestSubject(db, userId, domainId)
+      const { id: categoryId } = createTestCategory(db, userId, subjectId)
+      const { id: topicId } = createTestTopic(db, userId, categoryId)
+
+      const result = await repo.verifyTopicBelongsToSubject(topicId, subjectId, userId)
+
+      expect(result).toBe(true)
+    })
+
+    it("should return false if topic belongs to different subject", async () => {
+      const { id: userId } = createTestUser(db)
+      const { id: domainId } = createTestStudyDomain(db, userId)
+      const { id: subject1Id } = createTestSubject(db, userId, domainId, { name: "Subject 1" })
+      const { id: subject2Id } = createTestSubject(db, userId, domainId, { name: "Subject 2" })
+      const { id: categoryId } = createTestCategory(db, userId, subject1Id)
+      const { id: topicId } = createTestTopic(db, userId, categoryId)
+
+      const result = await repo.verifyTopicBelongsToSubject(topicId, subject2Id, userId)
+
+      expect(result).toBe(false)
+    })
+
+    it("should return false if topic is soft-deleted", async () => {
+      const { id: userId } = createTestUser(db)
+      const { id: domainId } = createTestStudyDomain(db, userId)
+      const { id: subjectId } = createTestSubject(db, userId, domainId)
+      const { id: categoryId } = createTestCategory(db, userId, subjectId)
+      const { id: topicId } = createTestTopic(db, userId, categoryId, { deletedAt: new Date() })
+
+      const result = await repo.verifyTopicBelongsToSubject(topicId, subjectId, userId)
+
+      expect(result).toBe(false)
+    })
+
+    it("should return false for other user's topic", async () => {
+      const { id: user1Id } = createTestUser(db)
+      const { id: user2Id } = createTestUser(db)
+      const { id: domainId } = createTestStudyDomain(db, user1Id)
+      const { id: subjectId } = createTestSubject(db, user1Id, domainId)
+      const { id: categoryId } = createTestCategory(db, user1Id, subjectId)
+      const { id: topicId } = createTestTopic(db, user1Id, categoryId)
+
+      const result = await repo.verifyTopicBelongsToSubject(topicId, subjectId, user2Id)
 
       expect(result).toBe(false)
     })

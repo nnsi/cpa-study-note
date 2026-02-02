@@ -65,6 +65,13 @@ export type SessionWithStats = {
   firstMessagePreview: string | null
 }
 
+export type GoodQuestion = {
+  id: string
+  sessionId: string
+  content: string
+  createdAt: Date
+}
+
 export type ChatRepository = {
   createSession: (data: { userId: string; topicId: string }) => Promise<ChatSession>
   findSessionById: (id: string) => Promise<ChatSession | null>
@@ -77,6 +84,7 @@ export type ChatRepository = {
   findMessageById: (id: string) => Promise<ChatMessage | null>
   findMessagesBySession: (sessionId: string) => Promise<ChatMessage[]>
   updateMessageQuality: (id: string, quality: string, reason?: string) => Promise<void>
+  findGoodQuestionsByTopic: (userId: string, topicId: string) => Promise<GoodQuestion[]>
 }
 
 export const createChatRepository = (db: Db): ChatRepository => ({
@@ -307,5 +315,27 @@ export const createChatRepository = (db: Db): ChatRepository => ({
         questionQualityReason: reason ?? null,
       })
       .where(eq(chatMessages.id, id))
+  },
+
+  // トピックに紐づくgood質問を一括取得
+  findGoodQuestionsByTopic: async (userId: string, topicId: string) => {
+    return db
+      .select({
+        id: chatMessages.id,
+        sessionId: chatMessages.sessionId,
+        content: chatMessages.content,
+        createdAt: chatMessages.createdAt,
+      })
+      .from(chatMessages)
+      .innerJoin(chatSessions, eq(chatMessages.sessionId, chatSessions.id))
+      .where(
+        and(
+          eq(chatSessions.userId, userId),
+          eq(chatSessions.topicId, topicId),
+          eq(chatMessages.role, "user"),
+          eq(chatMessages.questionQuality, "good")
+        )
+      )
+      .orderBy(desc(chatMessages.createdAt))
   },
 })

@@ -180,6 +180,18 @@ export const useSendMessage = ({ sessionId, topicId, onSessionCreated }: UseSend
       // ユーザーメッセージを即時表示
       setPendingUserMessage({ content, imageId })
 
+      // バッファリング用の変数（再レンダリング抑制）
+      let textBuffer = ""
+      let rafId: number | null = null
+
+      const flushBuffer = () => {
+        if (textBuffer) {
+          setStreamingText((prev) => prev + textBuffer)
+          textBuffer = ""
+        }
+        rafId = null
+      }
+
       try {
         let userMessageId: string | undefined
         let currentSessionId = sessionId
@@ -196,7 +208,11 @@ export const useSendMessage = ({ sessionId, topicId, onSessionCreated }: UseSend
             currentSessionId = chunk.sessionId
             newSessionId = chunk.sessionId
           } else if (chunk.type === "text") {
-            setStreamingText((prev) => prev + chunk.content)
+            // バッファに蓄積し、次のフレームで一括更新
+            textBuffer += chunk.content
+            if (!rafId) {
+              rafId = requestAnimationFrame(flushBuffer)
+            }
           } else if (chunk.type === "done") {
             userMessageId = chunk.messageId
             // メッセージ一覧を再取得
@@ -218,6 +234,12 @@ export const useSendMessage = ({ sessionId, topicId, onSessionCreated }: UseSend
             setError(new Error(chunk.error))
           }
         }
+
+        // ループ終了後、残りのバッファをフラッシュ
+        if (rafId) {
+          cancelAnimationFrame(rafId)
+        }
+        flushBuffer()
 
         // ユーザーメッセージの質問評価を実行（バックグラウンド）
         if (userMessageId && currentSessionId) {

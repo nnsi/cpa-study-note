@@ -44,10 +44,10 @@ describe("Subject Routes", () => {
     client = testClient(app)
   })
 
-  describe("GET /api/study-domains/:domainId/subjects", () => {
+  describe("GET /api/subjects", () => {
     it("should return 401 without auth", async () => {
-      const res = await client.api["study-domains"][":domainId"].subjects.$get({
-        param: { domainId: "test-domain" },
+      const res = await client.api.subjects.$get({
+        query: { studyDomainId: "test-domain" },
       })
 
       expect(res.status).toBe(401)
@@ -60,8 +60,8 @@ describe("Subject Routes", () => {
       createTestSubject(db, userId, domainId, { name: "Subject 1" })
       createTestSubject(db, userId, domainId, { name: "Subject 2" })
 
-      const res = await client.api["study-domains"][":domainId"].subjects.$get(
-        { param: { domainId } },
+      const res = await client.api.subjects.$get(
+        { query: { studyDomainId: domainId } },
         { headers: createAuthHeaders(userId) }
       )
 
@@ -71,30 +71,38 @@ describe("Subject Routes", () => {
       expect(json.subjects).toHaveLength(2)
     })
 
-    it("should return 404 for non-existent study domain", async () => {
+    it("should return empty array for non-existent study domain", async () => {
       const { id: userId } = createTestUser(db)
       env.DEV_USER_ID = userId
 
-      const res = await client.api["study-domains"][":domainId"].subjects.$get(
-        { param: { domainId: "non-existent" } },
+      const res = await client.api.subjects.$get(
+        { query: { studyDomainId: "non-existent" } },
         { headers: createAuthHeaders(userId) }
       )
 
-      expect(res.status).toBe(404)
+      // 存在しないドメインでも200を返し、空配列を返す
+      expect(res.status).toBe(200)
+      const json = await res.json()
+      if (!("subjects" in json)) throw new Error("Expected subjects in response")
+      expect(json.subjects).toHaveLength(0)
     })
 
-    it("should return 404 for other user's study domain", async () => {
+    it("should return empty array for other user's study domain", async () => {
       const { id: user1Id } = createTestUser(db)
       const { id: user2Id } = createTestUser(db)
       env.DEV_USER_ID = user2Id
       const { id: domainId } = createTestStudyDomain(db, user1Id)
 
-      const res = await client.api["study-domains"][":domainId"].subjects.$get(
-        { param: { domainId } },
+      const res = await client.api.subjects.$get(
+        { query: { studyDomainId: domainId } },
         { headers: createAuthHeaders(user2Id) }
       )
 
-      expect(res.status).toBe(404)
+      // 他ユーザーのドメインの場合は空配列
+      expect(res.status).toBe(200)
+      const json = await res.json()
+      if (!("subjects" in json)) throw new Error("Expected subjects in response")
+      expect(json.subjects).toHaveLength(0)
     })
 
     it("should not return soft-deleted subjects", async () => {
@@ -104,8 +112,8 @@ describe("Subject Routes", () => {
       createTestSubject(db, userId, domainId, { name: "Active" })
       createTestSubject(db, userId, domainId, { name: "Deleted", deletedAt: new Date() })
 
-      const res = await client.api["study-domains"][":domainId"].subjects.$get(
-        { param: { domainId } },
+      const res = await client.api.subjects.$get(
+        { query: { studyDomainId: domainId } },
         { headers: createAuthHeaders(userId) }
       )
 

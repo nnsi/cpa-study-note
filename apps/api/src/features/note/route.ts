@@ -7,7 +7,7 @@ import { authMiddleware } from "@/shared/middleware/auth"
 import { createAIAdapter, resolveAIConfig } from "@/shared/lib/ai"
 import { createNoteRepository } from "./repository"
 import { createChatRepository } from "../chat/repository"
-import { createTopicRepository } from "../topic/repository"
+import { createSubjectRepository } from "../subject/repository"
 import {
   createNoteFromSessionRequestSchema,
   createManualNoteRequestSchema,
@@ -31,7 +31,7 @@ type NoteDeps = {
 export const noteRoutes = ({ env, db }: NoteDeps) => {
   const noteRepo = createNoteRepository(db)
   const chatRepo = createChatRepository(db)
-  const topicRepo = createTopicRepository(db)
+  const subjectRepo = createSubjectRepository(db)
   const aiConfig = resolveAIConfig(env.ENVIRONMENT)
 
   const app = new Hono<{ Bindings: Env; Variables: Variables }>()
@@ -72,7 +72,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
         const body = c.req.valid("json")
 
         const result = await createManualNote(
-          { noteRepo, topicRepo },
+          { noteRepo, subjectRepo },
           {
             userId: user.id,
             topicId: body.topicId,

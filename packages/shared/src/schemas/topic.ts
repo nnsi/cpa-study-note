@@ -144,6 +144,17 @@ export const topicFilterRequestSchema = z.object({
 
 export type TopicFilterRequest = z.input<typeof topicFilterRequestSchema>
 
+// フロントエンド向けのフィルタパラメータ（booleanを直接使用）
+export const topicFilterParamsSchema = z.object({
+  minSessionCount: z.number().int().min(0).optional(),
+  daysSinceLastChat: z.number().int().min(0).optional(),
+  understood: z.boolean().optional(),
+  hasPostCheckChat: z.boolean().optional(),
+  minGoodQuestionCount: z.number().int().min(0).optional(),
+})
+
+export type TopicFilterParams = z.infer<typeof topicFilterParamsSchema>
+
 export const filteredTopicSchema = z.object({
   id: z.string(),
   name: z.string(),

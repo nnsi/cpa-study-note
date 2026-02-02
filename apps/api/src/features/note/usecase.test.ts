@@ -6,7 +6,7 @@ import type { NoteRepository } from "./repository"
 import type { ChatRepository } from "../chat/repository"
 import type { AIAdapter } from "@/shared/lib/ai"
 import { defaultAIConfig } from "@/shared/lib/ai"
-import type { TopicRepository } from "../topic/repository"
+import type { SubjectRepository } from "../subject/repository"
 import {
   createNoteFromSession,
   createManualNote,
@@ -66,20 +66,23 @@ const createMockNoteRepo = (overrides: Partial<NoteRepository> = {}): NoteReposi
   ...overrides,
 })
 
-const createMockChatRepo = (overrides: Partial<ChatRepository> = {}): ChatRepository => ({
-  createSession: vi.fn().mockResolvedValue(createMockSession()),
-  findSessionById: vi.fn().mockResolvedValue(null),
-  findSessionsByTopic: vi.fn().mockResolvedValue([]),
-  findSessionsWithStatsByTopic: vi.fn().mockResolvedValue([]),
-  getSessionMessageCount: vi.fn().mockResolvedValue(0),
-  getSessionQualityStats: vi.fn().mockResolvedValue({ goodCount: 0, surfaceCount: 0 }),
-  getTopicWithHierarchy: vi.fn().mockResolvedValue(null),
-  createMessage: vi.fn().mockResolvedValue(createMockMessage()),
-  findMessageById: vi.fn().mockResolvedValue(null),
-  findMessagesBySession: vi.fn().mockResolvedValue([]),
-  updateMessageQuality: vi.fn().mockResolvedValue(undefined),
-  ...overrides,
-})
+const createMockChatRepo = (overrides: Partial<ChatRepository> = {}): ChatRepository => {
+  const defaults: ChatRepository = {
+    createSession: vi.fn().mockResolvedValue(createMockSession()),
+    findSessionById: vi.fn().mockResolvedValue(null),
+    findSessionsByTopic: vi.fn().mockResolvedValue([]),
+    findSessionsWithStatsByTopic: vi.fn().mockResolvedValue([]),
+    getSessionMessageCount: vi.fn().mockResolvedValue(0),
+    getSessionQualityStats: vi.fn().mockResolvedValue({ goodCount: 0, surfaceCount: 0 }),
+    getTopicWithHierarchy: vi.fn().mockResolvedValue(null),
+    createMessage: vi.fn().mockResolvedValue(createMockMessage()),
+    findMessageById: vi.fn().mockResolvedValue(null),
+    findMessagesBySession: vi.fn().mockResolvedValue([]),
+    updateMessageQuality: vi.fn().mockResolvedValue(undefined),
+    findGoodQuestionsByTopic: vi.fn().mockResolvedValue([]),
+  }
+  return { ...defaults, ...overrides }
+}
 
 const createMockAIAdapter = (overrides: Partial<AIAdapter> = {}): AIAdapter => ({
   generateText: vi.fn().mockResolvedValue({
@@ -95,6 +98,7 @@ const createMockAIAdapter = (overrides: Partial<AIAdapter> = {}): AIAdapter => (
 
 const createMockTopic = (overrides = {}) => ({
   id: "topic-1",
+  userId: "user-1",
   categoryId: "category-1",
   name: "有価証券",
   description: null,
@@ -104,27 +108,48 @@ const createMockTopic = (overrides = {}) => ({
   displayOrder: 1,
   createdAt: createMockDate(),
   updatedAt: createMockDate(),
+  deletedAt: null,
   ...overrides,
 })
 
-const createMockTopicRepo = (overrides: Partial<TopicRepository> = {}): TopicRepository => ({
-  findAllSubjects: vi.fn().mockResolvedValue([]),
-  findSubjectById: vi.fn().mockResolvedValue(null),
-  getSubjectStats: vi.fn().mockResolvedValue({ categoryCount: 0, topicCount: 0 }),
+const createMockSubjectRepo = (overrides: Partial<SubjectRepository> = {}): SubjectRepository => ({
+  findByStudyDomainId: vi.fn().mockResolvedValue([]),
+  findById: vi.fn().mockResolvedValue(null),
+  create: vi.fn().mockResolvedValue({ id: "new-subject-1" }),
+  update: vi.fn().mockResolvedValue(null),
+  softDelete: vi.fn().mockResolvedValue(false),
+  canDeleteSubject: vi.fn().mockResolvedValue({ canDelete: true }),
+  verifyStudyDomainOwnership: vi.fn().mockResolvedValue(false),
+  verifyCategoryBelongsToSubject: vi.fn().mockResolvedValue(false),
+  verifyTopicBelongsToSubject: vi.fn().mockResolvedValue(false),
+  findSubjectByIdAndUserId: vi.fn().mockResolvedValue(null),
   findCategoriesBySubjectId: vi.fn().mockResolvedValue([]),
-  findCategoryById: vi.fn().mockResolvedValue(null),
-  getCategoryTopicCounts: vi.fn().mockResolvedValue([]),
-  findTopicsByCategoryId: vi.fn().mockResolvedValue([]),
-  findTopicById: vi.fn().mockResolvedValue(null),
-  findTopicWithHierarchy: vi.fn().mockResolvedValue(null),
+  findTopicsByCategoryIds: vi.fn().mockResolvedValue([]),
+  findCategoryIdsBySubjectIdWithSoftDeleted: vi.fn().mockResolvedValue([]),
+  findTopicIdsBySubjectWithSoftDeleted: vi.fn().mockResolvedValue([]),
+  findExistingCategoryIds: vi.fn().mockResolvedValue([]),
+  findExistingTopicIds: vi.fn().mockResolvedValue([]),
+  softDeleteCategories: vi.fn().mockResolvedValue(undefined),
+  softDeleteTopics: vi.fn().mockResolvedValue(undefined),
+  upsertCategory: vi.fn().mockResolvedValue(undefined),
+  upsertTopic: vi.fn().mockResolvedValue(undefined),
   findProgress: vi.fn().mockResolvedValue(null),
-  upsertProgress: vi.fn().mockResolvedValue({} as ReturnType<TopicRepository["upsertProgress"]> extends Promise<infer T> ? T : never),
+  upsertProgress: vi.fn().mockResolvedValue({} as ReturnType<SubjectRepository["upsertProgress"]> extends Promise<infer T> ? T : never),
   findProgressByUser: vi.fn().mockResolvedValue([]),
   getProgressCountsByCategory: vi.fn().mockResolvedValue([]),
   getProgressCountsBySubject: vi.fn().mockResolvedValue([]),
   findRecentTopics: vi.fn().mockResolvedValue([]),
-  createCheckHistory: vi.fn().mockResolvedValue({} as ReturnType<TopicRepository["createCheckHistory"]> extends Promise<infer T> ? T : never),
+  createCheckHistory: vi.fn().mockResolvedValue({} as ReturnType<SubjectRepository["createCheckHistory"]> extends Promise<infer T> ? T : never),
   findCheckHistoryByTopic: vi.fn().mockResolvedValue([]),
+  findAllSubjectsForUser: vi.fn().mockResolvedValue([]),
+  findSubjectByIdForUser: vi.fn().mockResolvedValue(null),
+  getSubjectStats: vi.fn().mockResolvedValue({ categoryCount: 0, topicCount: 0 }),
+  getBatchSubjectStats: vi.fn().mockResolvedValue([]),
+  findCategoriesHierarchy: vi.fn().mockResolvedValue([]),
+  getCategoryTopicCounts: vi.fn().mockResolvedValue([]),
+  findTopicsByCategoryIdForUser: vi.fn().mockResolvedValue([]),
+  findTopicById: vi.fn().mockResolvedValue(null),
+  findTopicWithHierarchy: vi.fn().mockResolvedValue(null),
   findFilteredTopics: vi.fn().mockResolvedValue([]),
   searchTopics: vi.fn().mockResolvedValue([]),
   ...overrides,
@@ -503,12 +528,12 @@ describe("Note UseCase", () => {
       const noteRepo = createMockNoteRepo({
         create: vi.fn().mockResolvedValue(createdNote),
       })
-      const topicRepo = createMockTopicRepo({
+      const subjectRepo = createMockSubjectRepo({
         findTopicById: vi.fn().mockResolvedValue(topic),
       })
 
       const result = await createManualNote(
-        { noteRepo, topicRepo },
+        { noteRepo, subjectRepo },
         {
           userId: "user-1",
           topicId: "topic-1",
@@ -551,12 +576,12 @@ describe("Note UseCase", () => {
       const noteRepo = createMockNoteRepo({
         create: vi.fn().mockResolvedValue(createdNote),
       })
-      const topicRepo = createMockTopicRepo({
+      const subjectRepo = createMockSubjectRepo({
         findTopicById: vi.fn().mockResolvedValue(topic),
       })
 
       const result = await createManualNote(
-        { noteRepo, topicRepo },
+        { noteRepo, subjectRepo },
         {
           userId: "user-1",
           topicId: "topic-1",
@@ -573,12 +598,12 @@ describe("Note UseCase", () => {
 
     it("存在しないトピックでエラーを返す", async () => {
       const noteRepo = createMockNoteRepo()
-      const topicRepo = createMockTopicRepo({
+      const subjectRepo = createMockSubjectRepo({
         findTopicById: vi.fn().mockResolvedValue(null),
       })
 
       const result = await createManualNote(
-        { noteRepo, topicRepo },
+        { noteRepo, subjectRepo },
         {
           userId: "user-1",
           topicId: "non-existent",

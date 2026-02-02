@@ -1,8 +1,10 @@
 import type { NoteRepository } from "./repository"
 import type { ChatRepository } from "../chat/repository"
-import type { TopicRepository } from "../topic/repository"
+import type { SubjectRepository } from "../subject/repository"
 import type { AIAdapter, AIModelConfig } from "@/shared/lib/ai"
 import type { NoteSource } from "@cpa-study/shared/schemas"
+import { parseLLMJson, stripCodeBlock } from "@cpa-study/shared"
+import { z } from "zod"
 
 type NoteDeps = {
   noteRepo: NoteRepository
@@ -149,31 +151,23 @@ ${conversationText}${goodQuestionsSection}
     }
   }
 
-  let aiSummary = ""
-  let keyPoints: string[] = []
-  let stumbledPoints: string[] = []
+  const noteSummarySchema = z.object({
+    summary: z.string().default(""),
+    keyPoints: z.array(z.string()).default([]),
+    stumbledPoints: z.array(z.string()).default([]),
+  })
 
-  try {
-    // Markdownコードブロック (```json ... ```) を除去
-    let jsonContent = result.content.trim()
-    const codeBlockMatch = jsonContent.match(/```(?:json)?\s*([\s\S]*?)```/)
-    if (codeBlockMatch) {
-      jsonContent = codeBlockMatch[1].trim()
-    }
-
-    const parsed = JSON.parse(jsonContent)
-    aiSummary = parsed.summary || ""
-    keyPoints = parsed.keyPoints || []
-    stumbledPoints = parsed.stumbledPoints || []
-  } catch {
-    // パース失敗時はコードブロックを除去した上でそのまま保存
-    let fallback = result.content.trim()
-    const match = fallback.match(/```(?:json)?\s*([\s\S]*?)```/)
-    if (match) {
-      fallback = match[1].trim()
-    }
-    aiSummary = fallback
+  // パース失敗時のフォールバック: コードブロック除去後の生テキストをaiSummaryに設定
+  const fallbackSummary = {
+    summary: stripCodeBlock(result.content),
+    keyPoints: [] as string[],
+    stumbledPoints: [] as string[],
   }
+
+  const parsed = parseLLMJson(result.content, noteSummarySchema, fallbackSummary)
+  const aiSummary = parsed.summary
+  const keyPoints = parsed.keyPoints
+  const stumbledPoints = parsed.stumbledPoints
 
   const note = await noteRepo.create({
     userId,
@@ -190,16 +184,16 @@ ${conversationText}${goodQuestionsSection}
 
 // 独立ノート作成（手動）
 export const createManualNote = async (
-  deps: { noteRepo: NoteRepository; topicRepo: TopicRepository },
+  deps: { noteRepo: NoteRepository; subjectRepo: SubjectRepository },
   input: CreateManualNoteInput
 ): Promise<
   { ok: true; note: NoteResponse } | { ok: false; error: string; status: number }
 > => {
-  const { noteRepo, topicRepo } = deps
+  const { noteRepo, subjectRepo } = deps
   const { userId, topicId, userMemo, keyPoints = [], stumbledPoints = [] } = input
 
   // topicの存在確認
-  const topic = await topicRepo.findTopicById(topicId)
+  const topic = await subjectRepo.findTopicById(topicId, userId)
   if (!topic) {
     return { ok: false, error: "Topic not found", status: 404 }
   }
@@ -384,30 +378,23 @@ ${conversationText}${goodQuestionsSection}
     }
   }
 
-  let aiSummary = ""
-  let keyPoints: string[] = []
-  let stumbledPoints: string[] = []
+  const noteSummarySchema = z.object({
+    summary: z.string().default(""),
+    keyPoints: z.array(z.string()).default([]),
+    stumbledPoints: z.array(z.string()).default([]),
+  })
 
-  try {
-    // Markdownコードブロック (```json ... ```) を除去
-    let jsonContent = result.content.trim()
-    const codeBlockMatch = jsonContent.match(/```(?:json)?\s*([\s\S]*?)```/)
-    if (codeBlockMatch) {
-      jsonContent = codeBlockMatch[1].trim()
-    }
-
-    const parsed = JSON.parse(jsonContent)
-    aiSummary = parsed.summary || ""
-    keyPoints = parsed.keyPoints || []
-    stumbledPoints = parsed.stumbledPoints || []
-  } catch {
-    let fallback = result.content.trim()
-    const match = fallback.match(/```(?:json)?\s*([\s\S]*?)```/)
-    if (match) {
-      fallback = match[1].trim()
-    }
-    aiSummary = fallback
+  // パース失敗時のフォールバック: コードブロック除去後の生テキストをaiSummaryに設定
+  const fallbackSummary = {
+    summary: stripCodeBlock(result.content),
+    keyPoints: [] as string[],
+    stumbledPoints: [] as string[],
   }
+
+  const parsed = parseLLMJson(result.content, noteSummarySchema, fallbackSummary)
+  const aiSummary = parsed.summary
+  const keyPoints = parsed.keyPoints
+  const stumbledPoints = parsed.stumbledPoints
 
   const note = await noteRepo.update(noteId, {
     aiSummary,

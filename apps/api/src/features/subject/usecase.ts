@@ -7,7 +7,24 @@ import type {
   TopicNodeResponse,
   CSVImportResponse,
 } from "@cpa-study/shared/schemas"
-import type { SubjectRepository, Subject, CreateSubjectInput, UpdateSubjectInput } from "./repository"
+import { DEFAULT_STUDY_DOMAIN_ID } from "@cpa-study/shared/constants"
+import type {
+  SubjectRepository,
+  Subject,
+  CreateSubjectInput,
+  UpdateSubjectInput,
+  TopicProgress,
+  TopicFilterParams,
+  FilteredTopicRow,
+  SearchTopicRow,
+  RecentTopicRow,
+  SubjectStats,
+  CategoryTopicCount,
+  CategoryProgressCount,
+  SubjectProgressCount,
+  TopicWithHierarchy,
+  CategoryRecord,
+} from "./repository"
 import { parseCSV, parseCSV4Column, groupRowsBySubject, convertToTree, mergeTree } from "./csv-parser"
 import type { SimpleTransactionRunner } from "../../shared/lib/transaction"
 
@@ -16,6 +33,118 @@ type Result<T, E> = { ok: true; value: T } | { ok: false; error: E }
 
 const ok = <T>(value: T): Result<T, never> => ({ ok: true, value })
 const err = <E>(error: E): Result<never, E> => ({ ok: false, error })
+
+// User type for resolving studyDomainId
+type User = {
+  id: string
+  defaultStudyDomainId: string | null
+}
+
+// studyDomainId を解決する
+export const resolveStudyDomainId = (
+  explicitId: string | undefined,
+  user: User | undefined
+): string => {
+  if (explicitId) return explicitId
+  if (user?.defaultStudyDomainId) return user.defaultStudyDomainId
+  return DEFAULT_STUDY_DOMAIN_ID
+}
+
+// レスポンス用の型定義
+type SubjectWithStats = {
+  id: string
+  studyDomainId: string
+  name: string
+  description: string | null
+  emoji: string | null
+  color: string | null
+  displayOrder: number
+  createdAt: string
+  updatedAt: string
+  categoryCount: number
+  topicCount: number
+}
+
+type CategoryNode = {
+  id: string
+  subjectId: string
+  parentId: string | null
+  name: string
+  depth: number
+  displayOrder: number
+  createdAt: string
+  updatedAt: string
+  topicCount: number
+  understoodCount: number
+  children: CategoryNode[]
+}
+
+type TopicWithProgressResponse = {
+  id: string
+  categoryId: string
+  categoryName: string
+  subjectId: string
+  subjectName: string
+  name: string
+  description: string | null
+  displayOrder: number
+  createdAt: string
+  updatedAt: string
+  progress: ProgressResponse | null
+}
+
+type ProgressResponse = {
+  userId: string
+  topicId: string
+  understood: boolean
+  lastAccessedAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+type CheckHistoryResponse = {
+  id: string
+  action: "checked" | "unchecked"
+  checkedAt: string
+}
+
+type SubjectProgressStats = {
+  subjectId: string
+  subjectName: string
+  totalTopics: number
+  understoodTopics: number
+}
+
+type RecentTopicResponse = {
+  topicId: string
+  topicName: string
+  subjectId: string
+  subjectName: string
+  categoryId: string
+  lastAccessedAt: string
+}
+
+type FilteredTopicResponse = {
+  id: string
+  name: string
+  categoryId: string
+  subjectId: string
+  subjectName: string
+  sessionCount: number
+  lastChatAt: string | null
+  understood: boolean
+  goodQuestionCount: number
+}
+
+type TopicResponse = {
+  id: string
+  categoryId: string
+  name: string
+  description: string | null
+  displayOrder: number
+  createdAt: string
+  updatedAt: string
+}
 
 // Error types
 export type SubjectUseCaseError = "NOT_FOUND" | "FORBIDDEN" | "HAS_CATEGORIES"
@@ -561,4 +690,356 @@ export const bulkImportCSVToStudyDomain = async (
     },
     errors,
   })
+}
+
+// ============================================
+// 進捗・フィルタ・検索関連のusecase関数
+// ============================================
+
+/**
+ * 科目一覧取得（統計情報付き）
+ */
+export const listSubjectsWithStats = async (
+  deps: SubjectUseCaseDeps,
+  userId: string,
+  studyDomainId?: string
+): Promise<SubjectWithStats[]> => {
+  const subjects = await deps.subjectRepo.findAllSubjectsForUser(studyDomainId, userId)
+
+  // バッチ取得でN+1クエリを削減
+  const subjectIds = subjects.map((s) => s.id)
+  const batchStats = await deps.subjectRepo.getBatchSubjectStats(subjectIds, userId)
+  const statsMap = new Map(batchStats.map((s) => [s.subjectId, s]))
+
+  return subjects.map((subject) => {
+    const stats = statsMap.get(subject.id) ?? { categoryCount: 0, topicCount: 0 }
+    return {
+      id: subject.id,
+      studyDomainId: subject.studyDomainId,
+      name: subject.name,
+      description: subject.description,
+      emoji: subject.emoji,
+      color: subject.color,
+      displayOrder: subject.displayOrder,
+      createdAt: subject.createdAt.toISOString(),
+      updatedAt: subject.updatedAt.toISOString(),
+      categoryCount: stats.categoryCount,
+      topicCount: stats.topicCount,
+    }
+  })
+}
+
+/**
+ * 科目詳細取得（統計情報付き）
+ */
+export const getSubjectWithStats = async (
+  deps: SubjectUseCaseDeps,
+  userId: string,
+  subjectId: string
+): Promise<SubjectWithStats | null> => {
+  const subject = await deps.subjectRepo.findSubjectByIdForUser(subjectId, userId)
+
+  if (!subject) {
+    return null
+  }
+
+  const stats = await deps.subjectRepo.getSubjectStats(subjectId, userId)
+
+  return {
+    id: subject.id,
+    studyDomainId: subject.studyDomainId,
+    name: subject.name,
+    description: subject.description,
+    emoji: subject.emoji,
+    color: subject.color,
+    displayOrder: subject.displayOrder,
+    createdAt: subject.createdAt.toISOString(),
+    updatedAt: subject.updatedAt.toISOString(),
+    categoryCount: stats.categoryCount,
+    topicCount: stats.topicCount,
+  }
+}
+
+/**
+ * カテゴリ一覧（階層構造）取得
+ */
+export const listCategoriesHierarchy = async (
+  deps: SubjectUseCaseDeps,
+  userId: string,
+  subjectId: string
+): Promise<CategoryNode[]> => {
+  const [categories, topicCounts, progressCounts] = await Promise.all([
+    deps.subjectRepo.findCategoriesHierarchy(subjectId, userId),
+    deps.subjectRepo.getCategoryTopicCounts(subjectId, userId),
+    deps.subjectRepo.getProgressCountsByCategory(userId, subjectId),
+  ])
+
+  // カテゴリIDごとの論点数マップ
+  const topicCountMap = new Map(
+    topicCounts.map((tc) => [tc.categoryId, tc.topicCount])
+  )
+
+  // カテゴリIDごとの理解済み数マップ
+  const progressCountMap = new Map(
+    progressCounts.map((pc) => [pc.categoryId, pc.understoodCount])
+  )
+
+  // 階層構造に変換
+  const categoryMap = new Map<string, CategoryNode>()
+  const rootCategories: CategoryNode[] = []
+
+  // 1パス目：全カテゴリをマップに格納
+  for (const cat of categories) {
+    categoryMap.set(cat.id, {
+      id: cat.id,
+      subjectId: cat.subjectId,
+      parentId: cat.parentId,
+      name: cat.name,
+      depth: cat.depth,
+      displayOrder: cat.displayOrder,
+      createdAt: cat.createdAt.toISOString(),
+      updatedAt: cat.updatedAt.toISOString(),
+      topicCount: topicCountMap.get(cat.id) ?? 0,
+      understoodCount: progressCountMap.get(cat.id) ?? 0,
+      children: [],
+    })
+  }
+
+  // 2パス目：親子関係を構築
+  for (const cat of categories) {
+    const node = categoryMap.get(cat.id)!
+    if (cat.parentId) {
+      const parent = categoryMap.get(cat.parentId)
+      if (parent) {
+        parent.children.push(node)
+      }
+    } else {
+      rootCategories.push(node)
+    }
+  }
+
+  return rootCategories
+}
+
+/**
+ * カテゴリの論点一覧取得
+ */
+export const listTopicsByCategory = async (
+  deps: SubjectUseCaseDeps,
+  userId: string,
+  categoryId: string
+): Promise<TopicResponse[]> => {
+  const topics = await deps.subjectRepo.findTopicsByCategoryIdForUser(categoryId, userId)
+
+  return topics.map((t) => ({
+    id: t.id,
+    categoryId: t.categoryId,
+    name: t.name,
+    description: t.description,
+    displayOrder: t.displayOrder,
+    createdAt: t.createdAt.toISOString(),
+    updatedAt: t.updatedAt.toISOString(),
+  }))
+}
+
+/**
+ * 論点詳細取得（進捗含む）
+ */
+export const getTopicWithProgress = async (
+  deps: SubjectUseCaseDeps,
+  userId: string,
+  topicId: string
+): Promise<TopicWithProgressResponse | null> => {
+  const topic = await deps.subjectRepo.findTopicWithHierarchy(topicId, userId)
+  if (!topic) return null
+
+  const progress = await deps.subjectRepo.findProgress(userId, topicId)
+
+  // アクセス記録を更新
+  await deps.subjectRepo.upsertProgress({ userId, topicId })
+
+  return {
+    id: topic.id,
+    categoryId: topic.categoryId,
+    categoryName: topic.categoryName,
+    subjectId: topic.subjectId,
+    subjectName: topic.subjectName,
+    name: topic.name,
+    description: topic.description,
+    displayOrder: topic.displayOrder,
+    createdAt: topic.createdAt.toISOString(),
+    updatedAt: topic.updatedAt.toISOString(),
+    progress: progress
+      ? {
+          userId: progress.userId,
+          topicId: progress.topicId,
+          understood: progress.understood,
+          lastAccessedAt: progress.lastAccessedAt?.toISOString() ?? null,
+          createdAt: progress.createdAt.toISOString(),
+          updatedAt: progress.updatedAt.toISOString(),
+        }
+      : null,
+  }
+}
+
+/**
+ * 進捗更新
+ */
+export const updateProgress = async (
+  deps: SubjectUseCaseDeps,
+  userId: string,
+  topicId: string,
+  understood?: boolean
+): Promise<ProgressResponse> => {
+  // 現在の進捗を取得して、understood が変更されたかチェック
+  const currentProgress = await deps.subjectRepo.findProgress(userId, topicId)
+  const previousUnderstood = currentProgress?.understood ?? false
+
+  const progress = await deps.subjectRepo.upsertProgress({
+    userId,
+    topicId,
+    understood,
+  })
+
+  // understood フラグが変更された場合は履歴を記録
+  if (understood !== undefined && understood !== previousUnderstood) {
+    await deps.subjectRepo.createCheckHistory({
+      userId,
+      topicId,
+      action: understood ? "checked" : "unchecked",
+    })
+  }
+
+  return {
+    userId: progress.userId,
+    topicId: progress.topicId,
+    understood: progress.understood,
+    lastAccessedAt: progress.lastAccessedAt?.toISOString() ?? null,
+    createdAt: progress.createdAt.toISOString(),
+    updatedAt: progress.updatedAt.toISOString(),
+  }
+}
+
+/**
+ * ユーザーの全進捗取得
+ */
+export const listUserProgress = async (
+  deps: SubjectUseCaseDeps,
+  userId: string
+): Promise<ProgressResponse[]> => {
+  const progressList = await deps.subjectRepo.findProgressByUser(userId)
+
+  return progressList.map((p) => ({
+    userId: p.userId,
+    topicId: p.topicId,
+    understood: p.understood,
+    lastAccessedAt: p.lastAccessedAt?.toISOString() ?? null,
+    createdAt: p.createdAt.toISOString(),
+    updatedAt: p.updatedAt.toISOString(),
+  }))
+}
+
+/**
+ * チェック履歴取得
+ */
+export const getCheckHistory = async (
+  deps: SubjectUseCaseDeps,
+  userId: string,
+  topicId: string
+): Promise<CheckHistoryResponse[]> => {
+  const history = await deps.subjectRepo.findCheckHistoryByTopic(userId, topicId)
+
+  return history.map((h) => ({
+    id: h.id,
+    action: h.action,
+    checkedAt: h.checkedAt.toISOString(),
+  }))
+}
+
+/**
+ * 科目別進捗統計取得
+ */
+export const getSubjectProgressStats = async (
+  deps: SubjectUseCaseDeps,
+  userId: string
+): Promise<SubjectProgressStats[]> => {
+  const [subjects, progressCounts] = await Promise.all([
+    deps.subjectRepo.findAllSubjectsForUser(undefined, userId),
+    deps.subjectRepo.getProgressCountsBySubject(userId),
+  ])
+
+  // 科目ごとのトピック数をバッチ取得（N+1クエリ削減）
+  const subjectIds = subjects.map((s) => s.id)
+  const batchStats = await deps.subjectRepo.getBatchSubjectStats(subjectIds, userId)
+
+  const topicCountMap = new Map(
+    batchStats.map((s) => [s.subjectId, s.topicCount])
+  )
+
+  const progressMap = new Map(
+    progressCounts.map((p) => [p.subjectId, p.understoodCount])
+  )
+
+  return subjects.map((subject) => ({
+    subjectId: subject.id,
+    subjectName: subject.name,
+    totalTopics: topicCountMap.get(subject.id) ?? 0,
+    understoodTopics: progressMap.get(subject.id) ?? 0,
+  }))
+}
+
+/**
+ * 最近触った論点取得
+ */
+export const listRecentTopics = async (
+  deps: SubjectUseCaseDeps,
+  userId: string,
+  limit: number = 10
+): Promise<RecentTopicResponse[]> => {
+  const topics = await deps.subjectRepo.findRecentTopics(userId, limit)
+
+  return topics.map((t) => ({
+    topicId: t.topicId,
+    topicName: t.topicName,
+    subjectId: t.subjectId,
+    subjectName: t.subjectName,
+    categoryId: t.categoryId,
+    lastAccessedAt: t.lastAccessedAt.toISOString(),
+  }))
+}
+
+/**
+ * フィルタ済み論点取得
+ */
+export const filterTopics = async (
+  deps: SubjectUseCaseDeps,
+  userId: string,
+  filters: TopicFilterParams
+): Promise<FilteredTopicResponse[]> => {
+  const topics = await deps.subjectRepo.findFilteredTopics(userId, filters)
+
+  return topics.map((t) => ({
+    id: t.id,
+    name: t.name,
+    categoryId: t.categoryId,
+    subjectId: t.subjectId,
+    subjectName: t.subjectName,
+    sessionCount: t.sessionCount,
+    lastChatAt: t.lastChatAt ? new Date(t.lastChatAt).toISOString() : null,
+    understood: Boolean(t.understood),
+    goodQuestionCount: t.goodQuestionCount,
+  }))
+}
+
+/**
+ * 論点検索（ドメイン内）
+ */
+export const searchTopicsInDomain = async (
+  deps: SubjectUseCaseDeps,
+  userId: string,
+  studyDomainId: string,
+  query: string,
+  limit: number = 20
+): Promise<SearchTopicRow[]> => {
+  return deps.subjectRepo.searchTopics(studyDomainId, userId, query, limit)
 }

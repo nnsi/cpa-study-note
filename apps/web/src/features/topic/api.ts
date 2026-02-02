@@ -1,10 +1,7 @@
 import { api } from "@/lib/api-client"
+import type { TopicCheckHistoryResponse } from "@cpa-study/shared"
 
-export type CheckHistoryItem = {
-  id: string
-  action: "checked" | "unchecked"
-  checkedAt: string
-}
+export type CheckHistoryItem = TopicCheckHistoryResponse
 
 export const getCheckHistory = async (
   subjectId: string,

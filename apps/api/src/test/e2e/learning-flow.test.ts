@@ -134,7 +134,6 @@ describe("E2E: Learning Flow", () => {
 
   describe("Subject and Category Navigation", () => {
     it("should list all subjects", async () => {
-      // Note: trailing slash may cause 404, use without
       const res = await req.get("/api/subjects")
 
       expect(res.status).toBe(200)

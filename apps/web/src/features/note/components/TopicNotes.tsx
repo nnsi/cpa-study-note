@@ -16,48 +16,25 @@ type Note = {
   source?: NoteSource
 }
 
-type ChatMessage = {
+type GoodQuestion = {
   id: string
   sessionId: string
-  role: string
   content: string
-  questionQuality: "good" | "surface" | null
   createdAt: string
 }
 
-// 深掘り質問を取得するカスタムフック
-const useGoodQuestionsByTopic = (sessionIds: string[]) => {
+// 深掘り質問を取得するカスタムフック（バッチ取得でN+1解消）
+const useGoodQuestionsByTopic = (topicId: string) => {
   return useQuery({
-    queryKey: ["good-questions", ...sessionIds],
+    queryKey: ["good-questions", topicId],
     queryFn: async () => {
-      if (sessionIds.length === 0) return []
-
-      // 各セッションのメッセージを取得
-      const messagePromises = sessionIds.map(async (sessionId) => {
-        try {
-          const res = await api.api.chat.sessions[":sessionId"].messages.$get({
-            param: { sessionId },
-          })
-          if (!res.ok) return []
-          const data = await res.json()
-          return data.messages as ChatMessage[]
-        } catch {
-          return []
-        }
+      const res = await api.api.chat.topics[":topicId"]["good-questions"].$get({
+        param: { topicId },
       })
-
-      const allMessages = await Promise.all(messagePromises)
-
-      // 深掘り質問のみをフィルタ
-      return allMessages
-        .flat()
-        .filter((msg) => msg.role === "user" && msg.questionQuality === "good")
-        .sort(
-          (a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        )
+      if (!res.ok) return []
+      const data = await res.json()
+      return data.questions as GoodQuestion[]
     },
-    enabled: sessionIds.length > 0,
   })
 }
 
@@ -367,13 +344,9 @@ export const TopicNotes = ({ topicId }: Props) => {
 
   const notes: Note[] = data?.notes || []
 
-  // セッションIDを収集（深掘り質問取得用）
-  const sessionIds = notes
-    .map((note) => note.sessionId)
-    .filter((id): id is string => id !== null)
-
+  // 深掘り質問をバッチ取得（N+1解消）
   const { data: goodQuestions, isLoading: isLoadingQuestions } =
-    useGoodQuestionsByTopic(sessionIds)
+    useGoodQuestionsByTopic(topicId)
 
   const handleCreateNote = useCallback(
     (data: { userMemo: string; keyPoints: string[]; stumbledPoints: string[] }) => {

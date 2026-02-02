@@ -1,11 +1,13 @@
 import type { AIAdapter, AIMessage, StreamChunk, AIConfig } from "@/shared/lib/ai"
 import type { ChatRepository, ChatMessage } from "./repository"
-import type { TopicRepository } from "../topic/repository"
+import type { SubjectRepository } from "../subject/repository"
 import { buildSystemPrompt, buildEvaluationPrompt } from "./domain/prompts"
+import { parseLLMJson } from "@cpa-study/shared"
+import { z } from "zod"
 
 type ChatDeps = {
   chatRepo: ChatRepository
-  topicRepo: TopicRepository
+  subjectRepo: SubjectRepository
   aiAdapter: AIAdapter
   aiConfig: AIConfig
 }
@@ -31,13 +33,13 @@ type MessageResponse = {
 
 // セッション作成
 export const createSession = async (
-  deps: Pick<ChatDeps, "chatRepo" | "topicRepo">,
+  deps: Pick<ChatDeps, "chatRepo" | "subjectRepo">,
   userId: string,
   topicId: string
 ): Promise<
   { ok: true; session: SessionResponse } | { ok: false; error: string; status: number }
 > => {
-  const topic = await deps.topicRepo.findTopicById(topicId)
+  const topic = await deps.subjectRepo.findTopicById(topicId, userId)
   if (!topic) {
     return { ok: false, error: "Topic not found", status: 404 }
   }
@@ -271,7 +273,7 @@ export async function* sendMessage(
   }
 
   // 進捗を更新
-  await deps.topicRepo.upsertProgress({
+  await deps.subjectRepo.upsertProgress({
     userId: input.userId,
     topicId: session.topicId,
     incrementQuestionCount: true,
@@ -364,7 +366,7 @@ export async function* sendMessageWithNewSession(
   }
 
   // 進捗を更新
-  await deps.topicRepo.upsertProgress({
+  await deps.subjectRepo.upsertProgress({
     userId: input.userId,
     topicId: input.topicId,
     incrementQuestionCount: true,
@@ -372,6 +374,29 @@ export async function* sendMessageWithNewSession(
 
   // メッセージ保存後に"done"を送信
   yield { type: "done" as const, messageId: userMessage.id }
+}
+
+type GoodQuestionResponse = {
+  id: string
+  sessionId: string
+  content: string
+  createdAt: string
+}
+
+// トピックに紐づくgood質問を一括取得（N+1解消用）
+export const listGoodQuestionsByTopic = async (
+  deps: Pick<ChatDeps, "chatRepo">,
+  userId: string,
+  topicId: string
+): Promise<GoodQuestionResponse[]> => {
+  const questions = await deps.chatRepo.findGoodQuestionsByTopic(userId, topicId)
+
+  return questions.map((q) => ({
+    id: q.id,
+    sessionId: q.sessionId,
+    content: q.content,
+    createdAt: q.createdAt.toISOString(),
+  }))
 }
 
 type QuestionEvaluation = {
@@ -393,22 +418,21 @@ export const evaluateQuestion = async (
     maxTokens: deps.aiConfig.evaluation.maxTokens,
   })
 
-  // JSONパース（コードブロックの除去も対応）
-  let quality: "good" | "surface" = "surface"
-  let reason = ""
-  try {
-    const jsonStr = result.content
-      .replace(/```json\s*/g, "")
-      .replace(/```\s*/g, "")
-      .trim()
-    const parsed = JSON.parse(jsonStr) as { quality?: string; reason?: string }
-    quality = parsed.quality?.toLowerCase().includes("good") ? "good" : "surface"
-    reason = parsed.reason ?? ""
-  } catch {
-    // パースに失敗した場合はシンプルな判定にフォールバック
-    quality = result.content.toLowerCase().includes("good") ? "good" : "surface"
-    reason = ""
-  }
+  const evaluationSchema = z.object({
+    quality: z.string().default("surface"),
+    reason: z.string().default(""),
+  })
+
+  const fallback = { quality: "surface", reason: "" }
+  const parsed = parseLLMJson(result.content, evaluationSchema, fallback)
+
+  // "good" を含むかどうかで判定
+  const quality: "good" | "surface" = parsed.quality
+    .toLowerCase()
+    .includes("good")
+    ? "good"
+    : "surface"
+  const reason = parsed.reason
 
   await deps.chatRepo.updateMessageQuality(messageId, quality, reason)
 
