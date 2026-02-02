@@ -29,22 +29,27 @@ curlでは検出できない問題を発見するため、実際のブラウザ�
 pnpm dev
 ```
 
-### 2. Chromeで動作確認
+### 2. Chromeで動作確認（Claude in Chrome MCP）
 
-ユーザーに http://localhost:5173 を開いてもらい、以下を確認する。
+**重要:** 既にユーザーが開発サーバーを起動している可能性がある。まず`tabs_context_mcp`で既存タブを確認し、`localhost:5173`が開いていればそれを使う。**勝手にpnpm devで新しいサーバーを起動しない。**
+
+#### MCP活用のポイント
+
+1. **read_page**: アクセシビリティツリーでページ構造を確認
+2. **find**: 自然言語でボタンやリンクを検索
+3. **computer**: スクリーンショット、クリック、入力
+4. **read_console_messages**: JavaScriptエラー、CORSエラーを確認
+5. **read_network_requests**: APIリクエスト/レスポンスを確認
+
+#### 注意点
+
+- **`form_input`でReactの状態は更新されない**: textareaに値を設定してもonChangeが発火しない。`type`アクションを使うか、JavaScriptで直接操作
+- **既存の開発サーバーを確認**: 新しいサーバーを起動する前に、既にポートが使われていないか確認
 
 **DevToolsの活用:**
 - **Network**: リクエスト/レスポンス、ステータスコード、Cookie送信
 - **Console**: CORSエラー、JavaScriptエラー
 - **Application**: Cookie、LocalStorage の状態
-
-**確認の依頼例:**
-```
-「Chromeで http://localhost:5173 を開いて、以下を確認してもらえますか:
-1. [具体的な操作]
-2. DevToolsのNetworkタブで [確認したいこと]
-3. 結果を教えてください」
-```
 
 ### 3. 確認すべきフロー
 
