@@ -16,7 +16,10 @@ export const parseJson = async <T>(res: Response, zodSchema: z.ZodType<T>): Prom
 
 // よく使うレスポンススキーマ
 export const errorResponseSchema = z.object({
-  error: z.string(),
+  error: z.object({
+    code: z.string(),
+    message: z.string(),
+  }),
 })
 export type ErrorResponse = z.infer<typeof errorResponseSchema>
 

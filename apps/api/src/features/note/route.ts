@@ -22,6 +22,7 @@ import {
   updateNote,
   refreshNoteFromSession,
 } from "./usecase"
+import { handleResult, handleResultWith } from "@/shared/lib/route-helpers"
 
 type NoteDeps = {
   env: Env
@@ -54,11 +55,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
           { userId: user.id, sessionId }
         )
 
-        if (!result.ok) {
-          return c.json({ error: result.error }, result.status as 404 | 403)
-        }
-
-        return c.json({ note: result.note }, 201)
+        return handleResultWith(c, result, (note) => ({ note }), 201)
       }
     )
 
@@ -82,11 +79,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
           }
         )
 
-        if (!result.ok) {
-          return c.json({ error: result.error }, result.status as 404)
-        }
-
-        return c.json({ note: result.note }, 201)
+        return handleResultWith(c, result, (note) => ({ note }), 201)
       }
     )
 
@@ -119,12 +112,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
       const noteId = c.req.param("noteId")
 
       const result = await getNote({ noteRepo }, user.id, noteId)
-
-      if (!result.ok) {
-        return c.json({ error: result.error }, result.status as 404 | 403)
-      }
-
-      return c.json({ note: result.note })
+      return handleResultWith(c, result, (note) => ({ note }))
     })
 
     // ノート更新
@@ -145,12 +133,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
         const body = c.req.valid("json")
 
         const result = await updateNote({ noteRepo }, user.id, noteId, body)
-
-        if (!result.ok) {
-          return c.json({ error: result.error }, result.status as 404 | 403)
-        }
-
-        return c.json({ note: result.note })
+        return handleResultWith(c, result, (note) => ({ note }))
       }
     )
 
@@ -170,14 +153,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
         noteId
       )
 
-      if (!result.ok) {
-        return c.json(
-          { error: result.error },
-          result.status as 400 | 403 | 404
-        )
-      }
-
-      return c.json({ note: result.note })
+      return handleResultWith(c, result, (note) => ({ note }))
     })
 
   return app

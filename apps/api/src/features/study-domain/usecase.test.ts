@@ -112,8 +112,7 @@ describe("Study Domain UseCase", () => {
       expect(result.ok).toBe(false)
       if (result.ok) return
 
-      expect(result.error.type).toBe("not_found")
-      expect(result.error.message).toBe("学習領域が見つかりません")
+      expect(result.error.code).toBe("NOT_FOUND")
     })
   })
 
@@ -196,8 +195,7 @@ describe("Study Domain UseCase", () => {
       expect(result.ok).toBe(false)
       if (result.ok) return
 
-      expect(result.error.type).toBe("not_found")
-      expect(result.error.message).toBe("学習領域が見つかりません")
+      expect(result.error.code).toBe("NOT_FOUND")
     })
 
     it("should convert dates to ISO strings", async () => {
@@ -245,8 +243,7 @@ describe("Study Domain UseCase", () => {
       expect(result.ok).toBe(false)
       if (result.ok) return
 
-      expect(result.error.type).toBe("not_found")
-      expect(result.error.message).toBe("学習領域が見つかりません")
+      expect(result.error.code).toBe("NOT_FOUND")
       expect(repo.canDeleteStudyDomain).not.toHaveBeenCalled()
       expect(repo.softDelete).not.toHaveBeenCalled()
     })
@@ -267,8 +264,7 @@ describe("Study Domain UseCase", () => {
       expect(result.ok).toBe(false)
       if (result.ok) return
 
-      expect(result.error.type).toBe("cannot_delete")
-      expect(result.error.message).toBe("1件の科目が紐づいています")
+      expect(result.error.code).toBe("CONFLICT")
       expect(repo.softDelete).not.toHaveBeenCalled()
     })
 
@@ -287,7 +283,7 @@ describe("Study Domain UseCase", () => {
       expect(result.ok).toBe(false)
       if (result.ok) return
 
-      expect(result.error.message).toBe("この学習領域は削除できません")
+      expect(result.error.code).toBe("CONFLICT")
     })
   })
 })

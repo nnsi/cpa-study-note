@@ -164,7 +164,7 @@ describe("Auth UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (result.ok) return
-      expect(result.error).toBe("PROVIDER_NOT_FOUND")
+      expect(result.error.code).toBe("NOT_FOUND")
     })
 
     it("should return error when token exchange fails", async () => {
@@ -179,7 +179,7 @@ describe("Auth UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (result.ok) return
-      expect(result.error).toBe("TOKEN_EXCHANGE_FAILED")
+      expect(result.error.code).toBe("UNAUTHORIZED")
     })
 
     it("should return error when access token is missing", async () => {
@@ -196,7 +196,7 @@ describe("Auth UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (result.ok) return
-      expect(result.error).toBe("TOKEN_EXCHANGE_FAILED")
+      expect(result.error.code).toBe("UNAUTHORIZED")
     })
 
     it("should return error when getUserInfo fails", async () => {
@@ -211,7 +211,7 @@ describe("Auth UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (result.ok) return
-      expect(result.error).toBe("USER_INFO_FAILED")
+      expect(result.error.code).toBe("UNAUTHORIZED")
     })
   })
 
@@ -284,7 +284,7 @@ describe("Auth UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (result.ok) return
-      expect(result.error).toBe("REFRESH_TOKEN_EXPIRED")
+      expect(result.error.code).toBe("UNAUTHORIZED")
 
       // Verify token was deleted
       const found = await repo.findRefreshTokenByHash(tokenHash)
@@ -303,7 +303,7 @@ describe("Auth UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (result.ok) return
-      expect(result.error).toBe("INVALID_REFRESH_TOKEN")
+      expect(result.error.code).toBe("UNAUTHORIZED")
       expect(mockGenerateAccessToken).not.toHaveBeenCalled()
     })
 

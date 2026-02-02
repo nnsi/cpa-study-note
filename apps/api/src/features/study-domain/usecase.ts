@@ -3,20 +3,12 @@ import type {
   CreateStudyDomainInput,
   UpdateStudyDomainInput,
 } from "./repository"
+import { ok, err, type Result } from "@/shared/lib/result"
+import { notFound, conflict, type AppError } from "@/shared/lib/errors"
 
 type StudyDomainDeps = {
   repo: StudyDomainRepository
 }
-
-// Result type for error handling
-type Result<T, E> = { ok: true; value: T } | { ok: false; error: E }
-
-const ok = <T>(value: T): Result<T, never> => ({ ok: true, value })
-const err = <E>(error: E): Result<never, E> => ({ ok: false, error })
-
-// Error types
-type NotFoundError = { type: "not_found"; message: string }
-type CannotDeleteError = { type: "cannot_delete"; message: string }
 
 // Response types
 type StudyDomainResponse = {
@@ -55,12 +47,12 @@ export const getStudyDomain = async (
   deps: StudyDomainDeps,
   id: string,
   userId: string
-): Promise<Result<StudyDomainResponse, NotFoundError>> => {
+): Promise<Result<StudyDomainResponse, AppError>> => {
   const { repo } = deps
   const domain = await repo.findById(id, userId)
 
   if (!domain) {
-    return err({ type: "not_found", message: "学習領域が見つかりません" })
+    return err(notFound("学習領域が見つかりません"))
   }
 
   return ok({
@@ -112,12 +104,12 @@ export const updateStudyDomain = async (
   id: string,
   userId: string,
   data: UpdateStudyDomainInput
-): Promise<Result<StudyDomainResponse, NotFoundError>> => {
+): Promise<Result<StudyDomainResponse, AppError>> => {
   const { repo } = deps
   const domain = await repo.update(id, userId, data)
 
   if (!domain) {
-    return err({ type: "not_found", message: "学習領域が見つかりません" })
+    return err(notFound("学習領域が見つかりません"))
   }
 
   return ok({
@@ -137,22 +129,19 @@ export const deleteStudyDomain = async (
   deps: StudyDomainDeps,
   id: string,
   userId: string
-): Promise<Result<void, NotFoundError | CannotDeleteError>> => {
+): Promise<Result<void, AppError>> => {
   const { repo } = deps
 
   // Check if domain exists and belongs to user
   const existing = await repo.findById(id, userId)
   if (!existing) {
-    return err({ type: "not_found", message: "学習領域が見つかりません" })
+    return err(notFound("学習領域が見つかりません"))
   }
 
   // Check if can delete (no subjects)
   const canDelete = await repo.canDeleteStudyDomain(id, userId)
   if (!canDelete.canDelete) {
-    return err({
-      type: "cannot_delete",
-      message: canDelete.reason ?? "この学習領域は削除できません",
-    })
+    return err(conflict(canDelete.reason ?? "この学習領域は削除できません", { reason: "HAS_SUBJECTS" }))
   }
 
   await repo.softDelete(id, userId)

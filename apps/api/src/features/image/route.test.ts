@@ -219,7 +219,7 @@ describe("Image Routes", () => {
 
       expect(res.status).toBe(404)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("Image not found")
+      expect(body.error.message).toBe("画像が見つかりません")
     })
 
     it("他ユーザーの画像にアップロードしようとすると403を返す", async () => {
@@ -236,7 +236,7 @@ describe("Image Routes", () => {
 
       expect(res.status).toBe(403)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("Unauthorized")
+      expect(body.error.message).toBe("この画像へのアクセス権限がありません")
     })
 
     it("マジックバイトが一致しないファイルは400を返す", async () => {
@@ -258,7 +258,7 @@ describe("Image Routes", () => {
 
       expect(res.status).toBe(400)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("Invalid file format")
+      expect(body.error.message).toBe("ファイル形式が不正です")
     })
 
     it("10MBを超えるファイルは413を返す", async () => {
@@ -284,7 +284,7 @@ describe("Image Routes", () => {
 
       expect(res.status).toBe(413)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toContain("10MB")
+      expect(body.error.message).toContain("10MB")
     })
   })
 
@@ -320,7 +320,7 @@ describe("Image Routes", () => {
 
       expect(res.status).toBe(404)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("Image not found")
+      expect(body.error.message).toBe("画像が見つかりません")
     })
 
     it("他ユーザーの画像のOCRを実行しようとすると403を返す", async () => {
@@ -333,7 +333,7 @@ describe("Image Routes", () => {
 
       expect(res.status).toBe(403)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("Unauthorized")
+      expect(body.error.message).toBe("この画像へのアクセス権限がありません")
     })
 
     it("R2にファイルがない場合は404を返す", async () => {
@@ -347,7 +347,7 @@ describe("Image Routes", () => {
 
       expect(res.status).toBe(404)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("Image file not found")
+      expect(body.error.message).toBe("画像ファイルが見つかりません")
     })
   })
 
@@ -375,7 +375,7 @@ describe("Image Routes", () => {
 
       expect(res.status).toBe(404)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("Image not found")
+      expect(body.error.message).toBe("画像が見つかりません")
     })
 
     it("他ユーザーの画像メタデータにアクセスすると403を返す", async () => {
@@ -387,7 +387,7 @@ describe("Image Routes", () => {
 
       expect(res.status).toBe(403)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("Unauthorized")
+      expect(body.error.message).toBe("この画像へのアクセス権限がありません")
     })
   })
 
@@ -417,7 +417,7 @@ describe("Image Routes", () => {
 
       expect(res.status).toBe(401)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("Unauthorized")
+      expect(body.error.message).toBe("認証が必要です")
     })
 
     it("本番環境で認証なしの場合は401を返す（GET /images/:imageId）", async () => {
@@ -440,7 +440,7 @@ describe("Image Routes", () => {
 
       expect(res.status).toBe(401)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("Unauthorized")
+      expect(body.error.message).toBe("認証が必要です")
     })
 
     it("本番環境で認証なしの場合は401を返す（POST /images/:imageId/upload）", async () => {
@@ -472,7 +472,7 @@ describe("Image Routes", () => {
 
       expect(res.status).toBe(401)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("Unauthorized")
+      expect(body.error.message).toBe("認証が必要です")
     })
 
     it("本番環境で認証なしの場合は401を返す（POST /images/:imageId/ocr）", async () => {
@@ -496,7 +496,7 @@ describe("Image Routes", () => {
 
       expect(res.status).toBe(401)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("Unauthorized")
+      expect(body.error.message).toBe("認証が必要です")
     })
   })
 })

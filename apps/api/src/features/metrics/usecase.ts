@@ -1,4 +1,6 @@
 import type { MetricsRepository, MetricSnapshot, TodayMetrics, DailyMetric } from "./repository"
+import { ok, err, type Result } from "@/shared/lib/result"
+import { badRequest, type AppError } from "@/shared/lib/errors"
 
 type MetricsDeps = {
   metricsRepo: MetricsRepository
@@ -49,33 +51,19 @@ export const getDailyMetrics = async (
   from: string,
   to: string,
   timezone: string
-): Promise<
-  | { ok: true; metrics: DailyMetricResponse[] }
-  | { ok: false; error: string; status: number }
-> => {
+): Promise<Result<DailyMetricResponse[], AppError>> => {
   if (!isValidDateFormat(from) || !isValidDateFormat(to)) {
-    return {
-      ok: false,
-      error: "Invalid date format. Use YYYY-MM-DD",
-      status: 400,
-    }
+    return err(badRequest("日付形式が不正です。YYYY-MM-DD形式で指定してください"))
   }
 
   if (!isValidDateRange(from, to)) {
-    return {
-      ok: false,
-      error: "Invalid date range. 'from' must be before or equal to 'to'",
-      status: 400,
-    }
+    return err(badRequest("日付範囲が不正です。'from'は'to'以前の日付を指定してください"))
   }
 
   // オンザフライで集計（タイムゾーン考慮）
   const metrics = await deps.metricsRepo.aggregateDateRange(userId, from, to, timezone)
 
-  return {
-    ok: true,
-    metrics: metrics.map(toDailyMetricResponse),
-  }
+  return ok(metrics.map(toDailyMetricResponse))
 }
 
 // 今日の日付を取得（YYYY-MM-DD形式）
@@ -92,18 +80,11 @@ export const createSnapshot = async (
   deps: MetricsDeps,
   userId: string,
   date?: string
-): Promise<
-  | { ok: true; snapshot: MetricSnapshotResponse }
-  | { ok: false; error: string; status: number }
-> => {
+): Promise<Result<MetricSnapshotResponse, AppError>> => {
   const targetDate = date ?? getTodayDateString()
 
   if (!isValidDateFormat(targetDate)) {
-    return {
-      ok: false,
-      error: "Invalid date format. Use YYYY-MM-DD",
-      status: 400,
-    }
+    return err(badRequest("日付形式が不正です。YYYY-MM-DD形式で指定してください"))
   }
 
   // 集計を実行
@@ -112,10 +93,7 @@ export const createSnapshot = async (
   // upsert で保存
   const snapshot = await deps.metricsRepo.upsert(userId, targetDate, aggregation)
 
-  return {
-    ok: true,
-    snapshot: toResponse(snapshot),
-  }
+  return ok(toResponse(snapshot))
 }
 
 // 今日の活動メトリクス取得（リアルタイム集計、タイムゾーン考慮）

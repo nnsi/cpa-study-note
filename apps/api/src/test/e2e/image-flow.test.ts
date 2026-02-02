@@ -43,7 +43,10 @@ const getImageResponseSchema = z.object({
 })
 
 const errorResponseSchema = z.object({
-  error: z.string(),
+  error: z.object({
+    code: z.string(),
+    message: z.string(),
+  }),
 })
 
 const createSessionResponseSchema = z.object({
@@ -185,7 +188,7 @@ describe("E2E: Image Flow", () => {
 
       expect(res.status).toBe(413)
       const data = errorResponseSchema.parse(await res.json())
-      expect(data.error).toContain("too large")
+      expect(data.error.code).toBe("BAD_REQUEST")
     })
   })
 

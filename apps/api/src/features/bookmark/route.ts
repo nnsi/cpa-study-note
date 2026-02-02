@@ -9,6 +9,7 @@ import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
 import { createBookmarkRepository } from "./repository"
 import { getBookmarks, addBookmark, removeBookmark } from "./usecase"
+import { handleResult } from "@/shared/lib/route-helpers"
 
 type BookmarkDeps = {
   env: Env
@@ -34,11 +35,11 @@ export const bookmarkRoutes = ({ db }: BookmarkDeps) => {
 
       const result = await addBookmark(deps, user.id, targetType, targetId)
 
-      if (!result.success) {
-        return c.json({ error: "Target not found" }, 404)
+      if (!result.ok) {
+        return handleResult(c, result)
       }
 
-      if (result.alreadyExists) {
+      if (result.value.alreadyExists) {
         return c.json({ message: "Already bookmarked" }, 200)
       }
 
@@ -54,10 +55,10 @@ export const bookmarkRoutes = ({ db }: BookmarkDeps) => {
         const user = c.get("user")
         const { targetType, targetId } = c.req.valid("param")
 
-        const removed = await removeBookmark(deps, user.id, targetType, targetId)
+        const result = await removeBookmark(deps, user.id, targetType, targetId)
 
-        if (!removed) {
-          return c.json({ error: "Bookmark not found" }, 404)
+        if (!result.ok) {
+          return handleResult(c, result)
         }
 
         return c.json({ message: "Bookmark removed" }, 200)

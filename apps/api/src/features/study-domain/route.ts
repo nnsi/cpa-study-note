@@ -19,6 +19,7 @@ import {
 import { createSubjectRepository } from "../subject/repository"
 import { bulkImportCSVToStudyDomain } from "../subject/usecase"
 import { createNoTransactionRunner } from "@/shared/lib/transaction"
+import { handleResult, handleResultWith } from "@/shared/lib/route-helpers"
 
 type StudyDomainDeps = {
   env: Env
@@ -42,12 +43,7 @@ export const studyDomainRoutes = ({ db }: StudyDomainDeps) => {
       const user = c.get("user")
       const id = c.req.param("id")
       const result = await getStudyDomain(deps, id, user.id)
-
-      if (!result.ok) {
-        return c.json({ error: result.error.message }, 404)
-      }
-
-      return c.json({ studyDomain: result.value })
+      return handleResultWith(c, result, (studyDomain) => ({ studyDomain }))
     })
 
     // Create study domain
@@ -74,12 +70,7 @@ export const studyDomainRoutes = ({ db }: StudyDomainDeps) => {
         const id = c.req.param("id")
         const data = c.req.valid("json")
         const result = await updateStudyDomain(deps, id, user.id, data)
-
-        if (!result.ok) {
-          return c.json({ error: result.error.message }, 404)
-        }
-
-        return c.json({ studyDomain: result.value })
+        return handleResultWith(c, result, (studyDomain) => ({ studyDomain }))
       }
     )
 
@@ -90,11 +81,7 @@ export const studyDomainRoutes = ({ db }: StudyDomainDeps) => {
       const result = await deleteStudyDomain(deps, id, user.id)
 
       if (!result.ok) {
-        if (result.error.type === "not_found") {
-          return c.json({ error: result.error.message }, 404)
-        }
-        // cannot_delete
-        return c.json({ error: result.error.message }, 409)
+        return handleResult(c, result)
       }
 
       return c.json({ success: true })
@@ -121,18 +108,10 @@ export const studyDomainRoutes = ({ db }: StudyDomainDeps) => {
           const treeDeps = { subjectRepo, db, txRunner }
 
           const result = await bulkImportCSVToStudyDomain(treeDeps, user.id, id, csv)
-
-          if (!result.ok) {
-            if (result.error === "NOT_FOUND") {
-              return c.json({ error: "学習領域が見つかりません" }, 404)
-            }
-            return c.json({ error: "アクセスが拒否されました" }, 403)
-          }
-
-          return c.json(result.value)
+          return handleResult(c, result)
         } catch (e) {
           console.error("Import error:", e)
-          return c.json({ error: "インポート中にエラーが発生しました", details: String(e) }, 500)
+          return c.json({ error: { code: "INTERNAL_ERROR", message: "インポート中にエラーが発生しました" } }, 500)
         }
       }
     )

@@ -36,6 +36,7 @@ import {
   resolveStudyDomainId,
 } from "./usecase"
 import type { SimpleTransactionRunner } from "../../shared/lib/transaction"
+import { handleResult, handleResultWith } from "@/shared/lib/route-helpers"
 
 type SubjectDeps = {
   env: Env
@@ -118,12 +119,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectDeps) => {
       const user = c.get("user")
       const id = c.req.param("id")
       const result = await getSubject(deps, user.id, id)
-
-      if (!result.ok) {
-        return c.json({ error: "科目が見つかりません" }, 404)
-      }
-
-      return c.json({ subject: result.value })
+      return handleResultWith(c, result, (subject) => ({ subject }))
     })
 
     // Create subject under a study domain
@@ -141,16 +137,12 @@ export const subjectRoutes = ({ db, txRunner }: SubjectDeps) => {
         })
 
         if (!result.ok) {
-          return c.json({ error: "学習領域が見つかりません" }, 404)
+          return handleResult(c, result)
         }
 
         // Get the created subject to return full data
         const subjectResult = await getSubject(deps, user.id, result.value.id)
-        if (!subjectResult.ok) {
-          return c.json({ error: "科目の作成後の取得に失敗しました" }, 500)
-        }
-
-        return c.json({ subject: subjectResult.value }, 201)
+        return handleResultWith(c, subjectResult, (subject) => ({ subject }), 201)
       }
     )
 
@@ -164,12 +156,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectDeps) => {
         const id = c.req.param("id")
         const data = c.req.valid("json")
         const result = await updateSubject(deps, user.id, id, data)
-
-        if (!result.ok) {
-          return c.json({ error: "科目が見つかりません" }, 404)
-        }
-
-        return c.json({ subject: result.value })
+        return handleResultWith(c, result, (subject) => ({ subject }))
       }
     )
 
@@ -180,11 +167,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectDeps) => {
       const result = await deleteSubject(deps, user.id, id)
 
       if (!result.ok) {
-        if (result.error === "NOT_FOUND") {
-          return c.json({ error: "科目が見つかりません" }, 404)
-        }
-        // HAS_CATEGORIES
-        return c.json({ error: "単元が紐づいているため削除できません" }, 409)
+        return handleResult(c, result)
       }
 
       return c.json({ success: true })
@@ -195,12 +178,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectDeps) => {
       const user = c.get("user")
       const id = c.req.param("id")
       const result = await getSubjectTree(treeDeps, user.id, id)
-
-      if (!result.ok) {
-        return c.json({ error: "科目が見つかりません" }, 404)
-      }
-
-      return c.json({ tree: result.value })
+      return handleResultWith(c, result, (tree) => ({ tree }))
     })
 
     // Update subject tree
@@ -215,20 +193,12 @@ export const subjectRoutes = ({ db, txRunner }: SubjectDeps) => {
         const result = await updateSubjectTree(treeDeps, user.id, id, data)
 
         if (!result.ok) {
-          if (result.error === "NOT_FOUND") {
-            return c.json({ error: "科目が見つかりません" }, 404)
-          }
-          // INVALID_ID
-          return c.json({ error: "不正なIDが含まれています" }, 400)
+          return handleResult(c, result)
         }
 
         // Return updated tree
         const treeResult = await getSubjectTree(treeDeps, user.id, id)
-        if (!treeResult.ok) {
-          return c.json({ error: "ツリーの取得に失敗しました" }, 500)
-        }
-
-        return c.json({ tree: treeResult.value })
+        return handleResultWith(c, treeResult, (tree) => ({ tree }))
       }
     )
 
@@ -243,12 +213,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectDeps) => {
         const { csvContent } = c.req.valid("json")
 
         const result = await importCSVToSubject(treeDeps, user.id, id, csvContent)
-
-        if (!result.ok) {
-          return c.json({ error: "科目が見つかりません" }, 404)
-        }
-
-        return c.json(result.value)
+        return handleResult(c, result)
       }
     )
 

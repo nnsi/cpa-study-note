@@ -189,7 +189,7 @@ describe("Study Domain Routes", () => {
 
       expect(res.status).toBe(404)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("学習領域が見つかりません")
+      expect(body.error.message).toBe("学習領域が見つかりません")
     })
 
     it("should return 404 when domain belongs to other user", async () => {
@@ -367,7 +367,7 @@ describe("Study Domain Routes", () => {
 
       expect(res.status).toBe(404)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("学習領域が見つかりません")
+      expect(body.error.message).toBe("学習領域が見つかりません")
     })
 
     it("should return 404 when domain belongs to other user", async () => {
@@ -462,7 +462,7 @@ describe("Study Domain Routes", () => {
 
       expect(res.status).toBe(404)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("学習領域が見つかりません")
+      expect(body.error.message).toBe("学習領域が見つかりません")
     })
 
     it("should return 409 when subjects are attached", async () => {
@@ -498,7 +498,7 @@ describe("Study Domain Routes", () => {
 
       expect(res.status).toBe(409)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toContain("件の科目が紐づいています")
+      expect(body.error.message).toContain("件の科目が紐づいています")
     })
 
     it("should return 404 when domain belongs to other user", async () => {

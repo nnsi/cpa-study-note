@@ -1,6 +1,8 @@
 import type { BookmarkTargetType } from "@cpa-study/db/schema"
 import type { BookmarkRepository } from "./repository"
 import type { BookmarkWithDetails } from "@cpa-study/shared/schemas"
+import { ok, err, type Result } from "@/shared/lib/result"
+import { notFound, type AppError } from "@/shared/lib/errors"
 
 type BookmarkDeps = {
   repo: BookmarkRepository
@@ -44,23 +46,19 @@ export const addBookmark = async (
   userId: string,
   targetType: BookmarkTargetType,
   targetId: string
-): Promise<{ success: boolean; alreadyExists?: boolean }> => {
+): Promise<Result<{ alreadyExists: boolean }, AppError>> => {
   const { repo } = deps
 
   // 対象が存在するか確認
   const exists = await repo.targetExists(targetType, targetId)
   if (!exists) {
-    return { success: false }
+    return err(notFound("ブックマーク対象が見つかりません"))
   }
 
   // ブックマーク追加（冪等、重複は無視）
   const result = await repo.addBookmark(userId, targetType, targetId)
 
-  if (result.alreadyExists) {
-    return { success: true, alreadyExists: true }
-  }
-
-  return { success: true }
+  return ok({ alreadyExists: result.alreadyExists })
 }
 
 // ブックマーク削除
@@ -69,7 +67,13 @@ export const removeBookmark = async (
   userId: string,
   targetType: BookmarkTargetType,
   targetId: string
-): Promise<boolean> => {
+): Promise<Result<void, AppError>> => {
   const { repo } = deps
-  return repo.removeBookmark(userId, targetType, targetId)
+  const removed = await repo.removeBookmark(userId, targetType, targetId)
+
+  if (!removed) {
+    return err(notFound("ブックマークが見つかりません"))
+  }
+
+  return ok(undefined)
 }

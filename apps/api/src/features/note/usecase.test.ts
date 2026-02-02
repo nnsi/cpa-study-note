@@ -185,8 +185,8 @@ describe("Note UseCase", () => {
 
       expect(result.ok).toBe(true)
       if (result.ok) {
-        expect(result.note.aiSummary).toBe("テスト要約")
-        expect(result.note.keyPoints).toEqual(["ポイント1"])
+        expect(result.value.aiSummary).toBe("テスト要約")
+        expect(result.value.keyPoints).toEqual(["ポイント1"])
       }
       expect(aiAdapter.generateText).toHaveBeenCalled()
       expect(noteRepo.create).toHaveBeenCalled()
@@ -206,8 +206,7 @@ describe("Note UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("Session not found")
-        expect(result.status).toBe(404)
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
 
@@ -226,8 +225,7 @@ describe("Note UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("Unauthorized")
-        expect(result.status).toBe(403)
+        expect(result.error.code).toBe("FORBIDDEN")
       }
     })
 
@@ -367,9 +365,9 @@ describe("Note UseCase", () => {
 
       expect(result.ok).toBe(true)
       if (result.ok) {
-        expect(result.note.id).toBe("note-1")
-        expect(result.note.topicName).toBe("有価証券")
-        expect(result.note.subjectName).toBe("財務会計論")
+        expect(result.value.id).toBe("note-1")
+        expect(result.value.topicName).toBe("有価証券")
+        expect(result.value.subjectName).toBe("財務会計論")
       }
     })
 
@@ -382,8 +380,7 @@ describe("Note UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("Note not found")
-        expect(result.status).toBe(404)
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
 
@@ -403,8 +400,7 @@ describe("Note UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("Unauthorized")
-        expect(result.status).toBe(403)
+        expect(result.error.code).toBe("FORBIDDEN")
       }
     })
   })
@@ -427,7 +423,7 @@ describe("Note UseCase", () => {
 
       expect(result.ok).toBe(true)
       if (result.ok) {
-        expect(result.note.userMemo).toBe("新しいメモ")
+        expect(result.value.userMemo).toBe("新しいメモ")
       }
       expect(noteRepo.update).toHaveBeenCalledWith("note-1", { userMemo: "新しいメモ" })
     })
@@ -449,7 +445,7 @@ describe("Note UseCase", () => {
 
       expect(result.ok).toBe(true)
       if (result.ok) {
-        expect(result.note.keyPoints).toEqual(["新ポイント1", "新ポイント2"])
+        expect(result.value.keyPoints).toEqual(["新ポイント1", "新ポイント2"])
       }
     })
 
@@ -470,7 +466,7 @@ describe("Note UseCase", () => {
 
       expect(result.ok).toBe(true)
       if (result.ok) {
-        expect(result.note.stumbledPoints).toEqual(["新つまずき1"])
+        expect(result.value.stumbledPoints).toEqual(["新つまずき1"])
       }
     })
 
@@ -488,8 +484,7 @@ describe("Note UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("Note not found")
-        expect(result.status).toBe(404)
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
 
@@ -508,8 +503,7 @@ describe("Note UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("Unauthorized")
-        expect(result.status).toBe(403)
+        expect(result.error.code).toBe("FORBIDDEN")
       }
     })
   })
@@ -545,12 +539,12 @@ describe("Note UseCase", () => {
 
       expect(result.ok).toBe(true)
       if (result.ok) {
-        expect(result.note.sessionId).toBeNull()
-        expect(result.note.aiSummary).toBeNull()
-        expect(result.note.userMemo).toBe("手動で作成したノート")
-        expect(result.note.keyPoints).toEqual(["ポイント1", "ポイント2"])
-        expect(result.note.stumbledPoints).toEqual(["つまずき1"])
-        expect(result.note.source).toBe("manual")
+        expect(result.value.sessionId).toBeNull()
+        expect(result.value.aiSummary).toBeNull()
+        expect(result.value.userMemo).toBe("手動で作成したノート")
+        expect(result.value.keyPoints).toEqual(["ポイント1", "ポイント2"])
+        expect(result.value.stumbledPoints).toEqual(["つまずき1"])
+        expect(result.value.source).toBe("manual")
       }
       expect(noteRepo.create).toHaveBeenCalledWith({
         userId: "user-1",
@@ -591,8 +585,8 @@ describe("Note UseCase", () => {
 
       expect(result.ok).toBe(true)
       if (result.ok) {
-        expect(result.note.keyPoints).toEqual([])
-        expect(result.note.stumbledPoints).toEqual([])
+        expect(result.value.keyPoints).toEqual([])
+        expect(result.value.stumbledPoints).toEqual([])
       }
     })
 
@@ -613,8 +607,7 @@ describe("Note UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("Topic not found")
-        expect(result.status).toBe(404)
+        expect(result.error.code).toBe("NOT_FOUND")
       }
       expect(noteRepo.create).not.toHaveBeenCalled()
     })
@@ -643,7 +636,7 @@ describe("Note UseCase", () => {
 
       expect(result.ok).toBe(true)
       if (result.ok) {
-        expect(result.note.source).toBe("chat")
+        expect(result.value.source).toBe("chat")
       }
     })
   })

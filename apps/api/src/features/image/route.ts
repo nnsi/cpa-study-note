@@ -13,6 +13,7 @@ import {
   getImage,
   getImageFile,
 } from "./usecase"
+import { handleResult, handleResultWith } from "@/shared/lib/route-helpers"
 
 // 10MB制限
 const MAX_UPLOAD_SIZE = 10 * 1024 * 1024
@@ -52,7 +53,7 @@ export const imageRoutes = ({ env, db }: ImageDeps) => {
 
       // サイズ制限チェック
       if (body.byteLength > MAX_UPLOAD_SIZE) {
-        return c.json({ error: "File too large (max 10MB)" }, 413)
+        return c.json({ error: { code: "BAD_REQUEST", message: "ファイルサイズが大きすぎます（最大10MB）" } }, 413)
       }
 
       const result = await uploadImage(
@@ -63,7 +64,7 @@ export const imageRoutes = ({ env, db }: ImageDeps) => {
       )
 
       if (!result.ok) {
-        return c.json({ error: result.error }, result.status as 404 | 403)
+        return handleResult(c, result)
       }
 
       return c.json({ success: true })
@@ -85,11 +86,7 @@ export const imageRoutes = ({ env, db }: ImageDeps) => {
         imageId
       )
 
-      if (!result.ok) {
-        return c.json({ error: result.error }, result.status as 404 | 403)
-      }
-
-      return c.json({ imageId: result.imageId, ocrText: result.ocrText })
+      return handleResult(c, result)
     })
 
     // 画像取得
@@ -98,12 +95,7 @@ export const imageRoutes = ({ env, db }: ImageDeps) => {
       const imageId = c.req.param("imageId")
 
       const result = await getImage({ imageRepo }, user.id, imageId)
-
-      if (!result.ok) {
-        return c.json({ error: result.error }, result.status as 404 | 403)
-      }
-
-      return c.json({ image: result.image })
+      return handleResultWith(c, result, (image) => ({ image }))
     })
 
     // 画像ファイル取得（バイナリ）
@@ -118,12 +110,12 @@ export const imageRoutes = ({ env, db }: ImageDeps) => {
       )
 
       if (!result.ok) {
-        return c.json({ error: result.error }, result.status as 404 | 403)
+        return handleResult(c, result)
       }
 
-      return new Response(result.body, {
+      return new Response(result.value.body, {
         headers: {
-          "Content-Type": result.mimeType,
+          "Content-Type": result.value.mimeType,
           "Cache-Control": "private, max-age=3600",
         },
       })

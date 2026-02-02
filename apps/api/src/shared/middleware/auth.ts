@@ -18,7 +18,7 @@ export const authMiddleware = createMiddleware<AuthContext>(async (c, next) => {
   // 本番モード: JWT検証
   const token = c.req.header("Authorization")?.replace("Bearer ", "")
   if (!token) {
-    return c.json({ error: "Unauthorized" }, 401)
+    return c.json({ error: { code: "UNAUTHORIZED", message: "認証が必要です" } }, 401)
   }
 
   try {
@@ -37,7 +37,7 @@ export const authMiddleware = createMiddleware<AuthContext>(async (c, next) => {
     c.set("user", user)
     return next()
   } catch {
-    return c.json({ error: "Invalid token" }, 401)
+    return c.json({ error: { code: "UNAUTHORIZED", message: "無効なトークンです" } }, 401)
   }
 })
 

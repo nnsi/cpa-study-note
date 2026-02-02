@@ -55,7 +55,7 @@ describe("Subject UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("NOT_FOUND")
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
 
@@ -67,7 +67,7 @@ describe("Subject UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("NOT_FOUND")
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
 
@@ -105,7 +105,7 @@ describe("Subject UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("NOT_FOUND")
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
 
@@ -119,7 +119,7 @@ describe("Subject UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("NOT_FOUND")
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
 
@@ -132,7 +132,7 @@ describe("Subject UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("NOT_FOUND")
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
 
@@ -145,7 +145,7 @@ describe("Subject UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("NOT_FOUND")
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
   })
@@ -188,7 +188,7 @@ describe("Subject UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("NOT_FOUND")
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
 
@@ -203,7 +203,7 @@ describe("Subject UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("NOT_FOUND")
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
   })
@@ -233,7 +233,7 @@ describe("Subject UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("NOT_FOUND")
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
 
@@ -247,7 +247,7 @@ describe("Subject UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("NOT_FOUND")
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
 
@@ -260,7 +260,7 @@ describe("Subject UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("NOT_FOUND")
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
 
@@ -304,7 +304,7 @@ describe("Subject UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("NOT_FOUND")
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
 
@@ -318,7 +318,7 @@ describe("Subject UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("NOT_FOUND")
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
 
@@ -332,7 +332,7 @@ describe("Subject UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("HAS_CATEGORIES")
+        expect(result.error.code).toBe("CONFLICT")
       }
     })
 
@@ -426,7 +426,7 @@ describe("Subject UseCase - Tree Operations", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("NOT_FOUND")
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
 
@@ -440,7 +440,7 @@ describe("Subject UseCase - Tree Operations", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("NOT_FOUND")
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
   })
@@ -593,7 +593,7 @@ describe("Subject UseCase - Tree Operations", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("INVALID_ID")
+        expect(result.error.code).toBe("BAD_REQUEST")
       }
     })
 
@@ -608,7 +608,7 @@ describe("Subject UseCase - Tree Operations", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("NOT_FOUND")
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
   })
@@ -683,7 +683,7 @@ describe("Subject UseCase - Tree Operations", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("NOT_FOUND")
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
 

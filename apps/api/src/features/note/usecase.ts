@@ -5,6 +5,8 @@ import type { AIAdapter, AIModelConfig } from "@/shared/lib/ai"
 import type { NoteSource } from "@cpa-study/shared/schemas"
 import { parseLLMJson, stripCodeBlock } from "@cpa-study/shared"
 import { z } from "zod"
+import { ok, err, type Result } from "@/shared/lib/result"
+import { notFound, forbidden, badRequest, internalError, type AppError } from "@/shared/lib/errors"
 
 type NoteDeps = {
   noteRepo: NoteRepository
@@ -85,19 +87,17 @@ const toNoteResponse = (note: {
 export const createNoteFromSession = async (
   deps: NoteDeps,
   input: CreateNoteFromSessionInput
-): Promise<
-  { ok: true; note: NoteResponse } | { ok: false; error: string; status: number }
-> => {
+): Promise<Result<NoteResponse, AppError>> => {
   const { noteRepo, chatRepo, aiAdapter, noteSummaryConfig } = deps
   const { userId, sessionId } = input
 
   const session = await chatRepo.findSessionById(sessionId)
   if (!session) {
-    return { ok: false, error: "Session not found", status: 404 }
+    return err(notFound("セッションが見つかりません"))
   }
 
   if (session.userId !== userId) {
-    return { ok: false, error: "Unauthorized", status: 403 }
+    return err(forbidden("このセッションへのアクセス権限がありません"))
   }
 
   const messages = await chatRepo.findMessagesBySession(sessionId)
@@ -134,9 +134,9 @@ ${conversationText}${goodQuestionsSection}
   "stumbledPoints": ["つまずいたポイント1", ...]
 }`
 
-  let result
+  let aiResult
   try {
-    result = await aiAdapter.generateText({
+    aiResult = await aiAdapter.generateText({
       model: noteSummaryConfig.model,
       messages: [{ role: "user", content: summaryPrompt }],
       temperature: noteSummaryConfig.temperature,
@@ -144,11 +144,7 @@ ${conversationText}${goodQuestionsSection}
     })
   } catch (error) {
     console.error("[AI] generateText error:", error)
-    return {
-      ok: false,
-      error: "AI要約の生成に失敗しました。再度お試しください。",
-      status: 503,
-    }
+    return err(internalError("AI要約の生成に失敗しました。再度お試しください。"))
   }
 
   const noteSummarySchema = z.object({
@@ -159,12 +155,12 @@ ${conversationText}${goodQuestionsSection}
 
   // パース失敗時のフォールバック: コードブロック除去後の生テキストをaiSummaryに設定
   const fallbackSummary = {
-    summary: stripCodeBlock(result.content),
+    summary: stripCodeBlock(aiResult.content),
     keyPoints: [] as string[],
     stumbledPoints: [] as string[],
   }
 
-  const parsed = parseLLMJson(result.content, noteSummarySchema, fallbackSummary)
+  const parsed = parseLLMJson(aiResult.content, noteSummarySchema, fallbackSummary)
   const aiSummary = parsed.summary
   const keyPoints = parsed.keyPoints
   const stumbledPoints = parsed.stumbledPoints
@@ -179,23 +175,21 @@ ${conversationText}${goodQuestionsSection}
     stumbledPoints,
   })
 
-  return { ok: true, note: toNoteResponse(note) }
+  return ok(toNoteResponse(note))
 }
 
 // 独立ノート作成（手動）
 export const createManualNote = async (
   deps: { noteRepo: NoteRepository; subjectRepo: SubjectRepository },
   input: CreateManualNoteInput
-): Promise<
-  { ok: true; note: NoteResponse } | { ok: false; error: string; status: number }
-> => {
+): Promise<Result<NoteResponse, AppError>> => {
   const { noteRepo, subjectRepo } = deps
   const { userId, topicId, userMemo, keyPoints = [], stumbledPoints = [] } = input
 
   // topicの存在確認
   const topic = await subjectRepo.findTopicById(topicId, userId)
   if (!topic) {
-    return { ok: false, error: "Topic not found", status: 404 }
+    return err(notFound("論点が見つかりません"))
   }
 
   // ノート作成
@@ -209,7 +203,7 @@ export const createManualNote = async (
     stumbledPoints,
   })
 
-  return { ok: true, note: toNoteResponse(note) }
+  return ok(toNoteResponse(note))
 }
 
 // ノート一覧取得
@@ -240,29 +234,24 @@ export const getNote = async (
   deps: Pick<NoteDeps, "noteRepo">,
   userId: string,
   noteId: string
-): Promise<
-  { ok: true; note: NoteDetailResponse } | { ok: false; error: string; status: number }
-> => {
+): Promise<Result<NoteDetailResponse, AppError>> => {
   const note = await deps.noteRepo.findByIdWithTopic(noteId)
 
   if (!note) {
-    return { ok: false, error: "Note not found", status: 404 }
+    return err(notFound("ノートが見つかりません"))
   }
 
   if (note.userId !== userId) {
-    return { ok: false, error: "Unauthorized", status: 403 }
+    return err(forbidden("このノートへのアクセス権限がありません"))
   }
 
-  return {
-    ok: true,
-    note: {
-      ...toNoteResponse(note),
-      topicName: note.topicName,
-      categoryId: note.categoryId,
-      subjectId: note.subjectId,
-      subjectName: note.subjectName,
-    },
-  }
+  return ok({
+    ...toNoteResponse(note),
+    topicName: note.topicName,
+    categoryId: note.categoryId,
+    subjectId: note.subjectId,
+    subjectName: note.subjectName,
+  })
 }
 
 // ノート更新
@@ -271,22 +260,20 @@ export const updateNote = async (
   userId: string,
   noteId: string,
   input: UpdateNoteInput
-): Promise<
-  { ok: true; note: NoteResponse } | { ok: false; error: string; status: number }
-> => {
+): Promise<Result<NoteResponse, AppError>> => {
   const existing = await deps.noteRepo.findById(noteId)
 
   if (!existing) {
-    return { ok: false, error: "Note not found", status: 404 }
+    return err(notFound("ノートが見つかりません"))
   }
 
   if (existing.userId !== userId) {
-    return { ok: false, error: "Unauthorized", status: 403 }
+    return err(forbidden("このノートへのアクセス権限がありません"))
   }
 
   const note = await deps.noteRepo.update(noteId, input)
 
-  return { ok: true, note: toNoteResponse(note!) }
+  return ok(toNoteResponse(note!))
 }
 
 // セッションIDからノート取得
@@ -309,22 +296,20 @@ export const refreshNoteFromSession = async (
   deps: NoteDeps,
   userId: string,
   noteId: string
-): Promise<
-  { ok: true; note: NoteResponse } | { ok: false; error: string; status: number }
-> => {
+): Promise<Result<NoteResponse, AppError>> => {
   const { noteRepo, chatRepo, aiAdapter, noteSummaryConfig } = deps
 
   const existing = await noteRepo.findById(noteId)
   if (!existing) {
-    return { ok: false, error: "Note not found", status: 404 }
+    return err(notFound("ノートが見つかりません"))
   }
 
   if (existing.userId !== userId) {
-    return { ok: false, error: "Unauthorized", status: 403 }
+    return err(forbidden("このノートへのアクセス権限がありません"))
   }
 
   if (!existing.sessionId) {
-    return { ok: false, error: "No session linked to this note", status: 400 }
+    return err(badRequest("このノートにはセッションが紐づいていません"))
   }
 
   const messages = await chatRepo.findMessagesBySession(existing.sessionId)
@@ -361,9 +346,9 @@ ${conversationText}${goodQuestionsSection}
   "stumbledPoints": ["つまずいたポイント1", ...]
 }`
 
-  let result
+  let aiResult
   try {
-    result = await aiAdapter.generateText({
+    aiResult = await aiAdapter.generateText({
       model: noteSummaryConfig.model,
       messages: [{ role: "user", content: summaryPrompt }],
       temperature: noteSummaryConfig.temperature,
@@ -371,11 +356,7 @@ ${conversationText}${goodQuestionsSection}
     })
   } catch (error) {
     console.error("[AI] generateText error:", error)
-    return {
-      ok: false,
-      error: "AI要約の生成に失敗しました。再度お試しください。",
-      status: 503,
-    }
+    return err(internalError("AI要約の生成に失敗しました。再度お試しください。"))
   }
 
   const noteSummarySchema = z.object({
@@ -386,12 +367,12 @@ ${conversationText}${goodQuestionsSection}
 
   // パース失敗時のフォールバック: コードブロック除去後の生テキストをaiSummaryに設定
   const fallbackSummary = {
-    summary: stripCodeBlock(result.content),
+    summary: stripCodeBlock(aiResult.content),
     keyPoints: [] as string[],
     stumbledPoints: [] as string[],
   }
 
-  const parsed = parseLLMJson(result.content, noteSummarySchema, fallbackSummary)
+  const parsed = parseLLMJson(aiResult.content, noteSummarySchema, fallbackSummary)
   const aiSummary = parsed.summary
   const keyPoints = parsed.keyPoints
   const stumbledPoints = parsed.stumbledPoints
@@ -402,5 +383,5 @@ ${conversationText}${goodQuestionsSection}
     stumbledPoints,
   })
 
-  return { ok: true, note: toNoteResponse(note!) }
+  return ok(toNoteResponse(note!))
 }

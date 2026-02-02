@@ -17,7 +17,10 @@ const providersResponseSchema = z.object({
 })
 
 const errorResponseSchema = z.object({
-  error: z.string(),
+  error: z.object({
+    code: z.string(),
+    message: z.string(),
+  }),
 })
 
 const authUserSchema = z.object({
@@ -78,7 +81,7 @@ describe("E2E: Auth Flow", () => {
 
       expect(res.status).toBe(400)
       const data = errorResponseSchema.parse(await res.json())
-      expect(data.error).toBe("Missing code")
+      expect(data.error.message).toBe("Missing code")
     })
 
     it("should fail callback with invalid state", async () => {
@@ -88,7 +91,7 @@ describe("E2E: Auth Flow", () => {
 
       expect(res.status).toBe(400)
       const data = errorResponseSchema.parse(await res.json())
-      expect(data.error).toBe("Invalid state")
+      expect(data.error.message).toBe("Invalid state")
     })
 
     // Note: Full OAuth callback success flow is tested at the route level
@@ -211,7 +214,7 @@ describe("E2E: Auth Flow", () => {
 
       expect(res.status).toBe(401)
       const data = errorResponseSchema.parse(await res.json())
-      expect(data.error).toBe("No refresh token")
+      expect(data.error.message).toBe("No refresh token")
     })
 
     it("should fail refresh with invalid refresh token", async () => {

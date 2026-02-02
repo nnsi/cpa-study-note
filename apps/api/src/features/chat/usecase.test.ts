@@ -43,11 +43,11 @@ describe("Chat UseCase", () => {
       expect(result.ok).toBe(true)
       if (!result.ok) return
 
-      expect(result.session.id).toBeDefined()
-      expect(result.session.userId).toBe(testData.userId)
-      expect(result.session.topicId).toBe(testData.topicId)
-      expect(result.session.createdAt).toBeDefined()
-      expect(result.session.updatedAt).toBeDefined()
+      expect(result.value.id).toBeDefined()
+      expect(result.value.userId).toBe(testData.userId)
+      expect(result.value.topicId).toBe(testData.topicId)
+      expect(result.value.createdAt).toBeDefined()
+      expect(result.value.updatedAt).toBeDefined()
     })
 
     it("should reject session creation for non-existent topic", async () => {
@@ -60,8 +60,7 @@ describe("Chat UseCase", () => {
       expect(result.ok).toBe(false)
       if (result.ok) return
 
-      expect(result.error).toBe("Topic not found")
-      expect(result.status).toBe(404)
+      expect(result.error.code).toBe("NOT_FOUND")
     })
   })
 
@@ -155,8 +154,8 @@ describe("Chat UseCase", () => {
       expect(result.ok).toBe(true)
       if (!result.ok) return
 
-      expect(result.session.id).toBe(session.id)
-      expect(result.session.userId).toBe(testData.userId)
+      expect(result.value.id).toBe(session.id)
+      expect(result.value.userId).toBe(testData.userId)
     })
 
     it("should reject access from other user", async () => {
@@ -170,8 +169,7 @@ describe("Chat UseCase", () => {
       expect(result.ok).toBe(false)
       if (result.ok) return
 
-      expect(result.error).toBe("Unauthorized")
-      expect(result.status).toBe(403)
+      expect(result.error.code).toBe("FORBIDDEN")
     })
 
     it("should return 404 for non-existent session", async () => {
@@ -184,8 +182,7 @@ describe("Chat UseCase", () => {
       expect(result.ok).toBe(false)
       if (result.ok) return
 
-      expect(result.error).toBe("Session not found")
-      expect(result.status).toBe(404)
+      expect(result.error.code).toBe("NOT_FOUND")
     })
   })
 
@@ -222,11 +219,11 @@ describe("Chat UseCase", () => {
       expect(result.ok).toBe(true)
       if (!result.ok) return
 
-      expect(result.messages).toHaveLength(2)
-      expect(result.messages[0].content).toBe("First message")
-      expect(result.messages[0].role).toBe("user")
-      expect(result.messages[1].content).toBe("Response")
-      expect(result.messages[1].role).toBe("assistant")
+      expect(result.value).toHaveLength(2)
+      expect(result.value[0].content).toBe("First message")
+      expect(result.value[0].role).toBe("user")
+      expect(result.value[1].content).toBe("Response")
+      expect(result.value[1].role).toBe("assistant")
     })
 
     it("should reject access from other user", async () => {
@@ -244,8 +241,7 @@ describe("Chat UseCase", () => {
       expect(result.ok).toBe(false)
       if (result.ok) return
 
-      expect(result.error).toBe("Unauthorized")
-      expect(result.status).toBe(403)
+      expect(result.error.code).toBe("FORBIDDEN")
     })
 
     it("should return 404 for non-existent session", async () => {
@@ -258,8 +254,7 @@ describe("Chat UseCase", () => {
       expect(result.ok).toBe(false)
       if (result.ok) return
 
-      expect(result.error).toBe("Session not found")
-      expect(result.status).toBe(404)
+      expect(result.error.code).toBe("NOT_FOUND")
     })
   })
 

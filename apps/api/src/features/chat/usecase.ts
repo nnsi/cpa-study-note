@@ -4,6 +4,8 @@ import type { SubjectRepository } from "../subject/repository"
 import { buildSystemPrompt, buildEvaluationPrompt } from "./domain/prompts"
 import { parseLLMJson } from "@cpa-study/shared"
 import { z } from "zod"
+import { ok, err, type Result } from "@/shared/lib/result"
+import { notFound, forbidden, type AppError } from "@/shared/lib/errors"
 
 type ChatDeps = {
   chatRepo: ChatRepository
@@ -36,12 +38,10 @@ export const createSession = async (
   deps: Pick<ChatDeps, "chatRepo" | "subjectRepo">,
   userId: string,
   topicId: string
-): Promise<
-  { ok: true; session: SessionResponse } | { ok: false; error: string; status: number }
-> => {
+): Promise<Result<SessionResponse, AppError>> => {
   const topic = await deps.subjectRepo.findTopicById(topicId, userId)
   if (!topic) {
-    return { ok: false, error: "Topic not found", status: 404 }
+    return err(notFound("論点が見つかりません"))
   }
 
   const session = await deps.chatRepo.createSession({
@@ -49,14 +49,11 @@ export const createSession = async (
     topicId,
   })
 
-  return {
-    ok: true,
-    session: {
-      ...session,
-      createdAt: session.createdAt.toISOString(),
-      updatedAt: session.updatedAt.toISOString(),
-    },
-  }
+  return ok({
+    ...session,
+    createdAt: session.createdAt.toISOString(),
+    updatedAt: session.updatedAt.toISOString(),
+  })
 }
 
 type SessionWithStats = SessionResponse & {
@@ -87,26 +84,21 @@ export const getSession = async (
   deps: Pick<ChatDeps, "chatRepo">,
   userId: string,
   sessionId: string
-): Promise<
-  { ok: true; session: SessionResponse } | { ok: false; error: string; status: number }
-> => {
+): Promise<Result<SessionResponse, AppError>> => {
   const session = await deps.chatRepo.findSessionById(sessionId)
   if (!session) {
-    return { ok: false, error: "Session not found", status: 404 }
+    return err(notFound("セッションが見つかりません"))
   }
 
   if (session.userId !== userId) {
-    return { ok: false, error: "Unauthorized", status: 403 }
+    return err(forbidden("このセッションへのアクセス権限がありません"))
   }
 
-  return {
-    ok: true,
-    session: {
-      ...session,
-      createdAt: session.createdAt.toISOString(),
-      updatedAt: session.updatedAt.toISOString(),
-    },
-  }
+  return ok({
+    ...session,
+    createdAt: session.createdAt.toISOString(),
+    updatedAt: session.updatedAt.toISOString(),
+  })
 }
 
 // メッセージ一覧取得
@@ -114,27 +106,22 @@ export const listMessages = async (
   deps: Pick<ChatDeps, "chatRepo">,
   userId: string,
   sessionId: string
-): Promise<
-  { ok: true; messages: MessageResponse[] } | { ok: false; error: string; status: number }
-> => {
+): Promise<Result<MessageResponse[], AppError>> => {
   const session = await deps.chatRepo.findSessionById(sessionId)
   if (!session) {
-    return { ok: false, error: "Session not found", status: 404 }
+    return err(notFound("セッションが見つかりません"))
   }
 
   if (session.userId !== userId) {
-    return { ok: false, error: "Unauthorized", status: 403 }
+    return err(forbidden("このセッションへのアクセス権限がありません"))
   }
 
   const messages = await deps.chatRepo.findMessagesBySession(sessionId)
 
-  return {
-    ok: true,
-    messages: messages.map((m) => ({
-      ...m,
-      createdAt: m.createdAt.toISOString(),
-    })),
-  }
+  return ok(messages.map((m) => ({
+    ...m,
+    createdAt: m.createdAt.toISOString(),
+  })))
 }
 
 // メッセージ取得（評価用）- 所有権チェック付き
@@ -142,21 +129,19 @@ export const getMessageForEvaluation = async (
   deps: Pick<ChatDeps, "chatRepo">,
   userId: string,
   messageId: string
-): Promise<
-  { ok: true; content: string } | { ok: false; error: string; status: number }
-> => {
+): Promise<Result<string, AppError>> => {
   const message = await deps.chatRepo.findMessageById(messageId)
   if (!message) {
-    return { ok: false, error: "Message not found", status: 404 }
+    return err(notFound("メッセージが見つかりません"))
   }
 
   // セッション経由で所有権を確認
   const session = await deps.chatRepo.findSessionById(message.sessionId)
   if (!session || session.userId !== userId) {
-    return { ok: false, error: "Forbidden", status: 403 }
+    return err(forbidden("このメッセージへのアクセス権限がありません"))
   }
 
-  return { ok: true, content: message.content }
+  return ok(message.content)
 }
 
 type SendMessageInput = {

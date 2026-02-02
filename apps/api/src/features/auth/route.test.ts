@@ -200,7 +200,7 @@ describe("Auth Routes", () => {
       expect(res.status).toBe(404)
 
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("Provider not found")
+      expect(body.error.code).toBe("NOT_FOUND")
     })
 
     it("should set oauth_state cookie", async () => {
@@ -223,7 +223,7 @@ describe("Auth Routes", () => {
 
       expect(res.status).toBe(400)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("Missing code")
+      expect(body.error.code).toBe("BAD_REQUEST")
     })
 
     it("should return 400 when state is invalid", async () => {
@@ -237,7 +237,7 @@ describe("Auth Routes", () => {
 
       expect(res.status).toBe(400)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("Invalid state")
+      expect(body.error.code).toBe("BAD_REQUEST")
     })
 
     it("should complete OAuth callback successfully with mocked provider", async () => {
@@ -481,7 +481,7 @@ describe("Auth Routes", () => {
 
       expect(res.status).toBe(401)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("No refresh token")
+      expect(body.error.code).toBe("UNAUTHORIZED")
     })
 
     it("should return 401 when refresh token is invalid", async () => {
@@ -496,7 +496,7 @@ describe("Auth Routes", () => {
 
       expect(res.status).toBe(401)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("INVALID_REFRESH_TOKEN")
+      expect(body.error.code).toBe("UNAUTHORIZED")
     })
 
     it("should return new access token with valid refresh token", async () => {
@@ -560,7 +560,7 @@ describe("Auth Routes", () => {
 
       expect(res.status).toBe(401)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("REFRESH_TOKEN_EXPIRED")
+      expect(body.error.code).toBe("UNAUTHORIZED")
     })
   })
 
@@ -603,7 +603,7 @@ describe("Auth Routes", () => {
 
       expect(res.status).toBe(404)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("Not available")
+      expect(body.error.code).toBe("NOT_FOUND")
     })
   })
 

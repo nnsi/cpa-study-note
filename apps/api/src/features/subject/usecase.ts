@@ -27,12 +27,8 @@ import type {
 } from "./repository"
 import { parseCSV, parseCSV4Column, groupRowsBySubject, convertToTree, mergeTree } from "./csv-parser"
 import type { SimpleTransactionRunner } from "../../shared/lib/transaction"
-
-// Result type for operations
-type Result<T, E> = { ok: true; value: T } | { ok: false; error: E }
-
-const ok = <T>(value: T): Result<T, never> => ({ ok: true, value })
-const err = <E>(error: E): Result<never, E> => ({ ok: false, error })
+import { ok, err, type Result } from "@/shared/lib/result"
+import { notFound, badRequest, conflict, type AppError } from "@/shared/lib/errors"
 
 // User type for resolving studyDomainId
 type User = {
@@ -146,10 +142,7 @@ type TopicResponse = {
   updatedAt: string
 }
 
-// Error types
-export type SubjectUseCaseError = "NOT_FOUND" | "FORBIDDEN" | "HAS_CATEGORIES"
-export type TreeOperationError = "NOT_FOUND" | "FORBIDDEN" | "INVALID_ID"
-export type CSVImportError = "NOT_FOUND" | "FORBIDDEN"
+// Error types are now unified via AppError from @/shared/lib/errors
 
 // Dependencies
 export type SubjectUseCaseDeps = {
@@ -161,11 +154,11 @@ export const listSubjects = async (
   deps: SubjectUseCaseDeps,
   userId: string,
   studyDomainId: string
-): Promise<Result<Subject[], SubjectUseCaseError>> => {
+): Promise<Result<Subject[], AppError>> => {
   // Verify the study domain belongs to the user
   const ownsStudyDomain = await deps.subjectRepo.verifyStudyDomainOwnership(studyDomainId, userId)
   if (!ownsStudyDomain) {
-    return err("NOT_FOUND")
+    return err(notFound("学習領域が見つかりません"))
   }
 
   const subjects = await deps.subjectRepo.findByStudyDomainId(studyDomainId, userId)
@@ -176,10 +169,10 @@ export const getSubject = async (
   deps: SubjectUseCaseDeps,
   userId: string,
   subjectId: string
-): Promise<Result<Subject, SubjectUseCaseError>> => {
+): Promise<Result<Subject, AppError>> => {
   const subject = await deps.subjectRepo.findById(subjectId, userId)
   if (!subject) {
-    return err("NOT_FOUND")
+    return err(notFound("科目が見つかりません"))
   }
   return ok(subject)
 }
@@ -197,11 +190,11 @@ export const createSubject = async (
   deps: SubjectUseCaseDeps,
   userId: string,
   data: CreateSubjectData
-): Promise<Result<{ id: string }, SubjectUseCaseError>> => {
+): Promise<Result<{ id: string }, AppError>> => {
   // Verify the study domain belongs to the user
   const ownsStudyDomain = await deps.subjectRepo.verifyStudyDomainOwnership(data.studyDomainId, userId)
   if (!ownsStudyDomain) {
-    return err("NOT_FOUND")
+    return err(notFound("学習領域が見つかりません"))
   }
 
   const input: CreateSubjectInput = {
@@ -231,7 +224,7 @@ export const updateSubject = async (
   userId: string,
   subjectId: string,
   data: UpdateSubjectData
-): Promise<Result<Subject, SubjectUseCaseError>> => {
+): Promise<Result<Subject, AppError>> => {
   const input: UpdateSubjectInput = {}
   if (data.name !== undefined) input.name = data.name
   if (data.description !== undefined) input.description = data.description
@@ -241,7 +234,7 @@ export const updateSubject = async (
 
   const result = await deps.subjectRepo.update(subjectId, userId, input)
   if (!result) {
-    return err("NOT_FOUND")
+    return err(notFound("科目が見つかりません"))
   }
   return ok(result)
 }
@@ -250,16 +243,16 @@ export const deleteSubject = async (
   deps: SubjectUseCaseDeps,
   userId: string,
   subjectId: string
-): Promise<Result<void, SubjectUseCaseError>> => {
+): Promise<Result<void, AppError>> => {
   // Check if deletion is allowed
   const canDelete = await deps.subjectRepo.canDeleteSubject(subjectId, userId)
   if (!canDelete.canDelete) {
-    return err("HAS_CATEGORIES")
+    return err(conflict("単元が紐づいているため削除できません", { reason: "HAS_CATEGORIES" }))
   }
 
   const result = await deps.subjectRepo.softDelete(subjectId, userId)
   if (!result) {
-    return err("NOT_FOUND")
+    return err(notFound("科目が見つかりません"))
   }
   return ok(undefined)
 }
@@ -278,11 +271,11 @@ export const getSubjectTree = async (
   deps: TreeUseCaseDeps,
   userId: string,
   subjectId: string
-): Promise<Result<TreeResponse, TreeOperationError>> => {
+): Promise<Result<TreeResponse, AppError>> => {
   // 1. Verify subject ownership
   const subject = await deps.subjectRepo.findSubjectByIdAndUserId(subjectId, userId)
   if (!subject) {
-    return err("NOT_FOUND")
+    return err(notFound("科目が見つかりません"))
   }
 
   // 2. Get all categories for this subject
@@ -346,13 +339,13 @@ export const updateSubjectTree = async (
   userId: string,
   subjectId: string,
   tree: UpdateTreeRequest
-): Promise<Result<void, TreeOperationError>> => {
+): Promise<Result<void, AppError>> => {
   const now = new Date()
 
   // 1. Verify subject ownership
   const subject = await deps.subjectRepo.findSubjectByIdAndUserId(subjectId, userId)
   if (!subject) {
-    return err("NOT_FOUND")
+    return err(notFound("科目が見つかりません"))
   }
 
   // 2. Collect all IDs from request
@@ -380,7 +373,7 @@ export const updateSubjectTree = async (
     validCategoryIdSet = new Set(validCategoryIds)
     for (const id of requestCategoryIds) {
       if (!validCategoryIdSet.has(id)) {
-        return err("INVALID_ID")
+        return err(badRequest("不正なカテゴリIDが含まれています", { invalidId: id }))
       }
     }
   }
@@ -396,7 +389,7 @@ export const updateSubjectTree = async (
     validTopicIdSet = new Set(validTopicIds)
     for (const id of requestTopicIds) {
       if (!validTopicIdSet.has(id)) {
-        return err("INVALID_ID")
+        return err(badRequest("不正な論点IDが含まれています", { invalidId: id }))
       }
     }
   }
@@ -490,11 +483,11 @@ export const importCSVToSubject = async (
   userId: string,
   subjectId: string,
   csvContent: string
-): Promise<Result<CSVImportResponse, CSVImportError>> => {
+): Promise<Result<CSVImportResponse, AppError>> => {
   // 1. Get existing tree (also validates ownership)
   const existingTreeResult = await getSubjectTree(deps, userId, subjectId)
   if (!existingTreeResult.ok) {
-    return err("NOT_FOUND")
+    return err(notFound("科目が見つかりません"))
   }
 
   // 2. Parse CSV
@@ -537,7 +530,7 @@ export const importCSVToSubject = async (
   const updateResult = await updateSubjectTree(deps, userId, subjectId, mergedTree)
   if (!updateResult.ok) {
     // This shouldn't happen since we already validated ownership
-    return err("NOT_FOUND")
+    return updateResult
   }
 
   // 7. Count imported items
@@ -565,8 +558,6 @@ export const importCSVToSubject = async (
 }
 
 // Bulk import types
-export type BulkCSVImportError = "NOT_FOUND" | "FORBIDDEN"
-
 export type BulkCSVImportResponse = {
   success: boolean
   imported: {
@@ -587,11 +578,11 @@ export const bulkImportCSVToStudyDomain = async (
   userId: string,
   studyDomainId: string,
   csvContent: string
-): Promise<Result<BulkCSVImportResponse, BulkCSVImportError>> => {
+): Promise<Result<BulkCSVImportResponse, AppError>> => {
   // 1. Verify study domain ownership
   const ownsStudyDomain = await deps.subjectRepo.verifyStudyDomainOwnership(studyDomainId, userId)
   if (!ownsStudyDomain) {
-    return err("NOT_FOUND")
+    return err(notFound("学習領域が見つかりません"))
   }
 
   // 2. Parse 4-column CSV

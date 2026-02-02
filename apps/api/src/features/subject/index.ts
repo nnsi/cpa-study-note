@@ -21,6 +21,4 @@ export {
   getSubjectTree,
   updateSubjectTree,
   importCSVToSubject,
-  type TreeOperationError,
-  type CSVImportError,
 } from "./usecase"

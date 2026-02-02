@@ -18,6 +18,7 @@ import {
   evaluateQuestion,
   listGoodQuestionsByTopic,
 } from "./usecase"
+import { handleResult, handleResultWith } from "@/shared/lib/route-helpers"
 
 type ChatDeps = {
   env: Env
@@ -45,11 +46,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
           topicId
         )
 
-        if (!result.ok) {
-          return c.json({ error: result.error }, result.status as 404)
-        }
-
-        return c.json({ session: result.session }, 201)
+        return handleResultWith(c, result, (session) => ({ session }), 201)
       }
     )
 
@@ -87,12 +84,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
       const user = c.get("user")
 
       const result = await getSession({ chatRepo }, user.id, sessionId)
-
-      if (!result.ok) {
-        return c.json({ error: result.error }, result.status as 404 | 403)
-      }
-
-      return c.json({ session: result.session })
+      return handleResultWith(c, result, (session) => ({ session }))
     })
 
     // メッセージ一覧
@@ -101,12 +93,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
       const user = c.get("user")
 
       const result = await listMessages({ chatRepo }, user.id, sessionId)
-
-      if (!result.ok) {
-        return c.json({ error: result.error }, result.status as 404 | 403)
-      }
-
-      return c.json({ messages: result.messages })
+      return handleResultWith(c, result, (messages) => ({ messages }))
     })
 
     // メッセージ送信（ストリーミング）
@@ -191,7 +178,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
       const result = await getMessageForEvaluation({ chatRepo }, user.id, messageId)
 
       if (!result.ok) {
-        return c.json({ error: result.error }, result.status as 404 | 403)
+        return handleResult(c, result)
       }
 
       const aiAdapter = createAIAdapter({
@@ -202,7 +189,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
       const quality = await evaluateQuestion(
         { chatRepo, subjectRepo, aiAdapter, aiConfig },
         messageId,
-        result.content
+        result.value
       )
 
       return c.json({ quality })

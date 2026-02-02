@@ -176,7 +176,7 @@ describe("Chat Routes", () => {
 
       expect(res.status).toBe(404)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("Topic not found")
+      expect(body.error.message).toBe("論点が見つかりません")
     })
 
     it("should return 401 when unauthenticated in production mode", async () => {
@@ -314,7 +314,7 @@ describe("Chat Routes", () => {
 
       expect(res.status).toBe(404)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("Session not found")
+      expect(body.error.message).toBe("セッションが見つかりません")
     })
 
     it("should return 403 for session owned by another user", async () => {
@@ -352,7 +352,7 @@ describe("Chat Routes", () => {
 
       expect(res.status).toBe(403)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("Unauthorized")
+      expect(body.error.message).toBe("このセッションへのアクセス権限がありません")
     })
   })
 
@@ -676,7 +676,7 @@ describe("Chat Routes", () => {
 
       expect(res.status).toBe(404)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("Message not found")
+      expect(body.error.message).toBe("メッセージが見つかりません")
     })
 
     it("should return 403 for message in session owned by another user", async () => {
@@ -726,7 +726,7 @@ describe("Chat Routes", () => {
 
       expect(res.status).toBe(403)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("Forbidden")
+      expect(body.error.message).toBe("このメッセージへのアクセス権限がありません")
     })
   })
 
