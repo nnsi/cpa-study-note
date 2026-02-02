@@ -99,28 +99,28 @@ Repository > Settings > Environments
 - [ ] Protection rules 設定（推奨）
 
 **Variables（手動設定）:**
-- [ ] `WEB_BASE_URL` = 本番フロントエンド URL
-- [ ] `VITE_API_URL` = 本番 API URL
+- [x] `WEB_BASE_URL` = 本番フロントエンド URL
+- [x] `VITE_API_URL` = 本番 API URL
 
 **Variables（自動設定）:**
 - `D1_DATABASE_ID` - Terraform Apply で自動設定
 - `R2_BUCKET_NAME` - Terraform Apply で自動設定
 
 **Secrets（環境別）:**
-- [ ] `JWT_SECRET` - 生成: `openssl rand -base64 32`（stgとは別の値）
-- [ ] `GOOGLE_CLIENT_ID` - Google OAuth（prod用）
-- [ ] `GOOGLE_CLIENT_SECRET` - Google OAuth（prod用）
-- [ ] `OPENROUTER_API_KEY` - OpenRouter API キー（prod用）
+- [x] `JWT_SECRET` - 生成: `openssl rand -base64 32`（stgとは別の値）
+- [x] `GOOGLE_CLIENT_ID` - Google OAuth（prod用）
+- [x] `GOOGLE_CLIENT_SECRET` - Google OAuth（prod用）
+- [x] `OPENROUTER_API_KEY` - OpenRouter API キー（prod用）
 
 ---
 
 ## 5. 動作確認
 
-- [ ] **staging デプロイ**
+- [x] **staging デプロイ**
   - master ブランチに push
   - または Actions > Deploy > staging
 
-- [ ] **staging 動作確認**
+- [x] **staging 動作確認**
   - フロントエンド URL にアクセス
   - 基本機能の動作確認
 
