@@ -8,7 +8,7 @@ import type {
   CSVImportResponse,
 } from "@cpa-study/shared/schemas"
 import type { SubjectRepository, Subject, CreateSubjectInput, UpdateSubjectInput } from "./repository"
-import { parseCSV, convertToTree, mergeTree } from "./csv-parser"
+import { parseCSV, parseCSV4Column, groupRowsBySubject, convertToTree, mergeTree } from "./csv-parser"
 import type { SimpleTransactionRunner } from "../../shared/lib/transaction"
 
 // Result type for operations
@@ -430,6 +430,134 @@ export const importCSVToSubject = async (
       categories: categoryCount,
       subcategories: subcategoryCount,
       topics: topicCount,
+    },
+    errors,
+  })
+}
+
+// Bulk import types
+export type BulkCSVImportError = "NOT_FOUND" | "FORBIDDEN"
+
+export type BulkCSVImportResponse = {
+  success: boolean
+  imported: {
+    subjects: number
+    categories: number
+    subcategories: number
+    topics: number
+  }
+  errors: Array<{ line: number; message: string }>
+}
+
+/**
+ * Bulk import 4-column CSV data into study domain
+ * Creates subjects if they don't exist, then imports tree structure
+ */
+export const bulkImportCSVToStudyDomain = async (
+  deps: TreeUseCaseDeps,
+  userId: string,
+  studyDomainId: string,
+  csvContent: string
+): Promise<Result<BulkCSVImportResponse, BulkCSVImportError>> => {
+  // 1. Verify study domain ownership
+  const ownsStudyDomain = await deps.subjectRepo.verifyStudyDomainOwnership(studyDomainId, userId)
+  if (!ownsStudyDomain) {
+    return err("NOT_FOUND")
+  }
+
+  // 2. Parse 4-column CSV
+  const { rows, errors } = parseCSV4Column(csvContent)
+
+  if (rows.length === 0) {
+    return ok({
+      success: false,
+      imported: { subjects: 0, categories: 0, subcategories: 0, topics: 0 },
+      errors: errors.length > 0 ? errors : [{ line: 0, message: "インポートするデータがありません" }],
+    })
+  }
+
+  // 3. Group rows by subject name
+  const groupedRows = groupRowsBySubject(rows)
+
+  // 4. Get existing subjects for this study domain
+  const existingSubjects = await deps.subjectRepo.findByStudyDomainId(studyDomainId, userId)
+  const subjectNameToId = new Map<string, string>(
+    existingSubjects.map((s) => [s.name, s.id])
+  )
+
+  // 5. Process each subject group
+  let totalSubjects = 0
+  let totalCategories = 0
+  let totalSubcategories = 0
+  let totalTopics = 0
+
+  for (const [subjectName, subjectRows] of groupedRows) {
+    let subjectId = subjectNameToId.get(subjectName)
+
+    // Create subject if it doesn't exist
+    if (!subjectId) {
+      const maxOrder = existingSubjects.reduce((max, s) => Math.max(max, s.displayOrder), -1)
+      const createResult = await deps.subjectRepo.create({
+        userId,
+        studyDomainId,
+        name: subjectName,
+        displayOrder: maxOrder + 1 + totalSubjects,
+      })
+      subjectId = createResult.id
+      totalSubjects++
+    }
+
+    // Get existing tree for this subject
+    const existingTreeResult = await getSubjectTree(deps, userId, subjectId)
+    if (!existingTreeResult.ok) {
+      continue // Skip if we can't get the tree (shouldn't happen)
+    }
+
+    // Convert subject rows to tree structure
+    const importedTree = convertToTree(subjectRows)
+
+    // Convert existing tree to updatable format
+    const existingTreeForMerge = {
+      categories: existingTreeResult.value.categories.map((cat) => ({
+        id: cat.id as string | null,
+        name: cat.name,
+        displayOrder: cat.displayOrder,
+        subcategories: cat.subcategories.map((subcat) => ({
+          id: subcat.id as string | null,
+          name: subcat.name,
+          displayOrder: subcat.displayOrder,
+          topics: subcat.topics.map((topic) => ({
+            id: topic.id as string | null,
+            name: topic.name,
+            displayOrder: topic.displayOrder,
+          })),
+        })),
+      })),
+    }
+
+    // Merge with existing data
+    const mergedTree = mergeTree(existingTreeForMerge, importedTree)
+
+    // Update tree
+    await updateSubjectTree(deps, userId, subjectId, mergedTree)
+
+    // Count imported items for this subject
+    for (const cat of importedTree.categories) {
+      totalCategories++
+      for (const subcat of cat.subcategories) {
+        totalSubcategories++
+        totalTopics += subcat.topics.length
+      }
+    }
+  }
+
+  return ok({
+    success: true,
+    imported: {
+      subjects: totalSubjects,
+      categories: totalCategories,
+      subcategories: totalSubcategories,
+      topics: totalTopics,
     },
     errors,
   })

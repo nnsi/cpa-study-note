@@ -15,6 +15,7 @@ import {
 import { filterTopics, type FilteredTopic } from "@/features/review/api"
 import { api } from "@/lib/api-client"
 import { useDebounce } from "@/lib/hooks/useDebounce"
+import { BulkCSVImporter } from "@/features/subject/components/BulkCSVImporter"
 
 export const Route = createFileRoute("/domains/$domainId/subjects/")({
   beforeLoad: requireAuth,
@@ -27,6 +28,7 @@ function SubjectsPage() {
   const [isSearchFocused, setIsSearchFocused] = useState(false)
   const [expandedSubjectId, setExpandedSubjectId] = useState<string | null>(null)
   const [expandedCategoryIds, setExpandedCategoryIds] = useState<Set<string>>(new Set())
+  const [showImporter, setShowImporter] = useState(false)
   const searchRef = useRef<HTMLDivElement>(null)
   const debouncedQuery = useDebounce(searchQuery, 300)
 
@@ -178,7 +180,18 @@ function SubjectsPage() {
             <span>/</span>
             <span>{domainData?.studyDomain.name ?? "..."}</span>
           </div>
-          <h1 className="heading-serif text-2xl lg:text-3xl">科目一覧</h1>
+          <div className="flex items-center justify-between">
+            <h1 className="heading-serif text-2xl lg:text-3xl">科目一覧</h1>
+            <button
+              onClick={() => setShowImporter(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors text-sm font-medium"
+            >
+              <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+              </svg>
+              CSVインポート
+            </button>
+          </div>
         </div>
 
         {/* Search Box */}
@@ -458,6 +471,11 @@ function SubjectsPage() {
           </div>
         )}
       </div>
+
+      {/* CSV Importer Modal */}
+      {showImporter && (
+        <BulkCSVImporter domainId={domainId} onClose={() => setShowImporter(false)} />
+      )}
     </PageWrapper>
   )
 }

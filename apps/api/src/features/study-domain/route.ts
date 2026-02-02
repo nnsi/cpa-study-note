@@ -1,5 +1,6 @@
 import { Hono } from "hono"
 import { zValidator } from "@hono/zod-validator"
+import { z } from "zod"
 import type { Db } from "@cpa-study/db"
 import {
   createStudyDomainRequestSchema,
@@ -15,6 +16,9 @@ import {
   updateStudyDomain,
   deleteStudyDomain,
 } from "./usecase"
+import { createSubjectRepository } from "../subject/repository"
+import { bulkImportCSVToStudyDomain } from "../subject/usecase"
+import { createNoTransactionRunner } from "@/shared/lib/transaction"
 
 type StudyDomainDeps = {
   env: Env
@@ -95,6 +99,43 @@ export const studyDomainRoutes = ({ db }: StudyDomainDeps) => {
 
       return c.json({ success: true })
     })
+
+    // Bulk import 4-column CSV
+    .post(
+      "/:id/import-csv",
+      authMiddleware,
+      zValidator(
+        "json",
+        z.object({
+          csv: z.string().min(1, "CSVデータは必須です").max(1_000_000, "CSVは1MB以内にしてください"),
+        })
+      ),
+      async (c) => {
+        const user = c.get("user")
+        const id = c.req.param("id")
+        const { csv } = c.req.valid("json")
+
+        try {
+          const subjectRepo = createSubjectRepository(db)
+          const txRunner = createNoTransactionRunner(db)
+          const treeDeps = { subjectRepo, db, txRunner }
+
+          const result = await bulkImportCSVToStudyDomain(treeDeps, user.id, id, csv)
+
+          if (!result.ok) {
+            if (result.error === "NOT_FOUND") {
+              return c.json({ error: "学習領域が見つかりません" }, 404)
+            }
+            return c.json({ error: "アクセスが拒否されました" }, 403)
+          }
+
+          return c.json(result.value)
+        } catch (e) {
+          console.error("Import error:", e)
+          return c.json({ error: "インポート中にエラーが発生しました", details: String(e) }, 500)
+        }
+      }
+    )
 
   return app
 }

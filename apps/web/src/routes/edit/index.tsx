@@ -22,6 +22,7 @@ import {
   type CreateSubjectInput,
   type UpdateSubjectInput,
 } from "@/features/subject/api"
+import { BulkCSVImporter } from "@/features/subject/components/BulkCSVImporter"
 
 export const Route = createFileRoute("/edit/")({
   beforeLoad: requireAuth,
@@ -38,6 +39,7 @@ function EditPage() {
   const [isCreateSubjectOpen, setIsCreateSubjectOpen] = useState(false)
   const [subjectToEdit, setSubjectToEdit] = useState<Subject | null>(null)
   const [subjectToDelete, setSubjectToDelete] = useState<Subject | null>(null)
+  const [showCSVImporter, setShowCSVImporter] = useState(false)
 
   // Fetch domains
   const { data: domainsData, isLoading: domainsLoading } = useQuery({
@@ -237,16 +239,28 @@ function EditPage() {
                 {selectedDomain ? `${selectedDomain.name} の科目` : "科目"}
               </h2>
               {selectedDomainId && (
-                <button
-                  type="button"
-                  onClick={() => setIsCreateSubjectOpen(true)}
-                  className="btn-secondary text-sm"
-                >
-                  <svg className="size-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                  </svg>
-                  新規作成
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowCSVImporter(true)}
+                    className="btn-secondary text-sm"
+                  >
+                    <svg className="size-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                    </svg>
+                    CSVインポート
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsCreateSubjectOpen(true)}
+                    className="btn-secondary text-sm"
+                  >
+                    <svg className="size-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    新規作成
+                  </button>
+                </div>
               )}
             </div>
 
@@ -399,6 +413,14 @@ function EditPage() {
           onConfirm={() => deleteSubjectMutation.mutate(subjectToDelete.id)}
           isLoading={deleteSubjectMutation.isPending}
           error={deleteSubjectMutation.error?.message}
+        />
+      )}
+
+      {/* CSV Importer */}
+      {showCSVImporter && selectedDomainId && (
+        <BulkCSVImporter
+          domainId={selectedDomainId}
+          onClose={() => setShowCSVImporter(false)}
         />
       )}
     </PageWrapper>

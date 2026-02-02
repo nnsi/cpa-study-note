@@ -6,6 +6,14 @@ export type ParsedRow = {
   topic: string
 }
 
+// 4-column CSV row type
+export type ParsedRow4Column = {
+  subject: string // 科目名
+  largeCategory: string // 大項目（カテゴリ）
+  mediumCategory: string // 中項目（単元）
+  topic: string // 小項目（論点）
+}
+
 export type ParseError = {
   line: number
   message: string
@@ -13,6 +21,11 @@ export type ParseError = {
 
 export type ParseResult = {
   rows: ParsedRow[]
+  errors: ParseError[]
+}
+
+export type ParseResult4Column = {
+  rows: ParsedRow4Column[]
   errors: ParseError[]
 }
 
@@ -121,6 +134,67 @@ export const parseCSV = (csvContent: string): ParseResult => {
   }
 
   return { rows, errors }
+}
+
+/**
+ * Parse 4-column CSV content into structured rows (RFC 4180 compliant)
+ * Expected format: 科目名,大項目,中項目,小項目
+ */
+export const parseCSV4Column = (csvContent: string): ParseResult4Column => {
+  const rows: ParsedRow4Column[] = []
+  const errors: ParseError[] = []
+
+  const lines = splitCSVLines(csvContent)
+
+  // Skip header row (line 0)
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim()
+    if (!line) continue // Skip empty lines
+
+    const fields = parseCSVLine(line)
+
+    if (fields.length < 4) {
+      errors.push({ line: i + 1, message: "4列必要です（科目名, 大項目, 中項目, 小項目）" })
+      continue
+    }
+
+    const [subject, large, medium, topic] = fields.map((f) => f.trim())
+
+    if (!subject || !large || !medium || !topic) {
+      errors.push({ line: i + 1, message: "空のフィールドがあります" })
+      continue
+    }
+
+    rows.push({
+      subject,
+      largeCategory: large,
+      mediumCategory: medium,
+      topic,
+    })
+  }
+
+  return { rows, errors }
+}
+
+/**
+ * Group 4-column parsed rows by subject name
+ */
+export const groupRowsBySubject = (
+  rows: ParsedRow4Column[]
+): Map<string, ParsedRow[]> => {
+  const grouped = new Map<string, ParsedRow[]>()
+
+  for (const row of rows) {
+    const existing = grouped.get(row.subject) ?? []
+    existing.push({
+      largeCategory: row.largeCategory,
+      mediumCategory: row.mediumCategory,
+      topic: row.topic,
+    })
+    grouped.set(row.subject, existing)
+  }
+
+  return grouped
 }
 
 /**
