@@ -1,12 +1,18 @@
 import { api } from "@/lib/api-client"
-import type { AllowedMimeType } from "@cpa-study/shared/schemas"
+import {
+  uploadUrlResponseSchema,
+  ocrResultResponseSchema,
+  imageResponseSchema,
+  type AllowedMimeType,
+} from "@cpa-study/shared/schemas"
 
 export const getUploadUrl = async (filename: string, mimeType: AllowedMimeType) => {
   const res = await api.api.images["upload-url"].$post({
     json: { filename, mimeType },
   })
   if (!res.ok) throw new Error("Failed to get upload URL")
-  return res.json()
+  const data = await res.json()
+  return uploadUrlResponseSchema.parse(data)
 }
 
 export const uploadImage = async (
@@ -31,7 +37,8 @@ export const performOCR = async (imageId: string) => {
     param: { imageId },
   })
   if (!res.ok) throw new Error("Failed to perform OCR")
-  return res.json()
+  const data = await res.json()
+  return ocrResultResponseSchema.parse(data)
 }
 
 export const getImage = async (imageId: string) => {
@@ -39,5 +46,6 @@ export const getImage = async (imageId: string) => {
     param: { imageId },
   })
   if (!res.ok) throw new Error("Failed to get image")
-  return res.json()
+  const data = await res.json()
+  return imageResponseSchema.parse(data)
 }

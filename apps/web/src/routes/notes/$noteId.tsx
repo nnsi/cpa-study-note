@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { api } from "@/lib/api-client"
 import { requireAuth } from "@/lib/auth"
 import { PageWrapper } from "@/components/layout"
+import { noteSingleResponseSchema, type NoteDetailResponse } from "@cpa-study/shared/schemas"
 
 export const Route = createFileRoute("/notes/$noteId")({
   beforeLoad: requireAuth,
@@ -22,12 +23,13 @@ function NoteDetailPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["notes", noteId],
-    queryFn: async () => {
+    queryFn: async (): Promise<{ note: NoteDetailResponse }> => {
       const res = await api.api.notes[":noteId"].$get({
         param: { noteId },
       })
       if (!res.ok) throw new Error(`ノートの取得に失敗しました (${res.status})`)
-      return res.json()
+      const json = await res.json()
+      return noteSingleResponseSchema.parse(json)
     },
   })
 

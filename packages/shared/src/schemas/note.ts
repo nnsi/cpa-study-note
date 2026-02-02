@@ -70,3 +70,20 @@ export type UpdateNoteRequest = z.infer<typeof updateNoteRequestSchema>
 export const noteResponseSchema = noteSchema
 
 export const notesResponseSchema = z.array(noteSchema)
+
+// Note detail response (with topic/category/subject info)
+export const noteDetailResponseSchema = noteWithSourceSchema.extend({
+  topicName: z.string(),
+  categoryId: z.string(),
+  subjectId: z.string(),
+  subjectName: z.string(),
+})
+
+export type NoteDetailResponse = z.infer<typeof noteDetailResponseSchema>
+
+// API response wrapper schemas
+export const noteSingleResponseSchema = z.object({
+  note: noteDetailResponseSchema,
+})
+
+export type NoteSingleResponse = z.infer<typeof noteSingleResponseSchema>

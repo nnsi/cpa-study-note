@@ -1,46 +1,35 @@
 import { api } from "@/lib/api-client"
+import {
+  studyDomainListResponseSchema,
+  studyDomainSingleResponseSchema,
+  bulkCSVImportResponseSchema,
+  successResponseSchema,
+  type StudyDomainResponse,
+  type CreateStudyDomainRequest,
+  type UpdateStudyDomainRequest,
+  type BulkCSVImportResponse,
+} from "@cpa-study/shared/schemas"
 
-export type StudyDomain = {
-  id: string
-  userId: string
-  name: string
-  description: string | null
-  emoji: string | null
-  color: string | null
-  createdAt: string
-  updatedAt: string
-}
+// Re-export types for convenience
+export type StudyDomain = StudyDomainResponse
+export type CreateStudyDomainInput = CreateStudyDomainRequest
+export type UpdateStudyDomainInput = UpdateStudyDomainRequest
+export type BulkCSVImportResult = BulkCSVImportResponse
 
-export type CreateStudyDomainInput = {
-  name: string
-  description?: string
-  emoji?: string
-  color?: string
-}
-
-export type UpdateStudyDomainInput = {
-  name?: string
-  description?: string
-  emoji?: string
-  color?: string
-}
-
-export const getStudyDomains = async (): Promise<{
-  studyDomains: StudyDomain[]
-}> => {
+export const getStudyDomains = async (): Promise<{ studyDomains: StudyDomain[] }> => {
   const res = await api.api["study-domains"].$get()
   if (!res.ok) throw new Error("Failed to fetch study domains")
-  return res.json()
+  const data = await res.json()
+  return studyDomainListResponseSchema.parse(data)
 }
 
-export const getStudyDomain = async (
-  id: string
-): Promise<{ studyDomain: StudyDomain }> => {
+export const getStudyDomain = async (id: string): Promise<{ studyDomain: StudyDomain }> => {
   const res = await api.api["study-domains"][":id"].$get({
     param: { id },
   })
   if (!res.ok) throw new Error("Failed to fetch study domain")
-  return res.json()
+  const data = await res.json()
+  return studyDomainSingleResponseSchema.parse(data)
 }
 
 export const createStudyDomain = async (
@@ -53,7 +42,8 @@ export const createStudyDomain = async (
     const error = await res.json()
     throw new Error((error as { error?: string }).error ?? "Failed to create study domain")
   }
-  return res.json()
+  const responseData = await res.json()
+  return studyDomainSingleResponseSchema.parse(responseData)
 }
 
 export const updateStudyDomain = async (
@@ -68,12 +58,11 @@ export const updateStudyDomain = async (
     const error = await res.json()
     throw new Error((error as { error?: string }).error ?? "Failed to update study domain")
   }
-  return res.json()
+  const responseData = await res.json()
+  return studyDomainSingleResponseSchema.parse(responseData)
 }
 
-export const deleteStudyDomain = async (
-  id: string
-): Promise<{ success: boolean }> => {
+export const deleteStudyDomain = async (id: string): Promise<{ success: boolean }> => {
   const res = await api.api["study-domains"][":id"].$delete({
     param: { id },
   })
@@ -81,19 +70,8 @@ export const deleteStudyDomain = async (
     const error = await res.json()
     throw new Error((error as { error?: string }).error ?? "Failed to delete study domain")
   }
-  return res.json()
-}
-
-// Bulk CSV import types
-export type BulkCSVImportResult = {
-  success: boolean
-  imported: {
-    subjects: number
-    categories: number
-    subcategories: number
-    topics: number
-  }
-  errors: Array<{ line: number; message: string }>
+  const data = await res.json()
+  return successResponseSchema.parse(data)
 }
 
 export const bulkImportCSV = async (
@@ -108,5 +86,6 @@ export const bulkImportCSV = async (
     const error = await res.json()
     throw new Error((error as { error?: string }).error ?? "CSVインポートに失敗しました")
   }
-  return res.json()
+  const data = await res.json()
+  return bulkCSVImportResponseSchema.parse(data)
 }

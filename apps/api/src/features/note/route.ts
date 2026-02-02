@@ -11,6 +11,7 @@ import { createSubjectRepository } from "../subject/repository"
 import {
   createNoteFromSessionRequestSchema,
   createManualNoteRequestSchema,
+  updateNoteRequestSchema,
 } from "@cpa-study/shared/schemas"
 import {
   createNoteFromSession,
@@ -119,14 +120,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
     .put(
       "/:noteId",
       authMiddleware,
-      zValidator(
-        "json",
-        z.object({
-          userMemo: z.string().optional(),
-          keyPoints: z.array(z.string()).optional(),
-          stumbledPoints: z.array(z.string()).optional(),
-        })
-      ),
+      zValidator("json", updateNoteRequestSchema),
       async (c) => {
         const user = c.get("user")
         const noteId = c.req.param("noteId")

@@ -1,6 +1,38 @@
 import { api } from "@/lib/api-client"
+import type {
+  CreateSubjectRequest,
+  UpdateSubjectRequest,
+  TopicSearchResult,
+} from "@cpa-study/shared/schemas"
+import type {
+  TopicNodeResponse,
+  SubcategoryNodeResponse,
+  CategoryNodeResponse,
+  TreeResponse,
+  TopicNode as TopicNodeInput,
+  SubcategoryNode as SubcategoryNodeInput,
+  CategoryNode as CategoryNodeInput,
+  UpdateTreeRequest,
+} from "@cpa-study/shared/schemas"
 
-// 単一科目の基本情報（GET /subjects/:id, POST, PUT で使用）
+// Re-export tree response types with convenient names (used by TreeEditor, useTreeState, etc.)
+export type TopicNode = TopicNodeResponse
+export type SubcategoryNode = SubcategoryNodeResponse
+export type CategoryNode = CategoryNodeResponse
+export type { TreeResponse }
+
+// Re-export tree input types (for creating/updating)
+export type { TopicNodeInput, SubcategoryNodeInput, CategoryNodeInput }
+export type UpdateTreeInput = UpdateTreeRequest
+
+// Re-export request types
+export type CreateSubjectInput = CreateSubjectRequest
+export type UpdateSubjectInput = UpdateSubjectRequest
+
+// Re-export search result type
+export type { TopicSearchResult }
+
+// Subject types - based on actual API response (without userId for list, with userId for single)
 export type Subject = {
   id: string
   userId: string
@@ -14,7 +46,6 @@ export type Subject = {
   updatedAt: string
 }
 
-// 科目一覧で返される統計付き情報（GET /subjects で使用）
 export type SubjectWithStats = {
   id: string
   studyDomainId: string
@@ -29,78 +60,6 @@ export type SubjectWithStats = {
   topicCount: number
 }
 
-export type CreateSubjectInput = {
-  name: string
-  description?: string
-  emoji?: string
-  color?: string
-}
-
-export type UpdateSubjectInput = {
-  name?: string
-  description?: string | null
-  emoji?: string | null
-  color?: string | null
-}
-
-// Tree types
-export type TopicNode = {
-  id: string
-  name: string
-  description: string | null
-  difficulty: "basic" | "intermediate" | "advanced" | null
-  topicType: string | null
-  aiSystemPrompt: string | null
-  displayOrder: number
-}
-
-export type SubcategoryNode = {
-  id: string
-  name: string
-  displayOrder: number
-  topics: TopicNode[]
-}
-
-export type CategoryNode = {
-  id: string
-  name: string
-  displayOrder: number
-  subcategories: SubcategoryNode[]
-}
-
-export type TreeResponse = {
-  categories: CategoryNode[]
-}
-
-// Input types for tree update (nullable IDs for new nodes)
-export type TopicNodeInput = {
-  id: string | null
-  name: string
-  description?: string | null
-  difficulty?: "basic" | "intermediate" | "advanced" | null
-  topicType?: string | null
-  aiSystemPrompt?: string | null
-  displayOrder: number
-}
-
-export type SubcategoryNodeInput = {
-  id: string | null
-  name: string
-  displayOrder: number
-  topics: TopicNodeInput[]
-}
-
-export type CategoryNodeInput = {
-  id: string | null
-  name: string
-  displayOrder: number
-  subcategories: SubcategoryNodeInput[]
-}
-
-export type UpdateTreeInput = {
-  categories: CategoryNodeInput[]
-}
-
 // API functions
 export const getSubjects = async (domainId: string): Promise<{ subjects: SubjectWithStats[] }> => {
   const res = await api.api.subjects.$get({
@@ -109,7 +68,7 @@ export const getSubjects = async (domainId: string): Promise<{ subjects: Subject
   if (!res.ok) {
     throw new Error("科目の取得に失敗しました")
   }
-  return res.json()
+  return res.json() as Promise<{ subjects: SubjectWithStats[] }>
 }
 
 export const getSubject = async (id: string): Promise<{ subject: Subject }> => {
@@ -120,12 +79,12 @@ export const getSubject = async (id: string): Promise<{ subject: Subject }> => {
     if (res.status === 404) throw new Error("科目が見つかりません")
     throw new Error("科目の取得に失敗しました")
   }
-  return res.json()
+  return res.json() as Promise<{ subject: Subject }>
 }
 
 export const createSubject = async (
   domainId: string,
-  data: CreateSubjectInput
+  data: CreateSubjectRequest
 ): Promise<{ subject: Subject }> => {
   const res = await api.api["study-domains"][":domainId"].subjects.$post({
     param: { domainId },
@@ -135,12 +94,12 @@ export const createSubject = async (
     const error = await res.json()
     throw new Error((error as { error?: string }).error ?? "科目の作成に失敗しました")
   }
-  return res.json()
+  return res.json() as Promise<{ subject: Subject }>
 }
 
 export const updateSubject = async (
   id: string,
-  data: UpdateSubjectInput
+  data: UpdateSubjectRequest
 ): Promise<{ subject: Subject }> => {
   const res = await api.api.subjects[":id"].$patch({
     param: { id },
@@ -150,7 +109,7 @@ export const updateSubject = async (
     const error = await res.json()
     throw new Error((error as { error?: string }).error ?? "科目の更新に失敗しました")
   }
-  return res.json()
+  return res.json() as Promise<{ subject: Subject }>
 }
 
 export const deleteSubject = async (id: string): Promise<{ success: boolean }> => {
@@ -161,7 +120,7 @@ export const deleteSubject = async (id: string): Promise<{ success: boolean }> =
     const error = await res.json()
     throw new Error((error as { error?: string }).error ?? "科目の削除に失敗しました")
   }
-  return res.json()
+  return res.json() as Promise<{ success: boolean }>
 }
 
 export const getSubjectTree = async (id: string): Promise<{ tree: TreeResponse }> => {
@@ -172,12 +131,12 @@ export const getSubjectTree = async (id: string): Promise<{ tree: TreeResponse }
     if (res.status === 404) throw new Error("科目が見つかりません")
     throw new Error("ツリーの取得に失敗しました")
   }
-  return res.json()
+  return res.json() as Promise<{ tree: TreeResponse }>
 }
 
 export const updateSubjectTree = async (
   id: string,
-  tree: UpdateTreeInput
+  tree: UpdateTreeRequest
 ): Promise<{ tree: TreeResponse }> => {
   const res = await api.api.subjects[":id"].tree.$put({
     param: { id },
@@ -187,7 +146,7 @@ export const updateSubjectTree = async (
     const error = await res.json()
     throw new Error((error as { error?: string }).error ?? "ツリーの更新に失敗しました")
   }
-  return res.json()
+  return res.json() as Promise<{ tree: TreeResponse }>
 }
 
 export const importCSV = async (
@@ -206,19 +165,11 @@ export const importCSV = async (
     const error = await res.json()
     throw new Error((error as { error?: string }).error ?? "CSVインポートに失敗しました")
   }
-  return res.json()
-}
-
-// Search types
-export type TopicSearchResult = {
-  id: string
-  name: string
-  description: string | null
-  categoryId: string
-  categoryName: string
-  subjectId: string
-  subjectName: string
-  studyDomainId: string
+  return res.json() as Promise<{
+    success: boolean
+    imported: { categories: number; subcategories: number; topics: number }
+    errors: Array<{ line: number; message: string }>
+  }>
 }
 
 export const searchTopics = async (
@@ -233,5 +184,5 @@ export const searchTopics = async (
     throw new Error("検索に失敗しました")
   }
   const data = await res.json()
-  return data.results
+  return data.results as TopicSearchResult[]
 }

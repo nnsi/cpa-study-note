@@ -3,18 +3,10 @@ import { Link } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
 import { useNotesByTopic, useRefreshNote, useCreateManualNote } from "../hooks"
 import { api } from "@/lib/api-client"
-import type { NoteSource } from "@cpa-study/shared/schemas"
+import type { Note, NoteSource } from "@cpa-study/shared/schemas"
 
-type Note = {
-  id: string
-  sessionId: string | null
-  aiSummary: string | null
-  userMemo: string | null
-  keyPoints: string[]
-  stumbledPoints: string[]
-  createdAt: string
-  source?: NoteSource
-}
+// APIレスポンスのNote型（sourceはオプショナルで追加される場合がある）
+type NoteWithOptionalSource = Note & { source?: NoteSource }
 
 type GoodQuestion = {
   id: string
@@ -39,7 +31,7 @@ const useGoodQuestionsByTopic = (topicId: string) => {
 }
 
 // ノートのソースを判定するヘルパー
-const getNoteSource = (note: Note): NoteSource => {
+const getNoteSource = (note: NoteWithOptionalSource): NoteSource => {
   if (note.source) return note.source
   return note.sessionId ? "chat" : "manual"
 }
@@ -342,7 +334,7 @@ export const TopicNotes = ({ topicId }: Props) => {
   const [showDeepDiveQuestions, setShowDeepDiveQuestions] = useState(false)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 
-  const notes: Note[] = data?.notes || []
+  const notes: NoteWithOptionalSource[] = data?.notes || []
 
   // 深掘り質問をバッチ取得（N+1解消）
   const { data: goodQuestions, isLoading: isLoadingQuestions } =

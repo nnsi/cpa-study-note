@@ -1,12 +1,18 @@
 import { api } from "@/lib/api-client"
-import type { BookmarkTargetType, BookmarkWithDetails } from "@cpa-study/shared/schemas"
+import {
+  bookmarkListResponseSchema,
+  messageResponseSchema,
+  type BookmarkTargetType,
+  type BookmarkWithDetails,
+} from "@cpa-study/shared/schemas"
 
 export type { BookmarkTargetType, BookmarkWithDetails }
 
 export const getBookmarks = async (): Promise<{ bookmarks: BookmarkWithDetails[] }> => {
   const res = await api.api.bookmarks.$get()
   if (!res.ok) throw new Error("Failed to fetch bookmarks")
-  return res.json()
+  const data = await res.json()
+  return bookmarkListResponseSchema.parse(data)
 }
 
 export const addBookmark = async (
@@ -17,7 +23,8 @@ export const addBookmark = async (
     json: { targetType, targetId },
   })
   if (!res.ok) throw new Error("Failed to add bookmark")
-  return res.json()
+  const data = await res.json()
+  return messageResponseSchema.parse(data)
 }
 
 export const removeBookmark = async (

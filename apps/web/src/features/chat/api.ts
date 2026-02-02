@@ -1,5 +1,9 @@
+import { z } from "zod"
 import { api } from "@/lib/api-client"
 import { useAuthStore } from "@/lib/auth"
+import { chatMessageSchema, type ChatMessage } from "@cpa-study/shared/schemas"
+
+export type { ChatMessage }
 
 export type StreamChunk =
   | { type: "text"; content: string }
@@ -7,12 +11,17 @@ export type StreamChunk =
   | { type: "error"; error: string }
   | { type: "session_created"; sessionId: string }
 
-export const getMessages = async (sessionId: string) => {
+const messagesResponseSchema = z.object({
+  messages: z.array(chatMessageSchema),
+})
+
+export const getMessages = async (sessionId: string): Promise<{ messages: ChatMessage[] }> => {
   const res = await api.api.chat.sessions[":sessionId"].messages.$get({
     param: { sessionId },
   })
   if (!res.ok) throw new Error("Failed to fetch messages")
-  return res.json()
+  const data = await res.json()
+  return messagesResponseSchema.parse(data)
 }
 
 export async function* streamMessage(
