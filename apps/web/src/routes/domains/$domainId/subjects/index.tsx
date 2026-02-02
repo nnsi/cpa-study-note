@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from "react"
 import { createFileRoute, Link } from "@tanstack/react-router"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { requireAuth } from "@/lib/auth"
 import { PageWrapper } from "@/components/layout"
 import { getColorClass } from "@/lib/colorClasses"
-import { getStudyDomain } from "@/features/study-domain/api"
+import { getStudyDomain, bulkImportCSV } from "@/features/study-domain/api"
 import {
   getSubjects,
   getSubjectTree,
@@ -15,6 +15,7 @@ import {
 import { filterTopics, type FilteredTopic } from "@/features/review/api"
 import { api } from "@/lib/api-client"
 import { useDebounce } from "@/lib/hooks/useDebounce"
+import { BulkCSVImporter } from "@/features/subject/components/BulkCSVImporter"
 
 export const Route = createFileRoute("/domains/$domainId/subjects/")({
   beforeLoad: requireAuth,
@@ -23,12 +24,28 @@ export const Route = createFileRoute("/domains/$domainId/subjects/")({
 
 function SubjectsPage() {
   const { domainId } = Route.useParams()
+  const queryClient = useQueryClient()
   const [searchQuery, setSearchQuery] = useState("")
   const [isSearchFocused, setIsSearchFocused] = useState(false)
   const [expandedSubjectId, setExpandedSubjectId] = useState<string | null>(null)
   const [expandedCategoryIds, setExpandedCategoryIds] = useState<Set<string>>(new Set())
+  const [showCSVImporter, setShowCSVImporter] = useState(false)
+  const [isImporting, setIsImporting] = useState(false)
   const searchRef = useRef<HTMLDivElement>(null)
   const debouncedQuery = useDebounce(searchQuery, 300)
+
+  const handleCSVImport = async (csv: string) => {
+    setIsImporting(true)
+    try {
+      const result = await bulkImportCSV(domainId, csv)
+      if (result.success) {
+        queryClient.invalidateQueries({ queryKey: ["subjects"] })
+      }
+      return result
+    } finally {
+      setIsImporting(false)
+    }
+  }
 
   // Click outside to close search results
   useEffect(() => {
@@ -178,7 +195,18 @@ function SubjectsPage() {
             <span>/</span>
             <span>{domainData?.studyDomain.name ?? "..."}</span>
           </div>
-          <h1 className="heading-serif text-2xl lg:text-3xl">科目一覧</h1>
+          <div className="flex items-center justify-between">
+            <h1 className="heading-serif text-2xl lg:text-3xl">科目一覧</h1>
+            <button
+              onClick={() => setShowCSVImporter(true)}
+              className="btn-secondary text-sm"
+            >
+              <svg className="size-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+              </svg>
+              CSVインポート
+            </button>
+          </div>
         </div>
 
         {/* Search Box */}
@@ -435,6 +463,15 @@ function SubjectsPage() {
           </div>
         )}
       </div>
+
+      {/* CSV Importer Modal */}
+      {showCSVImporter && (
+        <BulkCSVImporter
+          onImport={handleCSVImport}
+          onClose={() => setShowCSVImporter(false)}
+          isLoading={isImporting}
+        />
+      )}
     </PageWrapper>
   )
 }

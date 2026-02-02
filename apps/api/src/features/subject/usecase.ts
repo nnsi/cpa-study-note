@@ -404,3 +404,126 @@ export const importCSVToSubject = async (
     errors,
   })
 }
+
+export type BulkCSVImportResponse = {
+  success: boolean
+  imported: {
+    subjects: number
+    categories: number
+    topics: number
+  }
+  errors: Array<{ line: number; message: string }>
+}
+
+/**
+ * Bulk import CSV data into a study domain
+ * Creates subjects if they don't exist, then imports categories/topics
+ * CSV format: 科目,カテゴリ,論点
+ */
+export const bulkImportCSVToStudyDomain = async (
+  deps: TreeUseCaseDeps,
+  userId: string,
+  studyDomainId: string,
+  csvContent: string
+): Promise<Result<BulkCSVImportResponse, CSVImportError>> => {
+  // 1. Verify study domain ownership
+  const ownsStudyDomain = await deps.subjectRepo.verifyStudyDomainOwnership(studyDomainId, userId)
+  if (!ownsStudyDomain) {
+    return err("NOT_FOUND")
+  }
+
+  // 2. Parse CSV
+  const { rows, errors } = parseCSV(csvContent)
+
+  if (rows.length === 0) {
+    return ok({
+      success: false,
+      imported: { subjects: 0, categories: 0, topics: 0 },
+      errors: errors.length > 0 ? errors : [{ line: 0, message: "インポートするデータがありません" }],
+    })
+  }
+
+  // 3. Group rows by subject name
+  const subjectMap = new Map<string, typeof rows>()
+  for (const row of rows) {
+    const subjectName = row.subject
+    if (!subjectMap.has(subjectName)) {
+      subjectMap.set(subjectName, [])
+    }
+    subjectMap.get(subjectName)!.push(row)
+  }
+
+  // 4. Get existing subjects in this domain
+  const existingSubjects = await deps.subjectRepo.findByStudyDomainId(studyDomainId, userId)
+  const subjectByName = new Map(existingSubjects.map((s) => [s.name.toLowerCase(), s]))
+
+  // 5. Process each subject group
+  let totalSubjects = 0
+  let totalCategories = 0
+  let totalTopics = 0
+
+  for (const [subjectName, subjectRows] of subjectMap) {
+    let subject: Subject | null | undefined = subjectByName.get(subjectName.toLowerCase())
+
+    // Create subject if it doesn't exist
+    if (!subject) {
+      const createResult = await deps.subjectRepo.create({
+        userId,
+        studyDomainId,
+        name: subjectName,
+        description: null,
+        emoji: null,
+        color: null,
+        displayOrder: existingSubjects.length + totalSubjects,
+      })
+      subject = await deps.subjectRepo.findById(createResult.id, userId)
+      if (!subject) {
+        continue // Should not happen
+      }
+      totalSubjects++
+    }
+
+    // Get existing tree for this subject
+    const existingTreeResult = await getSubjectTree(deps, userId, subject.id)
+    if (!existingTreeResult.ok) {
+      continue
+    }
+
+    // Convert rows to tree (subject field is ignored in convertToTree)
+    const importedTree = convertToTree(subjectRows)
+
+    // Merge with existing
+    const existingTreeForMerge = {
+      categories: existingTreeResult.value.categories.map((cat) => ({
+        id: cat.id as string | null,
+        name: cat.name,
+        displayOrder: cat.displayOrder,
+        topics: cat.topics.map((topic) => ({
+          id: topic.id as string | null,
+          name: topic.name,
+          displayOrder: topic.displayOrder,
+        })),
+      })),
+    }
+    const mergedTree = mergeTree(existingTreeForMerge, importedTree)
+
+    // Update tree
+    await updateSubjectTree(deps, userId, subject.id, mergedTree)
+
+    // Count imported items
+    for (const cat of importedTree.categories) {
+      totalCategories++
+      totalTopics += cat.topics.length
+    }
+  }
+
+  return ok({
+    success: true,
+    imported: {
+      subjects: totalSubjects,
+      categories: totalCategories,
+      topics: totalTopics,
+    },
+    errors,
+  })
+}

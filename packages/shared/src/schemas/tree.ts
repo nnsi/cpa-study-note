@@ -85,3 +85,21 @@ export const csvImportResponseSchema = z.object({
 })
 
 export type CSVImportResponse = z.infer<typeof csvImportResponseSchema>
+
+// Bulk CSV import response schema (for study domain level import)
+export const bulkCSVImportResponseSchema = z.object({
+  success: z.boolean(),
+  imported: z.object({
+    subjects: z.number(),
+    categories: z.number(),
+    topics: z.number(),
+  }),
+  errors: z.array(
+    z.object({
+      line: z.number(),
+      message: z.string(),
+    })
+  ),
+})
+
+export type BulkCSVImportResponse = z.infer<typeof bulkCSVImportResponseSchema>

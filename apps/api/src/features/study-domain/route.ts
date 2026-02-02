@@ -1,5 +1,6 @@
 import { Hono } from "hono"
 import { zValidator } from "@hono/zod-validator"
+import { z } from "zod"
 import type { Db } from "@cpa-study/db"
 import {
   createStudyDomainRequestSchema,
@@ -15,6 +16,8 @@ import {
   updateStudyDomain,
   deleteStudyDomain,
 } from "./usecase"
+import { createSubjectRepository } from "../subject/repository"
+import { bulkImportCSVToStudyDomain } from "../subject/usecase"
 
 type StudyDomainDeps = {
   env: Env
@@ -95,6 +98,28 @@ export const studyDomainRoutes = ({ db }: StudyDomainDeps) => {
 
       return c.json({ success: true })
     })
+
+    // Bulk import CSV to study domain (creates subjects, categories, topics)
+    .post(
+      "/:id/import-csv",
+      authMiddleware,
+      zValidator("json", z.object({ csv: z.string() })),
+      async (c) => {
+        const user = c.get("user")
+        const id = c.req.param("id")
+        const { csv } = c.req.valid("json")
+
+        const subjectRepo = createSubjectRepository(db)
+        const treeDeps = { subjectRepo, db }
+        const result = await bulkImportCSVToStudyDomain(treeDeps, user.id, id, csv)
+
+        if (!result.ok) {
+          return c.json({ error: "学習領域が見つかりません" }, 404)
+        }
+
+        return c.json(result.value)
+      }
+    )
 
   return app
 }

@@ -83,3 +83,28 @@ export const deleteStudyDomain = async (
   }
   return res.json()
 }
+
+export type BulkCSVImportResult = {
+  success: boolean
+  imported: {
+    subjects: number
+    categories: number
+    topics: number
+  }
+  errors: Array<{ line: number; message: string }>
+}
+
+export const bulkImportCSV = async (
+  studyDomainId: string,
+  csv: string
+): Promise<BulkCSVImportResult> => {
+  const res = await api.api["study-domains"][":id"]["import-csv"].$post({
+    param: { id: studyDomainId },
+    json: { csv },
+  })
+  if (!res.ok) {
+    const error = await res.json()
+    throw new Error((error as { error?: string }).error ?? "CSVインポートに失敗しました")
+  }
+  return res.json() as Promise<BulkCSVImportResult>
+}
