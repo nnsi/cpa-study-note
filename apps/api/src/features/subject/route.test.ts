@@ -25,7 +25,7 @@ const createTestApp = (env: Env, db: Db) => {
       c.env = env
       return next()
     })
-    .route("/api", subjectRoutes({ env, db, txRunner }))
+    .route("/api/subjects", subjectRoutes({ env, db, txRunner }))
 }
 
 type TestApp = ReturnType<typeof createTestApp>
@@ -192,9 +192,9 @@ describe("Subject Routes", () => {
     })
   })
 
-  describe("POST /api/study-domains/:domainId/subjects", () => {
+  describe("POST /api/subjects/study-domains/:domainId", () => {
     it("should return 401 without auth", async () => {
-      const res = await client.api["study-domains"][":domainId"].subjects.$post({
+      const res = await client.api.subjects["study-domains"][":domainId"].$post({
         param: { domainId: "test-domain" },
         json: { name: "New Subject" },
       })
@@ -207,7 +207,7 @@ describe("Subject Routes", () => {
       env.DEV_USER_ID = userId
       const { id: domainId } = createTestStudyDomain(db, userId)
 
-      const res = await client.api["study-domains"][":domainId"].subjects.$post(
+      const res = await client.api.subjects["study-domains"][":domainId"].$post(
         {
           param: { domainId },
           json: {
@@ -232,7 +232,7 @@ describe("Subject Routes", () => {
       const { id: userId } = createTestUser(db)
       env.DEV_USER_ID = userId
 
-      const res = await client.api["study-domains"][":domainId"].subjects.$post(
+      const res = await client.api.subjects["study-domains"][":domainId"].$post(
         {
           param: { domainId: "non-existent" },
           json: { name: "New Subject" },
@@ -249,7 +249,7 @@ describe("Subject Routes", () => {
       env.DEV_USER_ID = user2Id
       const { id: domainId } = createTestStudyDomain(db, user1Id)
 
-      const res = await client.api["study-domains"][":domainId"].subjects.$post(
+      const res = await client.api.subjects["study-domains"][":domainId"].$post(
         {
           param: { domainId },
           json: { name: "Hijacked Subject" },
@@ -265,7 +265,7 @@ describe("Subject Routes", () => {
       env.DEV_USER_ID = userId
       const { id: domainId } = createTestStudyDomain(db, userId)
 
-      const res = await client.api["study-domains"][":domainId"].subjects.$post(
+      const res = await client.api.subjects["study-domains"][":domainId"].$post(
         {
           param: { domainId },
           json: { name: "" }, // Empty name

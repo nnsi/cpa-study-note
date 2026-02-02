@@ -495,4 +495,190 @@ describe("E2E: Multi-user boundary tests", () => {
       expect(res.status).toBe(404)
     })
   })
+
+  describe("Soft delete (deletedAt) boundary", () => {
+    // 論理削除用のテストデータID
+    const deletedSubjectId = "subject-deleted"
+    const deletedCategoryId = "category-deleted"
+    const deletedTopicId = "topic-deleted"
+
+    beforeAll(() => {
+      const now = new Date()
+      const deletedAt = new Date(Date.now() - 3600000) // 1時間前に削除
+
+      // 論理削除された科目を作成
+      ctx.db.insert(schema.subjects).values({
+        id: deletedSubjectId,
+        userId: userAId,
+        studyDomainId: userAStudyDomainId,
+        name: "削除された科目",
+        displayOrder: 99,
+        createdAt: now,
+        updatedAt: now,
+        deletedAt: deletedAt,
+      }).run()
+
+      // 論理削除された科目内のカテゴリ
+      ctx.db.insert(schema.categories).values({
+        id: deletedCategoryId,
+        userId: userAId,
+        subjectId: deletedSubjectId,
+        name: "削除された科目のカテゴリ",
+        depth: 1,
+        parentId: null,
+        displayOrder: 1,
+        createdAt: now,
+        updatedAt: now,
+        deletedAt: deletedAt,
+      }).run()
+
+      // 論理削除された科目内のトピック
+      ctx.db.insert(schema.topics).values({
+        id: deletedTopicId,
+        userId: userAId,
+        categoryId: deletedCategoryId,
+        name: "削除されたトピック検索テスト",
+        description: "このトピックは論理削除済み",
+        displayOrder: 1,
+        createdAt: now,
+        updatedAt: now,
+        deletedAt: deletedAt,
+      }).run()
+
+      // 論理削除されたトピックの進捗データ
+      ctx.db.insert(schema.userTopicProgress).values({
+        id: "progress-deleted-topic",
+        userId: userAId,
+        topicId: deletedTopicId,
+        understood: true,
+        lastAccessedAt: now,
+        questionCount: 10,
+        goodQuestionCount: 5,
+        createdAt: now,
+        updatedAt: now,
+      }).run()
+    })
+
+    it("should not return soft-deleted subjects in list", async () => {
+      // UserAの科目一覧を取得
+      const res = await makeRequest(`/api/subjects?studyDomainId=${userAStudyDomainId}`, {
+        userId: userAId,
+      })
+
+      expect(res.status).toBe(200)
+      const data = await res.json() as { subjects: Array<{ id: string; name: string }> }
+
+      // 論理削除された科目が含まれていないことを確認
+      const hasDeletedSubject = data.subjects.some((s) => s.id === deletedSubjectId)
+      expect(hasDeletedSubject).toBe(false)
+
+      // 通常の科目は含まれていることを確認
+      const hasNormalSubject = data.subjects.some((s) => s.id === userASubjectId)
+      expect(hasNormalSubject).toBe(true)
+    })
+
+    it("should return 404 when directly accessing soft-deleted subject", async () => {
+      // 論理削除された科目に直接アクセス
+      const res = await makeRequest(`/api/subjects/${deletedSubjectId}`, {
+        userId: userAId,
+      })
+
+      expect(res.status).toBe(404)
+    })
+
+    it("should return 404 when accessing soft-deleted subject tree", async () => {
+      // 論理削除された科目のツリーにアクセス
+      const res = await makeRequest(`/api/subjects/${deletedSubjectId}/tree`, {
+        userId: userAId,
+      })
+
+      expect(res.status).toBe(404)
+    })
+
+    it("should return 404 when accessing soft-deleted subject detail", async () => {
+      // 論理削除された科目の詳細にアクセス
+      const res = await makeRequest(`/api/subjects/${deletedSubjectId}/detail`, {
+        userId: userAId,
+      })
+
+      expect(res.status).toBe(404)
+    })
+
+    it("should not return soft-deleted topics in search results", async () => {
+      // 論理削除されたトピック名で検索
+      const res = await makeRequest(`/api/subjects/search?q=削除されたトピック検索テスト&studyDomainId=${userAStudyDomainId}`, {
+        userId: userAId,
+      })
+
+      expect(res.status).toBe(200)
+      const data = await res.json() as { results: Array<{ id: string }> }
+
+      // 論理削除されたトピックが含まれていないことを確認
+      const hasDeletedTopic = data.results.some((t) => t.id === deletedTopicId)
+      expect(hasDeletedTopic).toBe(false)
+    })
+
+    it("should not return soft-deleted topics in filter results", async () => {
+      // understood=true でフィルタ（論理削除されたトピックもunderstood=trueだが含まれないはず）
+      const res = await makeRequest("/api/subjects/filter?understood=true", {
+        userId: userAId,
+      })
+
+      expect(res.status).toBe(200)
+      const data = await res.json() as { topics: Array<{ id: string }> }
+
+      // 論理削除されたトピックが含まれていないことを確認
+      const hasDeletedTopic = data.topics.some((t) => t.id === deletedTopicId)
+      expect(hasDeletedTopic).toBe(false)
+    })
+
+    it("should not return soft-deleted topics progress in recent list", async () => {
+      // 最近アクセスしたトピック一覧を取得
+      const res = await makeRequest("/api/subjects/progress/recent", {
+        userId: userAId,
+      })
+
+      expect(res.status).toBe(200)
+      const data = await res.json() as { topics: Array<{ topicId: string }> }
+
+      // 論理削除されたトピックが含まれていないことを確認
+      const hasDeletedTopic = data.topics.some((t) => t.topicId === deletedTopicId)
+      expect(hasDeletedTopic).toBe(false)
+    })
+
+    it("should not include soft-deleted topics in subject progress stats", async () => {
+      // 科目別進捗統計を取得
+      const res = await makeRequest("/api/subjects/progress/subjects", {
+        userId: userAId,
+      })
+
+      expect(res.status).toBe(200)
+      const data = await res.json() as { stats: Array<{ subjectId: string }> }
+
+      // 論理削除された科目が含まれていないことを確認
+      const hasDeletedSubject = data.stats.some((s) => s.subjectId === deletedSubjectId)
+      expect(hasDeletedSubject).toBe(false)
+    })
+
+    it("should return 404 when updating soft-deleted subject", async () => {
+      // 論理削除された科目を更新しようとする
+      const res = await makeRequest(`/api/subjects/${deletedSubjectId}`, {
+        method: "PATCH",
+        userId: userAId,
+        body: { name: "復活させようとした科目" },
+      })
+
+      expect(res.status).toBe(404)
+    })
+
+    it("should return 404 when deleting already soft-deleted subject", async () => {
+      // 既に論理削除された科目を削除しようとする
+      const res = await makeRequest(`/api/subjects/${deletedSubjectId}`, {
+        method: "DELETE",
+        userId: userAId,
+      })
+
+      expect(res.status).toBe(404)
+    })
+  })
 })

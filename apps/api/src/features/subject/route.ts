@@ -55,7 +55,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectDeps) => {
 
     // 科目一覧（統計情報付き）
     .get(
-      "/subjects",
+      "/",
       authMiddleware,
       zValidator("query", listSubjectsQuerySchema),
       async (c) => {
@@ -69,7 +69,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectDeps) => {
 
     // 論点フィルタ
     .get(
-      "/subjects/filter",
+      "/filter",
       authMiddleware,
       zValidator("query", topicFilterRequestSchema),
       async (c) => {
@@ -82,7 +82,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectDeps) => {
 
     // 論点検索
     .get(
-      "/subjects/search",
+      "/search",
       authMiddleware,
       zValidator("query", topicSearchRequestSchema),
       async (c) => {
@@ -95,37 +95,37 @@ export const subjectRoutes = ({ db, txRunner }: SubjectDeps) => {
     )
 
     // ユーザーの全進捗取得
-    .get("/subjects/progress/me", authMiddleware, async (c) => {
+    .get("/progress/me", authMiddleware, async (c) => {
       const user = c.get("user")
       const progress = await listUserProgress(deps, user.id)
       return c.json({ progress })
     })
 
     // 科目別進捗統計
-    .get("/subjects/progress/subjects", authMiddleware, async (c) => {
+    .get("/progress/subjects", authMiddleware, async (c) => {
       const user = c.get("user")
       const stats = await getSubjectProgressStats(deps, user.id)
       return c.json({ stats })
     })
 
     // 最近触った論点リスト
-    .get("/subjects/progress/recent", authMiddleware, async (c) => {
+    .get("/progress/recent", authMiddleware, async (c) => {
       const user = c.get("user")
       const topics = await listRecentTopics(deps, user.id, 10)
       return c.json({ topics })
     })
 
     // Get subject by ID
-    .get("/subjects/:id", authMiddleware, async (c) => {
+    .get("/:id", authMiddleware, async (c) => {
       const user = c.get("user")
       const id = c.req.param("id")
       const result = await getSubject(deps, user.id, id)
       return handleResultWith(c, result, (subject) => ({ subject }))
     })
 
-    // Create subject under a study domain
+    // Create subject under a study domain (別プレフィックスなのでそのまま)
     .post(
-      "/study-domains/:domainId/subjects",
+      "/study-domains/:domainId",
       authMiddleware,
       zValidator("json", createSubjectRequestSchema),
       async (c) => {
@@ -149,7 +149,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectDeps) => {
 
     // Update subject
     .patch(
-      "/subjects/:id",
+      "/:id",
       authMiddleware,
       zValidator("json", updateSubjectRequestSchema),
       async (c) => {
@@ -162,7 +162,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectDeps) => {
     )
 
     // Delete subject (soft delete)
-    .delete("/subjects/:id", authMiddleware, async (c) => {
+    .delete("/:id", authMiddleware, async (c) => {
       const user = c.get("user")
       const id = c.req.param("id")
       const result = await deleteSubject(deps, user.id, id)
@@ -175,7 +175,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectDeps) => {
     })
 
     // Get subject tree
-    .get("/subjects/:id/tree", authMiddleware, async (c) => {
+    .get("/:id/tree", authMiddleware, async (c) => {
       const user = c.get("user")
       const id = c.req.param("id")
       const result = await getSubjectTree(treeDeps, user.id, id)
@@ -184,7 +184,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectDeps) => {
 
     // Update subject tree
     .put(
-      "/subjects/:id/tree",
+      "/:id/tree",
       authMiddleware,
       zValidator("json", updateTreeRequestSchema),
       async (c) => {
@@ -205,7 +205,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectDeps) => {
 
     // Import CSV data
     .post(
-      "/subjects/:id/import",
+      "/:id/import",
       authMiddleware,
       zValidator("json", csvImportRequestSchema),
       async (c) => {
@@ -219,7 +219,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectDeps) => {
     )
 
     // 科目詳細（統計情報付き）
-    .get("/subjects/:subjectId/detail", authMiddleware, async (c) => {
+    .get("/:subjectId/detail", authMiddleware, async (c) => {
       const subjectId = c.req.param("subjectId")
       const user = c.get("user")
       const subject = await getSubjectWithStats(deps, user.id, subjectId)
@@ -232,7 +232,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectDeps) => {
     })
 
     // カテゴリ一覧（階層構造）
-    .get("/subjects/:subjectId/categories", authMiddleware, async (c) => {
+    .get("/:subjectId/categories", authMiddleware, async (c) => {
       const subjectId = c.req.param("subjectId")
       const user = c.get("user")
       const categories = await listCategoriesHierarchy(deps, user.id, subjectId)
@@ -240,7 +240,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectDeps) => {
     })
 
     // カテゴリの論点一覧
-    .get("/subjects/:subjectId/categories/:categoryId/topics", authMiddleware, async (c) => {
+    .get("/:subjectId/categories/:categoryId/topics", authMiddleware, async (c) => {
       const subjectId = c.req.param("subjectId")
       const categoryId = c.req.param("categoryId")
       const user = c.get("user")
@@ -256,7 +256,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectDeps) => {
     })
 
     // 論点詳細（進捗含む）
-    .get("/subjects/:subjectId/topics/:topicId", authMiddleware, async (c) => {
+    .get("/:subjectId/topics/:topicId", authMiddleware, async (c) => {
       const subjectId = c.req.param("subjectId")
       const topicId = c.req.param("topicId")
       const user = c.get("user")
@@ -278,7 +278,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectDeps) => {
 
     // 進捗更新
     .put(
-      "/subjects/:subjectId/topics/:topicId/progress",
+      "/:subjectId/topics/:topicId/progress",
       authMiddleware,
       zValidator("json", updateProgressRequestSchema),
       async (c) => {
@@ -300,7 +300,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectDeps) => {
     )
 
     // チェック履歴取得
-    .get("/subjects/:subjectId/topics/:topicId/check-history", authMiddleware, async (c) => {
+    .get("/:subjectId/topics/:topicId/check-history", authMiddleware, async (c) => {
       const subjectId = c.req.param("subjectId")
       const topicId = c.req.param("topicId")
       const user = c.get("user")

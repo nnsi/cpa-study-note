@@ -67,3 +67,13 @@ export const chatMessagesWrapperResponseSchema = z.object({
 })
 
 export type ChatMessagesWrapperResponse = z.infer<typeof chatMessagesWrapperResponseSchema>
+
+// Good question response (for N+1 batch fetch)
+export const goodQuestionResponseSchema = z.object({
+  id: z.string(),
+  sessionId: z.string(),
+  content: z.string(),
+  createdAt: z.string().datetime(),
+})
+
+export type GoodQuestionResponse = z.infer<typeof goodQuestionResponseSchema>

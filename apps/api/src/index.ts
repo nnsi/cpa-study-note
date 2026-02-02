@@ -111,7 +111,7 @@ const createApp = (env: Env) => {
     .route("/api/images", createImageFeature(env, db))
     .route("/api/metrics", createMetricsFeature(env, db))
     .route("/api/study-domains", createStudyDomainFeature(env, db))
-    .route("/api", createSubjectFeature(env, db))
+    .route("/api/subjects", createSubjectFeature(env, db))
     .route("/api/bookmarks", createBookmarkFeature(env, db))
     .get("/api/health", (c) => c.json({ status: "ok" }))
     .onError((error, c) => {

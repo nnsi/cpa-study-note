@@ -3,6 +3,7 @@ import type { ChatRepository, ChatMessage } from "./repository"
 import type { SubjectRepository } from "../subject/repository"
 import { buildSystemPrompt, buildEvaluationPrompt } from "./domain/prompts"
 import { parseLLMJson } from "@cpa-study/shared"
+import type { GoodQuestionResponse } from "@cpa-study/shared/schemas"
 import { z } from "zod"
 import { ok, err, type Result } from "@/shared/lib/result"
 import { notFound, forbidden, type AppError } from "@/shared/lib/errors"
@@ -359,13 +360,6 @@ export async function* sendMessageWithNewSession(
 
   // メッセージ保存後に"done"を送信
   yield { type: "done" as const, messageId: userMessage.id }
-}
-
-type GoodQuestionResponse = {
-  id: string
-  sessionId: string
-  content: string
-  createdAt: string
 }
 
 // トピックに紐づくgood質問を一括取得（N+1解消用）

@@ -4,7 +4,7 @@ import type { Db } from "@cpa-study/db"
 import { uploadImageRequestSchema } from "@cpa-study/shared/schemas"
 import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
-import { createAIAdapter } from "@/shared/lib/ai"
+import { createAIAdapter, resolveAIConfig } from "@/shared/lib/ai"
 import { createImageRepository } from "./repository"
 import {
   createUploadUrl,
@@ -25,6 +25,7 @@ type ImageDeps = {
 
 export const imageRoutes = ({ env, db }: ImageDeps) => {
   const imageRepo = createImageRepository(db)
+  const aiConfig = resolveAIConfig(env.ENVIRONMENT)
 
   const app = new Hono<{ Bindings: Env; Variables: Variables }>()
     // アップロードURL取得
@@ -81,7 +82,7 @@ export const imageRoutes = ({ env, db }: ImageDeps) => {
       })
 
       const result = await performOCR(
-        { imageRepo, aiAdapter, r2: env.R2, apiBaseUrl: env.API_BASE_URL },
+        { imageRepo, aiAdapter, aiConfig, r2: env.R2 },
         user.id,
         imageId
       )

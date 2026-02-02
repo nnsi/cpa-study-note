@@ -43,6 +43,13 @@ const createMockAIAdapter = (overrides: Partial<AIAdapter> = {}): AIAdapter => (
   ...overrides,
 })
 
+const createMockAIConfig = () => ({
+  chat: { model: "test-model", temperature: 0.7, maxTokens: 2000 },
+  evaluation: { model: "test-model", temperature: 0, maxTokens: 100 },
+  noteSummary: { model: "test-model", temperature: 0.3, maxTokens: 1000 },
+  ocr: { model: "openai/gpt-4o-mini", temperature: 0, maxTokens: 2000 },
+})
+
 // PNG マジックバイト
 const createPngBuffer = (): ArrayBuffer => {
   const bytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
@@ -243,7 +250,7 @@ describe("Image UseCase", () => {
       })
 
       const result = await performOCR(
-        { imageRepo, aiAdapter, r2, apiBaseUrl: "https://api.example.com" },
+        { imageRepo, aiAdapter, aiConfig: createMockAIConfig(), r2 },
         "user-1",
         "image-1"
       )
@@ -267,7 +274,7 @@ describe("Image UseCase", () => {
       const r2 = createMockR2Bucket()
 
       const result = await performOCR(
-        { imageRepo, aiAdapter, r2, apiBaseUrl: "https://api.example.com" },
+        { imageRepo, aiAdapter, aiConfig: createMockAIConfig(), r2 },
         "user-1",
         "non-existent"
       )
@@ -287,7 +294,7 @@ describe("Image UseCase", () => {
       const r2 = createMockR2Bucket()
 
       const result = await performOCR(
-        { imageRepo, aiAdapter, r2, apiBaseUrl: "https://api.example.com" },
+        { imageRepo, aiAdapter, aiConfig: createMockAIConfig(), r2 },
         "user-1",
         "image-1"
       )
@@ -307,7 +314,7 @@ describe("Image UseCase", () => {
       const r2 = createMockR2Bucket() // 空のR2
 
       const result = await performOCR(
-        { imageRepo, aiAdapter, r2, apiBaseUrl: "https://api.example.com" },
+        { imageRepo, aiAdapter, aiConfig: createMockAIConfig(), r2 },
         "user-1",
         "image-1"
       )

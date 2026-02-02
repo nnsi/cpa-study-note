@@ -3,8 +3,8 @@ import type {
   CreateSubjectRequest,
   UpdateSubjectRequest,
   TopicSearchResult,
-} from "@cpa-study/shared/schemas"
-import type {
+  SubjectResponse,
+  SubjectWithStats,
   TopicNodeResponse,
   SubcategoryNodeResponse,
   CategoryNodeResponse,
@@ -32,33 +32,9 @@ export type UpdateSubjectInput = UpdateSubjectRequest
 // Re-export search result type
 export type { TopicSearchResult }
 
-// Subject types - based on actual API response (without userId for list, with userId for single)
-export type Subject = {
-  id: string
-  userId: string
-  studyDomainId: string
-  name: string
-  description: string | null
-  emoji: string | null
-  color: string | null
-  displayOrder: number
-  createdAt: string
-  updatedAt: string
-}
-
-export type SubjectWithStats = {
-  id: string
-  studyDomainId: string
-  name: string
-  description: string | null
-  emoji: string | null
-  color: string | null
-  displayOrder: number
-  createdAt: string
-  updatedAt: string
-  categoryCount: number
-  topicCount: number
-}
+// Re-export subject types from shared schema
+export type Subject = SubjectResponse
+export type { SubjectWithStats }
 
 // API functions
 export const getSubjects = async (domainId: string): Promise<{ subjects: SubjectWithStats[] }> => {
@@ -86,7 +62,7 @@ export const createSubject = async (
   domainId: string,
   data: CreateSubjectRequest
 ): Promise<{ subject: Subject }> => {
-  const res = await api.api["study-domains"][":domainId"].subjects.$post({
+  const res = await api.api.subjects["study-domains"][":domainId"].$post({
     param: { domainId },
     json: data,
   })

@@ -1,5 +1,5 @@
 import type { ImageRepository } from "./repository"
-import type { AIAdapter } from "@/shared/lib/ai"
+import type { AIAdapter, AIConfig } from "@/shared/lib/ai"
 import { ok, err, type Result } from "@/shared/lib/result"
 import { notFound, forbidden, badRequest, type AppError } from "@/shared/lib/errors"
 
@@ -42,6 +42,7 @@ const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
 type ImageDeps = {
   imageRepo: ImageRepository
   aiAdapter: AIAdapter
+  aiConfig: AIConfig
   r2: R2Bucket
   apiBaseUrl: string
 }
@@ -143,11 +144,11 @@ export const uploadImage = async (
 
 // OCR実行
 export const performOCR = async (
-  deps: ImageDeps,
+  deps: Pick<ImageDeps, "imageRepo" | "aiAdapter" | "aiConfig" | "r2">,
   userId: string,
   imageId: string
 ): Promise<Result<{ imageId: string; ocrText: string }, AppError>> => {
-  const { imageRepo, aiAdapter, r2 } = deps
+  const { imageRepo, aiAdapter, aiConfig, r2 } = deps
 
   const image = await imageRepo.findById(imageId)
   if (!image) {
@@ -174,7 +175,7 @@ export const performOCR = async (
 数値や計算式は正確に抽出してください。`
 
   const result = await aiAdapter.generateText({
-    model: "openai/gpt-4o-mini",
+    model: aiConfig.ocr.model,
     messages: [
       {
         role: "user",
@@ -182,8 +183,8 @@ export const performOCR = async (
         imageUrl,
       },
     ],
-    temperature: 0,
-    maxTokens: 2000,
+    temperature: aiConfig.ocr.temperature,
+    maxTokens: aiConfig.ocr.maxTokens,
   })
 
   await imageRepo.updateOcrText(imageId, result.content)
