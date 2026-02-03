@@ -4,7 +4,7 @@ import { z } from "zod"
 import type { Db } from "@cpa-study/db"
 import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
-import { handleResultWith } from "@/shared/lib/route-helpers"
+import { errorResponse } from "@/shared/lib/route-helpers"
 import { ok, type Result } from "@/shared/lib/result"
 import type { AppError } from "@/shared/lib/errors"
 import { createLearningRepository } from "./repository"
@@ -43,7 +43,8 @@ export const learningRoutes = ({ db }: LearningDeps) => {
       const user = c.get("user")
 
       const result = await touchTopic({ learningRepo }, user.id, topicId)
-      return handleResultWith(c, result, (progress) => ({ progress }))
+      if (!result.ok) return errorResponse(c, result.error)
+      return c.json({ progress: result.value })
     })
 
     // Get progress for a topic
@@ -52,7 +53,8 @@ export const learningRoutes = ({ db }: LearningDeps) => {
       const user = c.get("user")
 
       const result = await getProgress({ learningRepo }, user.id, topicId)
-      return handleResultWith(c, result, (progress) => ({ progress }))
+      if (!result.ok) return errorResponse(c, result.error)
+      return c.json({ progress: result.value })
     })
 
     // Update progress for a topic
@@ -66,7 +68,8 @@ export const learningRoutes = ({ db }: LearningDeps) => {
         const { understood } = c.req.valid("json")
 
         const result = await updateProgress({ learningRepo }, user.id, topicId, understood)
-        return handleResultWith(c, result, (progress) => ({ progress }))
+        if (!result.ok) return errorResponse(c, result.error)
+        return c.json({ progress: result.value })
       }
     )
 
@@ -76,7 +79,8 @@ export const learningRoutes = ({ db }: LearningDeps) => {
       const user = c.get("user")
 
       const result = await getCheckHistory({ learningRepo }, user.id, topicId)
-      return handleResultWith(c, result, (history) => ({ history }))
+      if (!result.ok) return errorResponse(c, result.error)
+      return c.json({ history: result.value })
     })
 
     // List recent topics
@@ -89,7 +93,8 @@ export const learningRoutes = ({ db }: LearningDeps) => {
         const { limit } = c.req.valid("query")
 
         const result = await listRecentTopics({ learningRepo }, user.id, limit)
-        return handleResultWith(c, result, (topics) => ({ topics }))
+        if (!result.ok) return errorResponse(c, result.error)
+        return c.json({ topics: result.value })
       }
     )
 
@@ -98,7 +103,8 @@ export const learningRoutes = ({ db }: LearningDeps) => {
       const user = c.get("user")
 
       const result = await listUserProgress({ learningRepo }, user.id)
-      return handleResultWith(c, result, (progress) => ({ progress }))
+      if (!result.ok) return errorResponse(c, result.error)
+      return c.json({ progress: result.value })
     })
 
     // Get subject progress stats
@@ -106,7 +112,8 @@ export const learningRoutes = ({ db }: LearningDeps) => {
       const user = c.get("user")
 
       const result = await getSubjectProgressStats(subjectRepo, user.id)
-      return handleResultWith(c, result, (stats) => ({ stats }))
+      if (!result.ok) return errorResponse(c, result.error)
+      return c.json({ stats: result.value })
     })
 
   return app

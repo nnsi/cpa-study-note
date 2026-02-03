@@ -7,7 +7,7 @@ import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
 import { createMetricsRepository } from "./repository"
 import { getDailyMetrics, createSnapshot, getTodayMetrics } from "./usecase"
-import { handleResult, handleResultWith } from "@/shared/lib/route-helpers"
+import { handleResult, errorResponse } from "@/shared/lib/route-helpers"
 
 type MetricsDeps = {
   env: Env
@@ -22,7 +22,8 @@ export const metricsRoutes = ({ env, db }: MetricsDeps) => {
     .get("/today", authMiddleware, async (c) => {
       const user = c.get("user")
       const result = await getTodayMetrics({ metricsRepo }, user.id, user.timezone)
-      return handleResultWith(c, result, (metrics) => ({ metrics }))
+      if (!result.ok) return errorResponse(c, result.error)
+      return c.json({ metrics: result.value })
     })
 
     // 日次メトリクス取得（タイムゾーン考慮）
@@ -36,7 +37,8 @@ export const metricsRoutes = ({ env, db }: MetricsDeps) => {
 
         const result = await getDailyMetrics({ metricsRepo }, user.id, from, to, user.timezone)
 
-        return handleResultWith(c, result, (metrics) => ({ metrics }))
+        if (!result.ok) return errorResponse(c, result.error)
+        return c.json({ metrics: result.value })
       }
     )
 
@@ -46,7 +48,8 @@ export const metricsRoutes = ({ env, db }: MetricsDeps) => {
 
       const result = await createSnapshot({ metricsRepo }, user.id)
 
-      return handleResultWith(c, result, (snapshot) => ({ snapshot }), 201)
+      if (!result.ok) return errorResponse(c, result.error)
+      return c.json({ snapshot: result.value }, 201)
     })
 
     // スナップショット作成（指定日）
@@ -60,7 +63,8 @@ export const metricsRoutes = ({ env, db }: MetricsDeps) => {
 
         const result = await createSnapshot({ metricsRepo }, user.id, date)
 
-        return handleResultWith(c, result, (snapshot) => ({ snapshot }), 201)
+        if (!result.ok) return errorResponse(c, result.error)
+        return c.json({ snapshot: result.value }, 201)
       }
     )
 

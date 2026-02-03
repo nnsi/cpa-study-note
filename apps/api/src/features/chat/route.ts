@@ -18,7 +18,7 @@ import {
   evaluateQuestion,
   listGoodQuestionsByTopic,
 } from "./usecase"
-import { handleResult, handleResultWith } from "@/shared/lib/route-helpers"
+import { handleResult, errorResponse } from "@/shared/lib/route-helpers"
 
 type ChatDeps = {
   env: Env
@@ -46,7 +46,8 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
           topicId
         )
 
-        return handleResultWith(c, result, (session) => ({ session }), 201)
+        if (!result.ok) return errorResponse(c, result.error)
+        return c.json({ session: result.value }, 201)
       }
     )
 
@@ -60,7 +61,8 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
 
         const result = await listSessionsByTopic({ chatRepo }, user.id, topicId)
 
-        return handleResultWith(c, result, (sessions) => ({ sessions }))
+        if (!result.ok) return errorResponse(c, result.error)
+        return c.json({ sessions: result.value })
       }
     )
 
@@ -74,7 +76,8 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
 
         const result = await listGoodQuestionsByTopic({ chatRepo }, user.id, topicId)
 
-        return handleResultWith(c, result, (questions) => ({ questions }))
+        if (!result.ok) return errorResponse(c, result.error)
+        return c.json({ questions: result.value })
       }
     )
 
@@ -84,7 +87,8 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
       const user = c.get("user")
 
       const result = await getSession({ chatRepo }, user.id, sessionId)
-      return handleResultWith(c, result, (session) => ({ session }))
+      if (!result.ok) return errorResponse(c, result.error)
+      return c.json({ session: result.value })
     })
 
     // メッセージ一覧
@@ -93,7 +97,8 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
       const user = c.get("user")
 
       const result = await listMessages({ chatRepo }, user.id, sessionId)
-      return handleResultWith(c, result, (messages) => ({ messages }))
+      if (!result.ok) return errorResponse(c, result.error)
+      return c.json({ messages: result.value })
     })
 
     // メッセージ送信（ストリーミング）
@@ -178,7 +183,8 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         result.value
       )
 
-      return handleResultWith(c, evalResult, (evaluation) => ({ quality: evaluation }))
+      if (!evalResult.ok) return errorResponse(c, evalResult.error)
+      return c.json({ quality: evalResult.value })
     })
 
   return app
