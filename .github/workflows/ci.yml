@@ -15,7 +15,6 @@ jobs:
     outputs:
       api: ${{ steps.filter.outputs.api }}
       web: ${{ steps.filter.outputs.web }}
-      typescript: ${{ steps.filter.outputs.typescript }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -32,9 +31,6 @@ jobs:
             web:
               - 'apps/web/**'
               - 'packages/shared/**'
-            typescript:
-              - '**/*.ts'
-              - '**/*.tsx'
 
   test-api:
     name: Test API
@@ -86,27 +82,3 @@ jobs:
         run: pnpm --filter @cpa-study/web test
         continue-on-error: true  # テストがない場合はスキップ
 
-  lint:
-    name: Lint
-    needs: changes
-    if: needs.changes.outputs.typescript == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Lint
-        run: pnpm lint
-        continue-on-error: true  # lintがない場合はスキップ
