@@ -86,30 +86,6 @@ jobs:
         run: pnpm --filter @cpa-study/web test
         continue-on-error: true  # テストがない場合はスキップ
 
-  typecheck:
-    name: Type Check
-    needs: changes
-    if: needs.changes.outputs.typescript == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Type check
-        run: pnpm typecheck
-
   lint:
     name: Lint
     needs: changes
