@@ -328,28 +328,6 @@ describe("E2E: Multi-user boundary tests", () => {
     })
   })
 
-  // Note: Filter and Search endpoints have been moved/removed from subject feature
-  // These tests are skipped as the endpoints no longer exist on /api/subjects
-  describe.skip("Filter boundary (moved to view feature)", () => {
-    it("should not return other user's topics in filter results", async () => {
-      // This test was for /api/subjects/filter which has been removed
-    })
-
-    it("should only return own topics in filter results", async () => {
-      // This test was for /api/subjects/filter which has been removed
-    })
-  })
-
-  describe.skip("Search boundary (moved to view feature)", () => {
-    it("should not return other user's topics in search results", async () => {
-      // This test was for /api/subjects/search which has been removed
-    })
-
-    it("should only return own topics in search results", async () => {
-      // This test was for /api/subjects/search which has been removed
-    })
-  })
-
   describe("Recent topics boundary", () => {
     it("should not return other user's topics in recent list", async () => {
       // UserBの最近アクセスしたトピック一覧を取得
@@ -386,20 +364,6 @@ describe("E2E: Multi-user boundary tests", () => {
       })
 
       expect(res.status).toBe(404)
-    })
-  })
-
-  // Note: Categories endpoint has been moved/removed from subject feature
-  describe.skip("Categories boundary (moved to view feature)", () => {
-    it("should return empty categories when accessing other user's subject categories", async () => {
-      // This test was for /api/subjects/:id/categories which has been removed
-    })
-  })
-
-  // Note: Subject detail endpoint has been moved/removed from subject feature
-  describe.skip("Subject detail boundary (moved to view feature)", () => {
-    it("should return 404 when accessing other user's subject detail", async () => {
-      // This test was for /api/subjects/:id/detail which has been removed
     })
   })
 
@@ -730,16 +694,6 @@ describe("E2E: Multi-user boundary tests", () => {
       })
 
       expect(res.status).toBe(404)
-    })
-
-    // Note: search endpoint has been moved/removed from subject feature
-    it.skip("should not return soft-deleted topics in search results", async () => {
-      // This test was for /api/subjects/search which has been removed
-    })
-
-    // Note: filter endpoint has been moved/removed from subject feature
-    it.skip("should not return soft-deleted topics in filter results", async () => {
-      // This test was for /api/subjects/filter which has been removed
     })
 
     it("should not return soft-deleted topics progress in recent list", async () => {

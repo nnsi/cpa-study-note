@@ -161,14 +161,6 @@ describe("E2E: Auth Flow", () => {
       expect(setCookie).toContain("refresh_token=")
     })
 
-    // Note: This test requires a separate app instance with production env.
-    // Since the app is initialized with env at creation time, changing env
-    // at request time doesn't work. We'll skip this test as it's an
-    // integration concern rather than an E2E flow test.
-    it.skip("should reject dev login in non-local environment", async () => {
-      // Would need to create a new app instance with ENVIRONMENT: "production"
-      expect(true).toBe(true)
-    })
   })
 
   describe("Token Refresh Flow", () => {
