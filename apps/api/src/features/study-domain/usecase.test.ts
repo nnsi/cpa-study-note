@@ -46,9 +46,11 @@ describe("Study Domain UseCase", () => {
       const result = await listStudyDomains(deps, "user-1")
 
       expect(repo.findByUserId).toHaveBeenCalledWith("user-1")
-      expect(result).toHaveLength(1)
-      expect(result[0].id).toBe("domain-1")
-      expect(result[0].name).toBe("公認会計士試験")
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      expect(result.value).toHaveLength(1)
+      expect(result.value[0].id).toBe("domain-1")
+      expect(result.value[0].name).toBe("公認会計士試験")
     })
 
     it("should convert dates to ISO strings", async () => {
@@ -57,8 +59,10 @@ describe("Study Domain UseCase", () => {
 
       const result = await listStudyDomains(deps, "user-1")
 
-      expect(result[0].createdAt).toBe("2024-01-01T00:00:00.000Z")
-      expect(result[0].updatedAt).toBe("2024-01-01T00:00:00.000Z")
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      expect(result.value[0].createdAt).toBe("2024-01-01T00:00:00.000Z")
+      expect(result.value[0].updatedAt).toBe("2024-01-01T00:00:00.000Z")
     })
 
     it("should return empty array when no domains exist", async () => {
@@ -69,7 +73,9 @@ describe("Study Domain UseCase", () => {
 
       const result = await listStudyDomains(deps, "user-1")
 
-      expect(result).toHaveLength(0)
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      expect(result.value).toHaveLength(0)
     })
   })
 
@@ -133,7 +139,9 @@ describe("Study Domain UseCase", () => {
         name: "New Domain",
       })
 
-      expect(result.id).toBe("new-domain")
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      expect(result.value.id).toBe("new-domain")
       expect(repo.create).toHaveBeenCalledWith({
         userId: "user-1",
         name: "New Domain",

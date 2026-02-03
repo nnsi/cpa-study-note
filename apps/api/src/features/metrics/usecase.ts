@@ -101,6 +101,7 @@ export const getTodayMetrics = async (
   deps: MetricsDeps,
   userId: string,
   timezone: string
-): Promise<TodayMetrics> => {
-  return deps.metricsRepo.aggregateToday(userId, timezone)
+): Promise<Result<TodayMetrics, AppError>> => {
+  const metrics = await deps.metricsRepo.aggregateToday(userId, timezone)
+  return ok(metrics)
 }

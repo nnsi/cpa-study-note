@@ -106,21 +106,24 @@ describe("Chat UseCase", () => {
         questionQuality: null,
       })
 
-      const sessions = await listSessionsByTopic(
+      const result = await listSessionsByTopic(
         { chatRepo },
         testData.userId,
         testData.topicId
       )
 
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+
       // session2 has no messages, should be filtered out
-      expect(sessions).toHaveLength(2)
-      expect(sessions.find((s) => s.id === session1.id)).toBeDefined()
-      expect(sessions.find((s) => s.id === session3.id)).toBeDefined()
-      expect(sessions.find((s) => s.id === session2.id)).toBeUndefined()
+      expect(result.value).toHaveLength(2)
+      expect(result.value.find((s) => s.id === session1.id)).toBeDefined()
+      expect(result.value.find((s) => s.id === session3.id)).toBeDefined()
+      expect(result.value.find((s) => s.id === session2.id)).toBeUndefined()
 
       // Verify message counts
-      const s1 = sessions.find((s) => s.id === session1.id)
-      const s3 = sessions.find((s) => s.id === session3.id)
+      const s1 = result.value.find((s) => s.id === session1.id)
+      const s3 = result.value.find((s) => s.id === session3.id)
       expect(s1?.messageCount).toBe(2)
       expect(s3?.messageCount).toBe(1)
     })
@@ -132,13 +135,15 @@ describe("Chat UseCase", () => {
         topicId: testData.topicId,
       })
 
-      const sessions = await listSessionsByTopic(
+      const result = await listSessionsByTopic(
         { chatRepo },
         testData.userId,
         testData.topicId
       )
 
-      expect(sessions).toHaveLength(0)
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      expect(result.value).toHaveLength(0)
     })
   })
 
@@ -534,7 +539,9 @@ describe("Chat UseCase", () => {
         message.content
       )
 
-      expect(result.quality).toBe("good")
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      expect(result.value.quality).toBe("good")
 
       // Verify message was updated
       const updated = await chatRepo.findMessageById(message.id)
@@ -566,7 +573,9 @@ describe("Chat UseCase", () => {
         message.content
       )
 
-      expect(result.quality).toBe("surface")
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      expect(result.value.quality).toBe("surface")
 
       // Verify message was updated
       const updated = await chatRepo.findMessageById(message.id)
@@ -598,7 +607,9 @@ describe("Chat UseCase", () => {
         message.content
       )
 
-      expect(result.quality).toBe("surface")
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      expect(result.value.quality).toBe("surface")
     })
   })
 })

@@ -125,9 +125,9 @@ export const updateProgress = async (
 export const listUserProgress = async (
   deps: LearningUseCaseDeps,
   userId: string
-): Promise<ProgressResponse[]> => {
+): Promise<Result<ProgressResponse[], AppError>> => {
   const progressList = await deps.learningRepo.findProgressByUser(userId)
-  return progressList.map(formatProgress)
+  return ok(progressList.map(formatProgress))
 }
 
 /**
@@ -162,15 +162,17 @@ export const listRecentTopics = async (
   deps: LearningUseCaseDeps,
   userId: string,
   limit: number = 10
-): Promise<RecentTopicResponse[]> => {
+): Promise<Result<RecentTopicResponse[], AppError>> => {
   const topics = await deps.learningRepo.findRecentTopics(userId, limit)
 
-  return topics.map((t) => ({
-    topicId: t.topicId,
-    topicName: t.topicName,
-    subjectId: t.subjectId,
-    subjectName: t.subjectName,
-    categoryId: t.categoryId,
-    lastAccessedAt: t.lastAccessedAt.toISOString(),
-  }))
+  return ok(
+    topics.map((t) => ({
+      topicId: t.topicId,
+      topicName: t.topicName,
+      subjectId: t.subjectId,
+      subjectName: t.subjectName,
+      categoryId: t.categoryId,
+      lastAccessedAt: t.lastAccessedAt.toISOString(),
+    }))
+  )
 }
