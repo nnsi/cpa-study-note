@@ -6,6 +6,20 @@ import { filterTopics, type FilteredTopic } from "@/features/review/api"
 import { PageWrapper } from "@/components/layout"
 import { BookmarkButton } from "@/features/bookmark"
 
+// View API response type for category topics
+type CategoryTopicsResponse = {
+  category: {
+    id: string
+    name: string
+  }
+  topics: Array<{
+    id: string
+    name: string
+    description: string | null
+    displayOrder: number
+  }>
+}
+
 export const Route = createFileRoute("/domains/$domainId/subjects/$subjectId/$categoryId/")({
   beforeLoad: requireAuth,
   component: CategoryPage,
@@ -15,16 +29,14 @@ function CategoryPage() {
   const { domainId, subjectId, categoryId } = Route.useParams()
   const queryClient = useQueryClient()
 
-  const { data: topics, isLoading } = useQuery({
+  const { data: topicsData, isLoading } = useQuery({
     queryKey: ["subjects", subjectId, "categories", categoryId, "topics"],
-    queryFn: async () => {
-      const res = await api.api.subjects[":subjectId"].categories[
-        ":categoryId"
-      ].topics.$get({
-        param: { subjectId, categoryId },
+    queryFn: async (): Promise<CategoryTopicsResponse> => {
+      const res = await api.api.view.categories[":categoryId"].topics.$get({
+        param: { categoryId },
       })
       if (!res.ok) throw new Error(`論点の取得に失敗しました (${res.status})`)
-      return res.json()
+      return res.json() as Promise<CategoryTopicsResponse>
     },
   })
 
@@ -32,7 +44,7 @@ function CategoryPage() {
   const { data: progressData } = useQuery({
     queryKey: ["progress", "me"],
     queryFn: async () => {
-      const res = await api.api.subjects.progress.me.$get()
+      const res = await api.api.learning.progress.$get()
       if (!res.ok) throw new Error(`進捗の取得に失敗しました (${res.status})`)
       return res.json()
     },
@@ -67,10 +79,8 @@ function CategoryPage() {
       topicId: string
       understood: boolean
     }) => {
-      const res = await api.api.subjects[":subjectId"].topics[
-        ":topicId"
-      ].progress.$put({
-        param: { subjectId, topicId },
+      const res = await api.api.learning.topics[":topicId"].progress.$put({
+        param: { topicId },
         json: { understood },
       })
       if (!res.ok) throw new Error(`進捗の更新に失敗しました (${res.status})`)
@@ -124,7 +134,7 @@ function CategoryPage() {
       </div>
 
       <div className="space-y-3">
-        {topics?.topics.map((topic: { id: string; name: string; description: string | null }) => {
+        {topicsData?.topics.map((topic: { id: string; name: string; description: string | null }) => {
           const progress = progressMap.get(topic.id)
           const isUnderstood = progress?.understood ?? false
           const stats = statsMap.get(topic.id)
@@ -212,7 +222,7 @@ function CategoryPage() {
           )
         })}
 
-        {topics?.topics.length === 0 && (
+        {topicsData?.topics.length === 0 && (
           <p className="text-ink-500 text-center py-8">
             この単元には論点がありません
           </p>

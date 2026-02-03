@@ -12,14 +12,15 @@ type Topic = {
   displayOrder: number
   createdAt: string
   updatedAt: string
-  progress: {
-    userId: string
-    topicId: string
-    understood: boolean
-    lastAccessedAt: string | null
-    createdAt: string
-    updatedAt: string
-  } | null
+}
+
+type Progress = {
+  userId: string
+  topicId: string
+  understood: boolean
+  lastAccessedAt: string | null
+  createdAt: string
+  updatedAt: string
 }
 
 type Session = {
@@ -31,19 +32,18 @@ type Session = {
 
 type Props = {
   topic: Topic
+  progress: Progress | null
   subjectId: string
   sessions?: Session[]
 }
 
-export const TopicInfo = ({ topic, subjectId, sessions = [] }: Props) => {
+export const TopicInfo = ({ topic, progress, subjectId, sessions = [] }: Props) => {
   const queryClient = useQueryClient()
 
   const { mutate: updateProgress, isPending } = useMutation({
     mutationFn: async (understood: boolean) => {
-      const res = await api.api.subjects[":subjectId"].topics[
-        ":topicId"
-      ].progress.$put({
-        param: { subjectId, topicId: topic.id },
+      const res = await api.api.learning.topics[":topicId"].progress.$put({
+        param: { topicId: topic.id },
         json: { understood },
       })
       if (!res.ok) throw new Error("Failed to update progress")
@@ -62,7 +62,7 @@ export const TopicInfo = ({ topic, subjectId, sessions = [] }: Props) => {
     topic.id
   )
 
-  const isUnderstood = topic.progress?.understood ?? false
+  const isUnderstood = progress?.understood ?? false
 
   return (
     <div className="p-4 space-y-6">
@@ -95,8 +95,8 @@ export const TopicInfo = ({ topic, subjectId, sessions = [] }: Props) => {
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-ink-50 rounded-xl p-3">
             <p className="text-2xl font-bold text-ink-900">
-              {topic.progress?.lastAccessedAt
-                ? formatRelativeTime(topic.progress.lastAccessedAt)
+              {progress?.lastAccessedAt
+                ? formatRelativeTime(progress.lastAccessedAt)
                 : "-"}
             </p>
             <p className="text-xs text-ink-500">最終アクセス</p>

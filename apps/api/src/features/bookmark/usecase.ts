@@ -16,11 +16,11 @@ export const getBookmarks = async (
   const { repo } = deps
   const bookmarks = await repo.findBookmarksByUser(userId)
 
-  // ブックマークの詳細情報を取得
+  // ブックマークの詳細情報を取得（ユーザー境界と削除フラグを考慮）
   const bookmarksWithDetails: BookmarkWithDetails[] = []
 
   for (const bookmark of bookmarks) {
-    const details = await repo.getBookmarkDetails(bookmark.targetType, bookmark.targetId)
+    const details = await repo.getBookmarkDetails(bookmark.targetType, bookmark.targetId, userId)
 
     if (details) {
       bookmarksWithDetails.push({
@@ -49,8 +49,8 @@ export const addBookmark = async (
 ): Promise<Result<{ alreadyExists: boolean }, AppError>> => {
   const { repo } = deps
 
-  // 対象が存在するか確認
-  const exists = await repo.targetExists(targetType, targetId)
+  // 対象が存在するか確認（ユーザー境界と削除フラグを考慮）
+  const exists = await repo.targetExists(targetType, targetId, userId)
   if (!exists) {
     return err(notFound("ブックマーク対象が見つかりません"))
   }

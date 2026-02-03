@@ -68,7 +68,7 @@ export const createSubject = async (
   })
   if (!res.ok) {
     const error = await res.json()
-    throw new Error((error as { error?: string }).error ?? "科目の作成に失敗しました")
+    throw new Error((error as { error?: { message?: string } }).error?.message ?? "科目の作成に失敗しました")
   }
   return res.json() as Promise<{ subject: Subject }>
 }
@@ -83,7 +83,7 @@ export const updateSubject = async (
   })
   if (!res.ok) {
     const error = await res.json()
-    throw new Error((error as { error?: string }).error ?? "科目の更新に失敗しました")
+    throw new Error((error as { error?: { message?: string } }).error?.message ?? "科目の更新に失敗しました")
   }
   return res.json() as Promise<{ subject: Subject }>
 }
@@ -94,7 +94,7 @@ export const deleteSubject = async (id: string): Promise<{ success: boolean }> =
   })
   if (!res.ok) {
     const error = await res.json()
-    throw new Error((error as { error?: string }).error ?? "科目の削除に失敗しました")
+    throw new Error((error as { error?: { message?: string } }).error?.message ?? "科目の削除に失敗しました")
   }
   return res.json() as Promise<{ success: boolean }>
 }
@@ -120,7 +120,7 @@ export const updateSubjectTree = async (
   })
   if (!res.ok) {
     const error = await res.json()
-    throw new Error((error as { error?: string }).error ?? "ツリーの更新に失敗しました")
+    throw new Error((error as { error?: { message?: string } }).error?.message ?? "ツリーの更新に失敗しました")
   }
   return res.json() as Promise<{ tree: TreeResponse }>
 }
@@ -139,7 +139,7 @@ export const importCSV = async (
   })
   if (!res.ok) {
     const error = await res.json()
-    throw new Error((error as { error?: string }).error ?? "CSVインポートに失敗しました")
+    throw new Error((error as { error?: { message?: string } }).error?.message ?? "CSVインポートに失敗しました")
   }
   return res.json() as Promise<{
     success: boolean
@@ -148,17 +148,39 @@ export const importCSV = async (
   }>
 }
 
+type ViewSearchResponse = {
+  results: Array<{
+    id: string
+    name: string
+    subjectId: string
+    subjectName: string
+    categoryId: string
+    categoryName: string
+  }>
+  total: number
+}
+
 export const searchTopics = async (
   query: string,
   studyDomainId: string,
   limit: number = 20
 ): Promise<TopicSearchResult[]> => {
-  const res = await api.api.subjects.search.$get({
+  const res = await api.api.view.search.$get({
     query: { q: query, limit: String(limit), studyDomainId },
   })
   if (!res.ok) {
     throw new Error("検索に失敗しました")
   }
-  const data = await res.json()
-  return data.results as TopicSearchResult[]
+  const data = (await res.json()) as ViewSearchResponse
+  // Transform to TopicSearchResult format
+  return data.results.map((r) => ({
+    id: r.id,
+    name: r.name,
+    description: null,
+    studyDomainId,
+    subjectId: r.subjectId,
+    categoryId: r.categoryId,
+    subjectName: r.subjectName,
+    categoryName: r.categoryName,
+  }))
 }

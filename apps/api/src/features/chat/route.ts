@@ -6,7 +6,7 @@ import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
 import { createAIAdapter, streamToSSE, resolveAIConfig } from "@/shared/lib/ai"
 import { createChatRepository } from "./repository"
-import { createSubjectRepository } from "../subject/repository"
+import { createLearningRepository } from "../learning/repository"
 import {
   createSession,
   getSession,
@@ -27,7 +27,7 @@ type ChatDeps = {
 
 export const chatRoutes = ({ env, db }: ChatDeps) => {
   const chatRepo = createChatRepository(db)
-  const subjectRepo = createSubjectRepository(db)
+  const learningRepo = createLearningRepository(db)
   const aiConfig = resolveAIConfig(env.ENVIRONMENT)
 
   const app = new Hono<{ Bindings: Env; Variables: Variables }>()
@@ -41,7 +41,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         const { topicId } = c.req.valid("json")
 
         const result = await createSession(
-          { chatRepo, subjectRepo },
+          { chatRepo, learningRepo },
           user.id,
           topicId
         )
@@ -112,7 +112,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         })
 
         const stream = sendMessage(
-          { chatRepo, subjectRepo, aiAdapter, aiConfig },
+          { chatRepo, learningRepo, aiAdapter, aiConfig },
           {
             sessionId,
             userId: user.id,
@@ -142,7 +142,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         })
 
         const stream = sendMessageWithNewSession(
-          { chatRepo, subjectRepo, aiAdapter, aiConfig },
+          { chatRepo, learningRepo, aiAdapter, aiConfig },
           {
             topicId,
             userId: user.id,
@@ -173,7 +173,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
       })
 
       const quality = await evaluateQuestion(
-        { chatRepo, subjectRepo, aiAdapter, aiConfig },
+        { chatRepo, learningRepo, aiAdapter, aiConfig },
         messageId,
         result.value
       )

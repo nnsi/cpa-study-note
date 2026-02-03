@@ -23,6 +23,44 @@ type Session = {
   firstMessagePreview: string | null
 }
 
+// View API response type for topic detail
+type TopicViewResponse = {
+  topic: {
+    id: string
+    name: string
+    description: string | null
+    categoryId: string
+    categoryName: string
+    subjectId: string
+    subjectName: string
+    difficulty: string | null
+    topicType: string | null
+    displayOrder: number
+    createdAt: string
+    updatedAt: string
+  }
+  progress: {
+    id: string
+    userId: string
+    topicId: string
+    understood: boolean
+    lastAccessedAt: string | null
+    questionCount: number
+    goodQuestionCount: number
+    createdAt: string
+    updatedAt: string
+  } | null
+  recentNotes: Array<{
+    id: string
+    title: string | null
+    updatedAt: string
+  }>
+  recentSessions: Array<{
+    id: string
+    createdAt: string
+  }>
+}
+
 function TopicDetailPage() {
   const { domainId, subjectId, categoryId, topicId } = Route.useParams()
   const [activeTab, setActiveTab] = useState<"info" | "chat" | "notes">("chat")
@@ -36,12 +74,12 @@ function TopicDetailPage() {
 
   const { data: topic, isLoading } = useQuery({
     queryKey: ["topics", topicId],
-    queryFn: async () => {
-      const res = await api.api.subjects[":subjectId"].topics[":topicId"].$get({
-        param: { subjectId, topicId },
+    queryFn: async (): Promise<TopicViewResponse> => {
+      const res = await api.api.view.topics[":topicId"].$get({
+        param: { topicId },
       })
       if (!res.ok) throw new Error("Failed to fetch topic")
-      return res.json()
+      return res.json() as Promise<TopicViewResponse>
     },
   })
 
@@ -173,7 +211,7 @@ function TopicDetailPage() {
           {/* サイドバーコンテンツ */}
           <div className="flex-1 overflow-y-auto">
             {sidebarTab === "info" && topic && (
-              <TopicInfo topic={topic.topic} subjectId={subjectId} sessions={sessions} />
+              <TopicInfo topic={topic.topic} progress={topic.progress} subjectId={subjectId} sessions={sessions} />
             )}
             {sidebarTab === "sessions" && (
               <SessionList
@@ -203,7 +241,7 @@ function TopicDetailPage() {
       <div className="lg:hidden flex-1 min-h-0 overflow-hidden min-w-0 flex flex-col">
         {activeTab === "info" && topic && (
           <div className="h-full overflow-y-auto">
-            <TopicInfo topic={topic.topic} subjectId={subjectId} sessions={sessions} />
+            <TopicInfo topic={topic.topic} progress={topic.progress} subjectId={subjectId} sessions={sessions} />
           </div>
         )}
         {activeTab === "chat" && (

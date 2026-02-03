@@ -188,6 +188,17 @@ export const createTestDatabase = (): {
       created_at INTEGER NOT NULL,
       UNIQUE(date, user_id)
     );
+
+    CREATE TABLE IF NOT EXISTS user_bookmarks (
+      id TEXT PRIMARY KEY NOT NULL,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      target_type TEXT NOT NULL,
+      target_id TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      UNIQUE(user_id, target_type, target_id)
+    );
+    CREATE INDEX IF NOT EXISTS user_bookmarks_user_id_idx ON user_bookmarks(user_id);
+    CREATE INDEX IF NOT EXISTS user_bookmarks_user_type_idx ON user_bookmarks(user_id, target_type);
   `)
 
   const db = drizzle(sqlite, { schema })

@@ -66,12 +66,11 @@ describe("Subject Routes", () => {
       )
 
       expect(res.status).toBe(200)
-      const json = await res.json()
-      if (!("subjects" in json)) throw new Error("Expected subjects in response")
+      const json = await res.json() as { subjects: Array<{ name: string }> }
       expect(json.subjects).toHaveLength(2)
     })
 
-    it("should return empty array for non-existent study domain", async () => {
+    it("should return 404 for non-existent study domain", async () => {
       const { id: userId } = createTestUser(db)
       env.DEV_USER_ID = userId
 
@@ -80,14 +79,11 @@ describe("Subject Routes", () => {
         { headers: createAuthHeaders(userId) }
       )
 
-      // 存在しないドメインでも200を返し、空配列を返す
-      expect(res.status).toBe(200)
-      const json = await res.json()
-      if (!("subjects" in json)) throw new Error("Expected subjects in response")
-      expect(json.subjects).toHaveLength(0)
+      // 存在しないドメインは404を返す
+      expect(res.status).toBe(404)
     })
 
-    it("should return empty array for other user's study domain", async () => {
+    it("should return 404 for other user's study domain", async () => {
       const { id: user1Id } = createTestUser(db)
       const { id: user2Id } = createTestUser(db)
       env.DEV_USER_ID = user2Id
@@ -98,11 +94,8 @@ describe("Subject Routes", () => {
         { headers: createAuthHeaders(user2Id) }
       )
 
-      // 他ユーザーのドメインの場合は空配列
-      expect(res.status).toBe(200)
-      const json = await res.json()
-      if (!("subjects" in json)) throw new Error("Expected subjects in response")
-      expect(json.subjects).toHaveLength(0)
+      // 他ユーザーのドメインは404を返す
+      expect(res.status).toBe(404)
     })
 
     it("should not return soft-deleted subjects", async () => {
@@ -118,8 +111,7 @@ describe("Subject Routes", () => {
       )
 
       expect(res.status).toBe(200)
-      const json = await res.json()
-      if (!("subjects" in json)) throw new Error("Expected subjects in response")
+      const json = await res.json() as { subjects: Array<{ name: string }> }
       expect(json.subjects).toHaveLength(1)
       expect(json.subjects[0].name).toBe("Active")
     })

@@ -15,7 +15,7 @@ export const getTodayMetrics = async (): Promise<TodayMetricsResponse> => {
 }
 
 export const getRecentTopics = async (): Promise<RecentTopicsResponse> => {
-  const res = await api.api.subjects.progress.recent.$get()
+  const res = await api.api.learning.topics.recent.$get({ query: {} })
   if (!res.ok) throw new Error("Failed to fetch recent topics")
   return res.json()
 }

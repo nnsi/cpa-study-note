@@ -38,7 +38,7 @@ function SubjectCategoriesPage() {
   const { data: progressData } = useQuery({
     queryKey: ["progress", "me"],
     queryFn: async () => {
-      const res = await api.api.subjects.progress.me.$get()
+      const res = await api.api.learning.progress.$get()
       if (!res.ok) throw new Error("進捗の取得に失敗しました")
       return res.json()
     },

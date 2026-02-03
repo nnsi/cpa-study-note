@@ -11,6 +11,8 @@ import { createMetricsFeature } from "./features/metrics"
 import { createStudyDomainFeature } from "./features/study-domain"
 import { createSubjectFeature } from "./features/subject"
 import { createBookmarkFeature } from "./features/bookmark"
+import { createLearningFeature } from "./features/learning"
+import { createViewFeature } from "./features/view"
 import {
   createRateLimitStore,
   createRateLimiterFactory,
@@ -113,6 +115,8 @@ const createApp = (env: Env) => {
     .route("/api/study-domains", createStudyDomainFeature(env, db))
     .route("/api/subjects", createSubjectFeature(env, db))
     .route("/api/bookmarks", createBookmarkFeature(env, db))
+    .route("/api/learning", createLearningFeature(env, db))
+    .route("/api/view", createViewFeature(env, db))
     .get("/api/health", (c) => c.json({ status: "ok" }))
     .onError((error, c) => {
       // ローカル環境では詳細なエラー情報を出力
@@ -136,7 +140,19 @@ const createApp = (env: Env) => {
           console.error(`  Error:`, error)
         }
       }
-      return c.json({ error: "Internal Server Error" }, 500)
+      return c.json(
+        {
+          error: {
+            code: "INTERNAL_ERROR",
+            message: "Internal Server Error",
+            ...(env.ENVIRONMENT === "local" &&
+              error instanceof Error && {
+                details: { name: error.name, path: c.req.path },
+              }),
+          },
+        },
+        500
+      )
     })
 
   return app

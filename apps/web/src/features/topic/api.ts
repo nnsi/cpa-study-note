@@ -4,14 +4,13 @@ import type { TopicCheckHistoryResponse } from "@cpa-study/shared"
 export type CheckHistoryItem = TopicCheckHistoryResponse
 
 export const getCheckHistory = async (
-  subjectId: string,
+  _subjectId: string,
   topicId: string
 ): Promise<{ history: CheckHistoryItem[] }> => {
-  const res = await api.api.subjects[":subjectId"].topics[":topicId"][
-    "check-history"
-  ].$get({
-    param: { subjectId, topicId },
+  // Note: subjectId is no longer needed for the Learning API
+  const res = await api.api.learning.topics[":topicId"]["check-history"].$get({
+    param: { topicId },
   })
   if (!res.ok) throw new Error("Failed to fetch check history")
-  return res.json()
+  return res.json() as Promise<{ history: CheckHistoryItem[] }>
 }

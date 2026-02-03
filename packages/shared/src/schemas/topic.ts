@@ -127,29 +127,46 @@ export const topicCheckHistoryResponseSchema = z.object({
 
 export type TopicCheckHistoryResponse = z.infer<typeof topicCheckHistoryResponseSchema>
 
-// Filter schemas
+/**
+ * 論点フィルタリング用スキーマ
+ *
+ * フィルタ条件の意味:
+ * - minSessionCount: 指定数以上のチャットセッションがある論点を抽出
+ * - daysSinceLastChat: 指定日数以内に最後のチャットがある論点を抽出
+ *   （例: 7を指定すると、直近7日以内にチャットがあった論点）
+ * - understood: 理解済みフラグの状態でフィルタ
+ * - minGoodQuestionCount: 指定数以上の良い質問がある論点を抽出
+ */
 export const topicFilterRequestSchema = z.object({
+  /** 最小チャットセッション数 */
   minSessionCount: z.coerce.number().int().min(0).optional(),
+  /** 直近N日以内にチャットがある論点を抽出（N日以上経過したものを除外） */
   daysSinceLastChat: z.coerce.number().int().min(0).optional(),
+  /** 理解済みフラグ */
   understood: z
     .enum(["true", "false"])
     .transform((v) => v === "true")
     .optional(),
-  hasPostCheckChat: z
-    .enum(["true", "false"])
-    .transform((v) => v === "true")
-    .optional(),
+  /** 最小良い質問数 */
   minGoodQuestionCount: z.coerce.number().int().min(0).optional(),
 })
 
 export type TopicFilterRequest = z.input<typeof topicFilterRequestSchema>
 
-// フロントエンド向けのフィルタパラメータ（booleanを直接使用）
+/**
+ * フロントエンド向けのフィルタパラメータ（booleanを直接使用）
+ *
+ * topicFilterRequestSchemaと同じフィルタ条件だが、
+ * クエリパラメータ変換前の型として使用
+ */
 export const topicFilterParamsSchema = z.object({
+  /** 最小チャットセッション数 */
   minSessionCount: z.number().int().min(0).optional(),
+  /** 直近N日以内にチャットがある論点を抽出（N日以上経過したものを除外） */
   daysSinceLastChat: z.number().int().min(0).optional(),
+  /** 理解済みフラグ */
   understood: z.boolean().optional(),
-  hasPostCheckChat: z.boolean().optional(),
+  /** 最小良い質問数 */
   minGoodQuestionCount: z.number().int().min(0).optional(),
 })
 

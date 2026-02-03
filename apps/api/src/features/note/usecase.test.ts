@@ -133,14 +133,9 @@ const createMockSubjectRepo = (overrides: Partial<SubjectRepository> = {}): Subj
   softDeleteTopics: vi.fn().mockResolvedValue(undefined),
   upsertCategory: vi.fn().mockResolvedValue(undefined),
   upsertTopic: vi.fn().mockResolvedValue(undefined),
-  findProgress: vi.fn().mockResolvedValue(null),
-  upsertProgress: vi.fn().mockResolvedValue({} as ReturnType<SubjectRepository["upsertProgress"]> extends Promise<infer T> ? T : never),
-  findProgressByUser: vi.fn().mockResolvedValue([]),
   getProgressCountsByCategory: vi.fn().mockResolvedValue([]),
   getProgressCountsBySubject: vi.fn().mockResolvedValue([]),
   findRecentTopics: vi.fn().mockResolvedValue([]),
-  createCheckHistory: vi.fn().mockResolvedValue({} as ReturnType<SubjectRepository["createCheckHistory"]> extends Promise<infer T> ? T : never),
-  findCheckHistoryByTopic: vi.fn().mockResolvedValue([]),
   findAllSubjectsForUser: vi.fn().mockResolvedValue([]),
   findSubjectByIdForUser: vi.fn().mockResolvedValue(null),
   getSubjectStats: vi.fn().mockResolvedValue({ categoryCount: 0, topicCount: 0 }),
@@ -150,8 +145,6 @@ const createMockSubjectRepo = (overrides: Partial<SubjectRepository> = {}): Subj
   findTopicsByCategoryIdForUser: vi.fn().mockResolvedValue([]),
   findTopicById: vi.fn().mockResolvedValue(null),
   findTopicWithHierarchy: vi.fn().mockResolvedValue(null),
-  findFilteredTopics: vi.fn().mockResolvedValue([]),
-  searchTopics: vi.fn().mockResolvedValue([]),
   ...overrides,
 })
 

@@ -1,6 +1,6 @@
 import type { AIAdapter, AIMessage, StreamChunk, AIConfig } from "@/shared/lib/ai"
 import type { ChatRepository, ChatMessage } from "./repository"
-import type { SubjectRepository } from "../subject/repository"
+import type { LearningRepository } from "../learning/repository"
 import { buildSystemPrompt, buildEvaluationPrompt } from "./domain/prompts"
 import { parseLLMJson } from "@cpa-study/shared"
 import type { GoodQuestionResponse } from "@cpa-study/shared/schemas"
@@ -10,7 +10,7 @@ import { notFound, forbidden, type AppError } from "@/shared/lib/errors"
 
 type ChatDeps = {
   chatRepo: ChatRepository
-  subjectRepo: SubjectRepository
+  learningRepo: LearningRepository
   aiAdapter: AIAdapter
   aiConfig: AIConfig
 }
@@ -36,12 +36,12 @@ type MessageResponse = {
 
 // セッション作成
 export const createSession = async (
-  deps: Pick<ChatDeps, "chatRepo" | "subjectRepo">,
+  deps: Pick<ChatDeps, "chatRepo" | "learningRepo">,
   userId: string,
   topicId: string
 ): Promise<Result<SessionResponse, AppError>> => {
-  const topic = await deps.subjectRepo.findTopicById(topicId, userId)
-  if (!topic) {
+  const exists = await deps.learningRepo.verifyTopicExists(userId, topicId)
+  if (!exists) {
     return err(notFound("論点が見つかりません"))
   }
 
@@ -258,8 +258,8 @@ export async function* sendMessage(
     })
   }
 
-  // 進捗を更新
-  await deps.subjectRepo.upsertProgress({
+  // 進捗を更新（learning featureのrepositoryを使用）
+  await deps.learningRepo.upsertProgress(input.userId, {
     userId: input.userId,
     topicId: session.topicId,
     incrementQuestionCount: true,
@@ -351,8 +351,8 @@ export async function* sendMessageWithNewSession(
     })
   }
 
-  // 進捗を更新
-  await deps.subjectRepo.upsertProgress({
+  // 進捗を更新（learning featureのrepositoryを使用）
+  await deps.learningRepo.upsertProgress(input.userId, {
     userId: input.userId,
     topicId: input.topicId,
     incrementQuestionCount: true,

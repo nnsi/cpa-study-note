@@ -85,9 +85,6 @@ export const useTopicFilter = (): UseTopicFilterReturn => {
     if (pendingFilters.understood !== undefined) {
       search.understood = String(pendingFilters.understood)
     }
-    if (pendingFilters.hasPostCheckChat !== undefined) {
-      search.hasPostCheckChat = String(pendingFilters.hasPostCheckChat)
-    }
     if (
       pendingFilters.minGoodQuestionCount !== undefined &&
       pendingFilters.minGoodQuestionCount > 0
