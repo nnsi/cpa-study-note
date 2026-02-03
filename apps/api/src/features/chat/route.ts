@@ -58,9 +58,9 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         const topicId = c.req.param("topicId")
         const user = c.get("user")
 
-        const sessions = await listSessionsByTopic({ chatRepo }, user.id, topicId)
+        const result = await listSessionsByTopic({ chatRepo }, user.id, topicId)
 
-        return c.json({ sessions })
+        return handleResultWith(c, result, (sessions) => ({ sessions }))
       }
     )
 
@@ -72,9 +72,9 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         const topicId = c.req.param("topicId")
         const user = c.get("user")
 
-        const questions = await listGoodQuestionsByTopic({ chatRepo }, user.id, topicId)
+        const result = await listGoodQuestionsByTopic({ chatRepo }, user.id, topicId)
 
-        return c.json({ questions })
+        return handleResultWith(c, result, (questions) => ({ questions }))
       }
     )
 
@@ -172,13 +172,13 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         apiKey: env.OPENROUTER_API_KEY,
       })
 
-      const quality = await evaluateQuestion(
+      const evalResult = await evaluateQuestion(
         { chatRepo, learningRepo, aiAdapter, aiConfig },
         messageId,
         result.value
       )
 
-      return c.json({ quality })
+      return handleResultWith(c, evalResult, (evaluation) => ({ quality: evaluation }))
     })
 
   return app

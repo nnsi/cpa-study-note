@@ -26,20 +26,22 @@ type StudyDomainResponse = {
 export const listStudyDomains = async (
   deps: StudyDomainDeps,
   userId: string
-): Promise<StudyDomainResponse[]> => {
+): Promise<Result<StudyDomainResponse[], AppError>> => {
   const { repo } = deps
   const domains = await repo.findByUserId(userId)
 
-  return domains.map((d) => ({
-    id: d.id,
-    userId: d.userId,
-    name: d.name,
-    description: d.description,
-    emoji: d.emoji,
-    color: d.color,
-    createdAt: d.createdAt.toISOString(),
-    updatedAt: d.updatedAt.toISOString(),
-  }))
+  return ok(
+    domains.map((d) => ({
+      id: d.id,
+      userId: d.userId,
+      name: d.name,
+      description: d.description,
+      emoji: d.emoji,
+      color: d.color,
+      createdAt: d.createdAt.toISOString(),
+      updatedAt: d.updatedAt.toISOString(),
+    }))
+  )
 }
 
 // Get study domain by ID
@@ -72,7 +74,7 @@ export const createStudyDomain = async (
   deps: StudyDomainDeps,
   userId: string,
   data: Omit<CreateStudyDomainInput, "userId">
-): Promise<StudyDomainResponse> => {
+): Promise<Result<StudyDomainResponse, AppError>> => {
   const { repo } = deps
 
   const { id } = await repo.create({
@@ -83,10 +85,10 @@ export const createStudyDomain = async (
   // Fetch the created domain to return
   const domain = await repo.findById(id, userId)
   if (!domain) {
-    throw new Error("Failed to create study domain")
+    return err(notFound("学習領域の作成に失敗しました"))
   }
 
-  return {
+  return ok({
     id: domain.id,
     userId: domain.userId,
     name: domain.name,
@@ -95,7 +97,7 @@ export const createStudyDomain = async (
     color: domain.color,
     createdAt: domain.createdAt.toISOString(),
     updatedAt: domain.updatedAt.toISOString(),
-  }
+  })
 }
 
 // Update study domain

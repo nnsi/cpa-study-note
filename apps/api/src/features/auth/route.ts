@@ -143,7 +143,7 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
       // Save refresh token to DB（UseCase経由）
       const expiresAt = new Date()
       expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_EXPIRES_DAYS)
-      await saveRefreshToken(
+      const saveResult = await saveRefreshToken(
         { repo },
         {
           userId: user.id,
@@ -151,6 +151,10 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
           expiresAt,
         }
       )
+
+      if (!saveResult.ok) {
+        return handleResult(c, saveResult)
+      }
 
       // Set refresh token in HttpOnly cookie
       setCookie(c, "refresh_token", refreshToken, {
@@ -237,10 +241,7 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
       )
 
       if (!userResult.ok) {
-        return c.json(
-          { error: { code: userResult.error.code, message: userResult.error.message } },
-          errorCodeToStatus[userResult.error.code]
-        )
+        return handleResult(c, userResult)
       }
 
       const existingUser = userResult.value
@@ -261,7 +262,7 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
       // Save refresh token to DB（UseCase経由）
       const expiresAt = new Date()
       expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_EXPIRES_DAYS)
-      await saveRefreshToken(
+      const saveResult = await saveRefreshToken(
         { repo },
         {
           userId: devUser.id,
@@ -269,6 +270,10 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
           expiresAt,
         }
       )
+
+      if (!saveResult.ok) {
+        return handleResult(c, saveResult)
+      }
 
       // Set refresh token in HttpOnly cookie
       setCookie(c, "refresh_token", refreshToken, {
@@ -292,7 +297,11 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
       if (refreshToken) {
         // Delete refresh token from DB（UseCase経由）
         const tokenHash = await hashToken(refreshToken)
-        await logout({ repo }, tokenHash)
+        const logoutResult = await logout({ repo }, tokenHash)
+        // エラーが発生してもクッキーはクリアする（ログ出力のみ）
+        if (!logoutResult.ok) {
+          console.error("[Auth] Logout DB error:", logoutResult.error)
+        }
       }
 
       // Clear refresh token cookie

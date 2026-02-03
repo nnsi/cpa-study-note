@@ -70,14 +70,16 @@ export const listSessionsByTopic = async (
   deps: Pick<ChatDeps, "chatRepo">,
   userId: string,
   topicId: string
-): Promise<SessionWithStats[]> => {
+): Promise<Result<SessionWithStats[], AppError>> => {
   const sessions = await deps.chatRepo.findSessionsWithStatsByTopic(userId, topicId)
 
-  return sessions.map((session) => ({
-    ...session,
-    createdAt: session.createdAt.toISOString(),
-    updatedAt: session.updatedAt.toISOString(),
-  }))
+  return ok(
+    sessions.map((session) => ({
+      ...session,
+      createdAt: session.createdAt.toISOString(),
+      updatedAt: session.updatedAt.toISOString(),
+    }))
+  )
 }
 
 // セッション取得
@@ -367,15 +369,17 @@ export const listGoodQuestionsByTopic = async (
   deps: Pick<ChatDeps, "chatRepo">,
   userId: string,
   topicId: string
-): Promise<GoodQuestionResponse[]> => {
+): Promise<Result<GoodQuestionResponse[], AppError>> => {
   const questions = await deps.chatRepo.findGoodQuestionsByTopic(userId, topicId)
 
-  return questions.map((q) => ({
-    id: q.id,
-    sessionId: q.sessionId,
-    content: q.content,
-    createdAt: q.createdAt.toISOString(),
-  }))
+  return ok(
+    questions.map((q) => ({
+      id: q.id,
+      sessionId: q.sessionId,
+      content: q.content,
+      createdAt: q.createdAt.toISOString(),
+    }))
+  )
 }
 
 type QuestionEvaluation = {
@@ -387,7 +391,7 @@ export const evaluateQuestion = async (
   deps: ChatDeps,
   messageId: string,
   content: string
-): Promise<QuestionEvaluation> => {
+): Promise<Result<QuestionEvaluation, AppError>> => {
   const evaluationPrompt = buildEvaluationPrompt(content)
 
   const result = await deps.aiAdapter.generateText({
@@ -415,5 +419,5 @@ export const evaluateQuestion = async (
 
   await deps.chatRepo.updateMessageQuality(messageId, quality, reason)
 
-  return { quality, reason }
+  return ok({ quality, reason })
 }

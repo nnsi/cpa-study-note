@@ -9,7 +9,7 @@ import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
 import { createBookmarkRepository } from "./repository"
 import { getBookmarks, addBookmark, removeBookmark } from "./usecase"
-import { handleResult } from "@/shared/lib/route-helpers"
+import { handleResult, handleResultWith } from "@/shared/lib/route-helpers"
 
 type BookmarkDeps = {
   env: Env
@@ -24,8 +24,8 @@ export const bookmarkRoutes = ({ db }: BookmarkDeps) => {
     // ブックマーク一覧取得
     .get("/", authMiddleware, async (c) => {
       const user = c.get("user")
-      const bookmarks = await getBookmarks(deps, user.id)
-      return c.json({ bookmarks })
+      const result = await getBookmarks(deps, user.id)
+      return handleResultWith(c, result, (bookmarks) => ({ bookmarks }))
     })
 
     // ブックマーク追加

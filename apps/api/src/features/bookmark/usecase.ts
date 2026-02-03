@@ -12,7 +12,7 @@ type BookmarkDeps = {
 export const getBookmarks = async (
   deps: BookmarkDeps,
   userId: string
-): Promise<BookmarkWithDetails[]> => {
+): Promise<Result<BookmarkWithDetails[], AppError>> => {
   const { repo } = deps
   const bookmarks = await repo.findBookmarksByUser(userId)
 
@@ -37,7 +37,7 @@ export const getBookmarks = async (
     }
   }
 
-  return bookmarksWithDetails
+  return ok(bookmarksWithDetails)
 }
 
 // ブックマーク追加

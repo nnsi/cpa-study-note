@@ -21,8 +21,8 @@ export const metricsRoutes = ({ env, db }: MetricsDeps) => {
     // 今日の活動メトリクス取得（リアルタイム、タイムゾーン考慮）
     .get("/today", authMiddleware, async (c) => {
       const user = c.get("user")
-      const metrics = await getTodayMetrics({ metricsRepo }, user.id, user.timezone)
-      return c.json({ metrics })
+      const result = await getTodayMetrics({ metricsRepo }, user.id, user.timezone)
+      return handleResultWith(c, result, (metrics) => ({ metrics }))
     })
 
     // 日次メトリクス取得（タイムゾーン考慮）
