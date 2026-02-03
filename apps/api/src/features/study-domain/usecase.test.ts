@@ -73,7 +73,9 @@ describe("Study Domain UseCase", () => {
 
       const result = await listStudyDomains(deps, "user-1")
 
-      expect(result).toHaveLength(0)
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      expect(result.value).toHaveLength(0)
     })
   })
 

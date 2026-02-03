@@ -135,13 +135,15 @@ describe("Chat UseCase", () => {
         topicId: testData.topicId,
       })
 
-      const sessions = await listSessionsByTopic(
+      const result = await listSessionsByTopic(
         { chatRepo },
         testData.userId,
         testData.topicId
       )
 
-      expect(sessions).toHaveLength(0)
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      expect(result.value).toHaveLength(0)
     })
   })
 
