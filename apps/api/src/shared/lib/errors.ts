@@ -5,6 +5,7 @@ export type ErrorCode =
   | "UNAUTHORIZED" // 401
   | "BAD_REQUEST" // 400
   | "CONFLICT" // 409
+  | "PAYLOAD_TOO_LARGE" // 413
   | "INTERNAL_ERROR" // 500
 
 // アプリケーション共通エラー型
@@ -69,6 +70,15 @@ export const internalError = (
   details,
 })
 
+export const payloadTooLarge = (
+  message: string,
+  details?: Record<string, unknown>
+): AppError => ({
+  code: "PAYLOAD_TOO_LARGE",
+  message,
+  details,
+})
+
 // コード → HTTPステータスのマッピング
 export const errorCodeToStatus = {
   NOT_FOUND: 404,
@@ -76,5 +86,6 @@ export const errorCodeToStatus = {
   UNAUTHORIZED: 401,
   BAD_REQUEST: 400,
   CONFLICT: 409,
+  PAYLOAD_TOO_LARGE: 413,
   INTERNAL_ERROR: 500,
 } as const satisfies Record<ErrorCode, number>

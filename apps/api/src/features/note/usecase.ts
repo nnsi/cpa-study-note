@@ -15,7 +15,7 @@ const noteSummaryParseSchema = z.object({
   stumbledPoints: z.array(z.string()).default([]),
 })
 
-type NoteDeps = {
+export type NoteDeps = {
   noteRepo: NoteRepository
   chatRepo: ChatRepository
   aiAdapter: AIAdapter
@@ -211,13 +211,13 @@ export const createManualNote = async (
 export const listNotes = async (
   deps: Pick<NoteDeps, "noteRepo">,
   userId: string
-): Promise<NoteListResponse[]> => {
+): Promise<Result<NoteListResponse[], AppError>> => {
   const notes = await deps.noteRepo.findByUser(userId)
-  return notes.map((note) => ({
+  return ok(notes.map((note) => ({
     ...toNoteResponse(note),
     topicName: note.topicName,
     subjectName: note.subjectName,
-  }))
+  })))
 }
 
 // 論点別ノート一覧取得
@@ -225,9 +225,9 @@ export const listNotesByTopic = async (
   deps: Pick<NoteDeps, "noteRepo">,
   userId: string,
   topicId: string
-): Promise<NoteResponse[]> => {
+): Promise<Result<NoteResponse[], AppError>> => {
   const notes = await deps.noteRepo.findByTopic(userId, topicId)
-  return notes.map(toNoteResponse)
+  return ok(notes.map(toNoteResponse))
 }
 
 // ノート詳細取得
@@ -282,14 +282,14 @@ export const getNoteBySession = async (
   deps: Pick<NoteDeps, "noteRepo">,
   userId: string,
   sessionId: string
-): Promise<NoteResponse | null> => {
+): Promise<Result<NoteResponse | null, AppError>> => {
   const note = await deps.noteRepo.findBySessionId(sessionId)
 
   if (!note || note.userId !== userId) {
-    return null
+    return ok(null)
   }
 
-  return toNoteResponse(note)
+  return ok(toNoteResponse(note))
 }
 
 // ノート再生成（最新の会話を反映）

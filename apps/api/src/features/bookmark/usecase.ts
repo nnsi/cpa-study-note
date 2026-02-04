@@ -4,7 +4,7 @@ import type { BookmarkWithDetails } from "@cpa-study/shared/schemas"
 import { ok, err, type Result } from "@/shared/lib/result"
 import { notFound, type AppError } from "@/shared/lib/errors"
 
-type BookmarkDeps = {
+export type BookmarkDeps = {
   repo: BookmarkRepository
 }
 

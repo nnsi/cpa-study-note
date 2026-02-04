@@ -307,10 +307,12 @@ describe("Note UseCase", () => {
 
       const result = await listNotes({ noteRepo }, "user-1")
 
-      expect(result).toHaveLength(2)
-      expect(result[0].topicName).toBe("有価証券")
-      expect(result[0].subjectName).toBe("財務会計論")
-      expect(result[0].createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T/)
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      expect(result.value).toHaveLength(2)
+      expect(result.value[0].topicName).toBe("有価証券")
+      expect(result.value[0].subjectName).toBe("財務会計論")
+      expect(result.value[0].createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T/)
     })
 
     it("ノートがない場合は空配列を返す", async () => {
@@ -320,7 +322,9 @@ describe("Note UseCase", () => {
 
       const result = await listNotes({ noteRepo }, "user-1")
 
-      expect(result).toEqual([])
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      expect(result.value).toEqual([])
     })
   })
 
@@ -336,7 +340,9 @@ describe("Note UseCase", () => {
 
       const result = await listNotesByTopic({ noteRepo }, "user-1", "topic-1")
 
-      expect(result).toHaveLength(2)
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      expect(result.value).toHaveLength(2)
       expect(noteRepo.findByTopic).toHaveBeenCalledWith("user-1", "topic-1")
     })
   })

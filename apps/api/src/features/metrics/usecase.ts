@@ -2,7 +2,7 @@ import type { MetricsRepository, MetricSnapshot, TodayMetrics, DailyMetric } fro
 import { ok, err, type Result } from "@/shared/lib/result"
 import { badRequest, type AppError } from "@/shared/lib/errors"
 
-type MetricsDeps = {
+export type MetricsDeps = {
   metricsRepo: MetricsRepository
 }
 

@@ -23,7 +23,7 @@ import {
   updateNote,
   refreshNoteFromSession,
 } from "./usecase"
-import { handleResult, handleResultWith } from "@/shared/lib/route-helpers"
+import { handleResult, handleResultWith, errorResponse } from "@/shared/lib/route-helpers"
 
 type NoteDeps = {
   env: Env
@@ -87,24 +87,27 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
     // ノート一覧
     .get("/", authMiddleware, async (c) => {
       const user = c.get("user")
-      const notes = await listNotes({ noteRepo }, user.id)
-      return c.json({ notes })
+      const result = await listNotes({ noteRepo }, user.id)
+      if (!result.ok) return errorResponse(c, result.error)
+      return c.json({ notes: result.value })
     })
 
     // 論点別ノート一覧
     .get("/topic/:topicId", authMiddleware, async (c) => {
       const user = c.get("user")
       const topicId = c.req.param("topicId")
-      const notes = await listNotesByTopic({ noteRepo }, user.id, topicId)
-      return c.json({ notes })
+      const result = await listNotesByTopic({ noteRepo }, user.id, topicId)
+      if (!result.ok) return errorResponse(c, result.error)
+      return c.json({ notes: result.value })
     })
 
     // セッション別ノート取得
     .get("/session/:sessionId", authMiddleware, async (c) => {
       const user = c.get("user")
       const sessionId = c.req.param("sessionId")
-      const note = await getNoteBySession({ noteRepo }, user.id, sessionId)
-      return c.json({ note })
+      const result = await getNoteBySession({ noteRepo }, user.id, sessionId)
+      if (!result.ok) return errorResponse(c, result.error)
+      return c.json({ note: result.value })
     })
 
     // ノート詳細

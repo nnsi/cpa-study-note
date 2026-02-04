@@ -13,7 +13,8 @@ import {
   getImage,
   getImageFile,
 } from "./usecase"
-import { handleResult, handleResultWith } from "@/shared/lib/route-helpers"
+import { handleResult, handleResultWith, errorResponse } from "@/shared/lib/route-helpers"
+import { payloadTooLarge } from "@/shared/lib/errors"
 
 // 10MB制限
 const MAX_UPLOAD_SIZE = 10 * 1024 * 1024
@@ -54,7 +55,7 @@ export const imageRoutes = ({ env, db }: ImageDeps) => {
 
       // サイズ制限チェック
       if (body.byteLength > MAX_UPLOAD_SIZE) {
-        return c.json({ error: { code: "BAD_REQUEST", message: "ファイルサイズが大きすぎます（最大10MB）" } }, 413)
+        return errorResponse(c, payloadTooLarge("ファイルサイズが大きすぎます（最大10MB）"))
       }
 
       const result = await uploadImage(

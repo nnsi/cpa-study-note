@@ -1,6 +1,7 @@
 import { ok, err, type Result } from "@/shared/lib/result"
 import { notFound, type AppError } from "@/shared/lib/errors"
 import type { LearningRepository, TopicProgress } from "./repository"
+import type { SubjectRepository } from "../subject/repository"
 
 // Response types
 export type ProgressResponse = {
@@ -27,6 +28,13 @@ export type RecentTopicResponse = {
   subjectName: string
   categoryId: string
   lastAccessedAt: string
+}
+
+export type SubjectProgressStats = {
+  subjectId: string
+  subjectName: string
+  totalTopics: number
+  understoodTopics: number
 }
 
 // Dependencies
@@ -173,6 +181,34 @@ export const listRecentTopics = async (
       subjectName: t.subjectName,
       categoryId: t.categoryId,
       lastAccessedAt: t.lastAccessedAt.toISOString(),
+    }))
+  )
+}
+
+/**
+ * Get subject progress stats
+ */
+export const getSubjectProgressStats = async (
+  deps: { subjectRepo: SubjectRepository },
+  userId: string
+): Promise<Result<SubjectProgressStats[], AppError>> => {
+  const [subjects, progressCounts] = await Promise.all([
+    deps.subjectRepo.findAllSubjectsForUser(undefined, userId),
+    deps.subjectRepo.getProgressCountsBySubject(userId),
+  ])
+
+  const subjectIds = subjects.map((s) => s.id)
+  const batchStats = await deps.subjectRepo.getBatchSubjectStats(subjectIds, userId)
+
+  const topicCountMap = new Map(batchStats.map((s) => [s.subjectId, s.topicCount]))
+  const progressMap = new Map(progressCounts.map((p) => [p.subjectId, p.understoodCount]))
+
+  return ok(
+    subjects.map((subject) => ({
+      subjectId: subject.id,
+      subjectName: subject.name,
+      totalTopics: topicCountMap.get(subject.id) ?? 0,
+      understoodTopics: progressMap.get(subject.id) ?? 0,
     }))
   )
 }
