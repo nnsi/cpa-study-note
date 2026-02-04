@@ -6,15 +6,7 @@ import {
   subjects,
   studyDomains,
 } from "@cpa-study/db/schema"
-
-export type TopicSearchResult = {
-  id: string
-  name: string
-  subjectId: string
-  subjectName: string
-  categoryId: string
-  categoryName: string
-}
+import type { SearchTopicsResponse } from "@cpa-study/shared/schemas"
 
 export type SearchViewRepo = {
   searchTopics: (
@@ -22,7 +14,7 @@ export type SearchViewRepo = {
     query: string,
     studyDomainId?: string,
     limit?: number
-  ) => Promise<{ results: TopicSearchResult[]; total: number }>
+  ) => Promise<SearchTopicsResponse>
 }
 
 export const createSearchViewRepo = (db: Db): SearchViewRepo => ({

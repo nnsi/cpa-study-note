@@ -1,16 +1,21 @@
 import { api } from "@/lib/api-client"
-import type { TopicCheckHistoryResponse } from "@cpa-study/shared"
+import {
+  checkHistoryListResponseSchema,
+  type TopicCheckHistoryResponse,
+  type CheckHistoryListResponse,
+} from "@cpa-study/shared/schemas"
 
 export type CheckHistoryItem = TopicCheckHistoryResponse
 
 export const getCheckHistory = async (
   _subjectId: string,
   topicId: string
-): Promise<{ history: CheckHistoryItem[] }> => {
+): Promise<CheckHistoryListResponse> => {
   // Note: subjectId is no longer needed for the Learning API
   const res = await api.api.learning.topics[":topicId"]["check-history"].$get({
     param: { topicId },
   })
   if (!res.ok) throw new Error("Failed to fetch check history")
-  return res.json() as Promise<{ history: CheckHistoryItem[] }>
+  const json = await res.json()
+  return checkHistoryListResponseSchema.parse(json)
 }

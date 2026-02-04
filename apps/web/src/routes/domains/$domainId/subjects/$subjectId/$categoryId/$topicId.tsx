@@ -6,6 +6,7 @@ import { ChatContainer, getSessionsByTopic } from "@/features/chat"
 import { TopicInfo } from "@/features/topic"
 import { TopicNotes } from "@/features/note"
 import { requireAuth } from "@/lib/auth"
+import { topicViewResponseSchema, type SessionWithStats } from "@cpa-study/shared/schemas"
 
 export const Route = createFileRoute(
   "/domains/$domainId/subjects/$subjectId/$categoryId/$topicId"
@@ -14,52 +15,8 @@ export const Route = createFileRoute(
   component: TopicDetailPage,
 })
 
-type Session = {
-  id: string
-  createdAt: string
-  messageCount: number
-  goodCount: number
-  surfaceCount: number
-  firstMessagePreview: string | null
-}
-
-// View API response type for topic detail
-type TopicViewResponse = {
-  topic: {
-    id: string
-    name: string
-    description: string | null
-    categoryId: string
-    categoryName: string
-    subjectId: string
-    subjectName: string
-    difficulty: string | null
-    topicType: string | null
-    displayOrder: number
-    createdAt: string
-    updatedAt: string
-  }
-  progress: {
-    id: string
-    userId: string
-    topicId: string
-    understood: boolean
-    lastAccessedAt: string | null
-    questionCount: number
-    goodQuestionCount: number
-    createdAt: string
-    updatedAt: string
-  } | null
-  recentNotes: Array<{
-    id: string
-    title: string | null
-    updatedAt: string
-  }>
-  recentSessions: Array<{
-    id: string
-    createdAt: string
-  }>
-}
+// SessionWithStatsのエイリアス
+type Session = SessionWithStats
 
 function TopicDetailPage() {
   const { domainId, subjectId, categoryId, topicId } = Route.useParams()
@@ -74,12 +31,13 @@ function TopicDetailPage() {
 
   const { data: topic, isLoading } = useQuery({
     queryKey: ["topics", topicId],
-    queryFn: async (): Promise<TopicViewResponse> => {
+    queryFn: async () => {
       const res = await api.api.view.topics[":topicId"].$get({
         param: { topicId },
       })
       if (!res.ok) throw new Error("Failed to fetch topic")
-      return res.json() as Promise<TopicViewResponse>
+      const data = await res.json()
+      return topicViewResponseSchema.parse(data)
     },
   })
 

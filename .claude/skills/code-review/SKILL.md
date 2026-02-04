@@ -105,6 +105,8 @@ Critical/Highの指摘を全て修正する。一箇所見つけたら「他に�
 | POST で `{ message: "..." }` 返却 | 詳細データを返すように変更 |
 | UseCase が Result を返さない | `Result<T, AppError>` を返すように変更 |
 | DI がインライン | `const deps = { repo }` 形式に変更 |
+| 野良Response型（ローカル定義） | `@cpa-study/shared/schemas` から import |
+| `as Promise<T>` キャスト | Zod parseに変更（実行時検証必須） |
 
 ---
 
@@ -157,6 +159,31 @@ grep -r "z.object" apps/api/src/features/**/route.ts
 **確認項目:**
 - Zodスキーマは `@cpa-study/shared/schemas` から import
 - ローカル定義は禁止
+
+### Response型（バックエンド）
+```bash
+# usecase内で野良Response型が定義されていないか
+grep -rn "^type.*Response\s*=" apps/api/src/features/**/usecase.ts
+grep -rn "^export type.*Response\s*=" apps/api/src/features/**/usecase.ts
+```
+
+**確認項目:**
+- Response型は `@cpa-study/shared/schemas` から import
+- ローカルResponse型定義は禁止（sharedとの型不整合を防ぐため）
+
+### Response型（フロントエンド）
+```bash
+# as Promise<> キャストが残っていないか
+grep -rn "as Promise<" apps/web/src/features/**/api.ts
+
+# Zod parseを使用しているか
+grep -rn "\.parse(json)" apps/web/src/features/**/api.ts
+```
+
+**確認項目:**
+- `res.json() as Promise<T>` は禁止（実行時検証なし）
+- 代わりに `xxxSchema.parse(json)` を使用（実行時検証あり）
+- スキーマは `@cpa-study/shared/schemas` から import
 
 ---
 

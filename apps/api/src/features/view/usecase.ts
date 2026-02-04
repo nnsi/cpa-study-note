@@ -4,97 +4,14 @@ import type { TopicViewRepo, TopicViewData } from "./repositories/topicViewRepo"
 import type { SubjectDashboardViewRepo, SubjectDashboardData } from "./repositories/subjectDashboardViewRepo"
 import type { ReviewListViewRepo, ReviewListData, ReviewListFilters } from "./repositories/reviewListViewRepo"
 import type { CategoryTopicsViewRepo, CategoryTopicsData } from "./repositories/categoryTopicsViewRepo"
-import type { SearchViewRepo, TopicSearchResult } from "./repositories/searchViewRepo"
-
-// Response types (Date -> string conversion)
-export type TopicViewResponse = {
-  topic: {
-    id: string
-    name: string
-    description: string | null
-    categoryId: string
-    categoryName: string
-    subjectId: string
-    subjectName: string
-    difficulty: string | null
-    topicType: string | null
-    displayOrder: number
-    createdAt: string
-    updatedAt: string
-  }
-  progress: {
-    id: string
-    userId: string
-    topicId: string
-    understood: boolean
-    lastAccessedAt: string | null
-    questionCount: number
-    goodQuestionCount: number
-    createdAt: string
-    updatedAt: string
-  } | null
-  recentNotes: Array<{
-    id: string
-    title: string | null
-    updatedAt: string
-  }>
-  recentSessions: Array<{
-    id: string
-    createdAt: string
-  }>
-}
-
-export type SubjectDashboardResponse = {
-  subject: {
-    id: string
-    name: string
-    emoji: string | null
-    color: string | null
-  }
-  stats: {
-    categoryCount: number
-    topicCount: number
-    completedCount: number
-    progressPercentage: number
-  }
-  recentTopics: Array<{
-    id: string
-    name: string
-    lastAccessedAt: string | null
-  }>
-}
-
-export type ReviewListResponse = {
-  topics: Array<{
-    id: string
-    name: string
-    subjectId: string
-    subjectName: string
-    categoryId: string
-    understood: boolean
-    lastAccessedAt: string | null
-    sessionCount: number
-  }>
-  total: number
-}
-
-export type CategoryTopicsResponse = {
-  category: {
-    id: string
-    name: string
-  }
-  topics: Array<{
-    id: string
-    name: string
-    description: string | null
-    displayOrder: number
-  }>
-}
-
-export type SearchTopicsResponse = {
-  results: TopicSearchResult[]
-  total: number
-}
+import type { SearchViewRepo } from "./repositories/searchViewRepo"
+import type {
+  TopicViewResponse,
+  SubjectDashboardResponse,
+  ReviewListResponse,
+  CategoryTopicsResponse,
+  SearchTopicsResponse,
+} from "@cpa-study/shared/schemas"
 
 // Dependencies
 export type ViewDeps = {

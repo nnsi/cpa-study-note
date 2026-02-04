@@ -1,5 +1,6 @@
 import { api } from "@/lib/api-client"
 import type { FilteredTopic, TopicFilterParams } from "@cpa-study/shared"
+import { reviewListResponseSchema } from "@cpa-study/shared/schemas"
 
 export type { FilteredTopic, TopicFilterParams }
 
@@ -18,20 +19,8 @@ export const filterTopics = async (
 
   const res = await api.api.view.topics.$get({ query })
   if (!res.ok) throw new Error("Failed to filter topics")
-  type ViewTopicsResponse = {
-    topics: Array<{
-      id: string
-      name: string
-      subjectId: string
-      subjectName: string
-      categoryId: string
-      understood: boolean
-      lastAccessedAt: string | null
-      sessionCount: number
-    }>
-    total: number
-  }
-  const data = (await res.json()) as ViewTopicsResponse
+  const json = await res.json()
+  const data = reviewListResponseSchema.parse(json)
   // Transform view API response to FilteredTopic format
   return data.topics.map((t) => ({
     id: t.id,

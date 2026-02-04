@@ -4,7 +4,8 @@ import type { TopicViewRepo, TopicViewData } from "./repositories/topicViewRepo"
 import type { SubjectDashboardViewRepo, SubjectDashboardData } from "./repositories/subjectDashboardViewRepo"
 import type { ReviewListViewRepo, ReviewListData, ReviewListFilters } from "./repositories/reviewListViewRepo"
 import type { CategoryTopicsViewRepo, CategoryTopicsData } from "./repositories/categoryTopicsViewRepo"
-import type { SearchViewRepo, TopicSearchResult } from "./repositories/searchViewRepo"
+import type { SearchViewRepo } from "./repositories/searchViewRepo"
+import type { SearchTopicsResponse } from "@cpa-study/shared/schemas"
 import type { ViewDeps } from "./usecase"
 import {
   getTopicView,
@@ -109,7 +110,7 @@ const mockCategoryTopicsData: CategoryTopicsData = {
   ],
 }
 
-const mockSearchResults: { results: TopicSearchResult[]; total: number } = {
+const mockSearchResults: SearchTopicsResponse = {
   results: [
     {
       id: "topic-1",

@@ -260,3 +260,26 @@ export const listSubjectsQuerySchema = z.object({
 })
 
 export type ListSubjectsQuery = z.infer<typeof listSubjectsQuerySchema>
+
+// ========== API レスポンスラッパースキーマ ==========
+
+// 科目一覧レスポンス（統計情報付き）
+export const subjectsWithStatsListResponseSchema = z.object({
+  subjects: z.array(subjectWithStatsSchema),
+})
+
+export type SubjectsWithStatsListResponse = z.infer<typeof subjectsWithStatsListResponseSchema>
+
+// 科目詳細レスポンス
+export const subjectDetailResponseSchema = z.object({
+  subject: subjectResponseSchema,
+})
+
+export type SubjectDetailResponse = z.infer<typeof subjectDetailResponseSchema>
+
+// チェック履歴一覧レスポンス
+export const checkHistoryListResponseSchema = z.object({
+  history: z.array(topicCheckHistoryResponseSchema),
+})
+
+export type CheckHistoryListResponse = z.infer<typeof checkHistoryListResponseSchema>

@@ -121,6 +121,24 @@ import { createBookmarkRequestSchema } from "@cpa-study/shared/schemas"
 const createBookmarkRequestSchema = z.object({ ... })
 ```
 
+### Response型
+```typescript
+// ✅ 正しい: shared から import（コンパイル時に型安全性を担保）
+import type { BookmarkResponse, BookmarkListResponse } from "@cpa-study/shared/schemas"
+
+export const getBookmarks = async (deps, userId): Promise<Result<BookmarkListResponse, AppError>> => {
+  // ...
+}
+
+// ❌ 禁止: ローカルで定義（野良Response型）
+type BookmarkResponse = {
+  id: string
+  // ...
+}
+```
+
+**理由:** Response型をsharedで一元管理することで、バックエンドのレスポンス形式が変わった場合にフロントエンドでもコンパイルエラーが発生し、型の不整合を防げる。
+
 ### レスポンス形式
 ```typescript
 // ✅ 正しい: POST/PUT は詳細データを返す

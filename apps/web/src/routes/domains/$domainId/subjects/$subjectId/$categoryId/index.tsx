@@ -6,20 +6,7 @@ import { filterTopics, type FilteredTopic } from "@/features/review/api"
 import { getMyProgress } from "@/features/progress/api"
 import { PageWrapper } from "@/components/layout"
 import { BookmarkButton } from "@/features/bookmark"
-
-// View API response type for category topics
-type CategoryTopicsResponse = {
-  category: {
-    id: string
-    name: string
-  }
-  topics: Array<{
-    id: string
-    name: string
-    description: string | null
-    displayOrder: number
-  }>
-}
+import { categoryTopicsResponseSchema } from "@cpa-study/shared/schemas"
 
 export const Route = createFileRoute("/domains/$domainId/subjects/$subjectId/$categoryId/")({
   beforeLoad: requireAuth,
@@ -32,12 +19,13 @@ function CategoryPage() {
 
   const { data: topicsData, isLoading } = useQuery({
     queryKey: ["subjects", subjectId, "categories", categoryId, "topics"],
-    queryFn: async (): Promise<CategoryTopicsResponse> => {
+    queryFn: async () => {
       const res = await api.api.view.categories[":categoryId"].topics.$get({
         param: { categoryId },
       })
       if (!res.ok) throw new Error(`論点の取得に失敗しました (${res.status})`)
-      return res.json() as Promise<CategoryTopicsResponse>
+      const data = await res.json()
+      return categoryTopicsResponseSchema.parse(data)
     },
   })
 

@@ -1,19 +1,8 @@
 import { api } from "@/lib/api-client"
 import type { TopicSearchResult } from "@cpa-study/shared/schemas"
+import { searchTopicsResponseSchema } from "@cpa-study/shared/schemas"
 
 export type { TopicSearchResult }
-
-type ViewSearchResponse = {
-  results: Array<{
-    id: string
-    name: string
-    subjectId: string
-    subjectName: string
-    categoryId: string
-    categoryName: string
-  }>
-  total: number
-}
 
 export const searchTopics = async (
   query: string,
@@ -24,8 +13,9 @@ export const searchTopics = async (
     query: { q: query, limit: String(limit), studyDomainId },
   })
   if (!res.ok) throw new Error("Failed to search topics")
-  const data = (await res.json()) as ViewSearchResponse
-  // Transform to TopicSearchResult format
+  const json = await res.json()
+  const data = searchTopicsResponseSchema.parse(json)
+  // Transform to TopicSearchResult format (topic.ts schema has extra fields)
   return {
     results: data.results.map((r) => ({
       id: r.id,
