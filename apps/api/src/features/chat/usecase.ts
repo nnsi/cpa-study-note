@@ -8,7 +8,7 @@ import { z } from "zod"
 import { ok, err, type Result } from "@/shared/lib/result"
 import { notFound, forbidden, type AppError } from "@/shared/lib/errors"
 
-type ChatDeps = {
+export type ChatDeps = {
   chatRepo: ChatRepository
   learningRepo: LearningRepository
   aiAdapter: AIAdapter

@@ -19,10 +19,10 @@ import {
 import { createSubjectRepository } from "../subject/repository"
 import { bulkImportCSVToStudyDomain } from "../subject/usecase"
 import { createNoTransactionRunner } from "@/shared/lib/transaction"
-import { handleResult, handleResultWith } from "@/shared/lib/route-helpers"
+import { handleResult, handleResultWith, errorResponse } from "@/shared/lib/route-helpers"
+import { internalError } from "@/shared/lib/errors"
 
 type StudyDomainDeps = {
-  env: Env
   db: Db
 }
 
@@ -106,7 +106,7 @@ export const studyDomainRoutes = ({ db }: StudyDomainDeps) => {
           return handleResult(c, result)
         } catch (e) {
           console.error("Import error:", e)
-          return c.json({ error: { code: "INTERNAL_ERROR", message: "インポート中にエラーが発生しました" } }, 500)
+          return errorResponse(c, internalError("インポート中にエラーが発生しました"))
         }
       }
     )

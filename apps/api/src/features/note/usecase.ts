@@ -15,7 +15,7 @@ const noteSummaryParseSchema = z.object({
   stumbledPoints: z.array(z.string()).default([]),
 })
 
-type NoteDeps = {
+export type NoteDeps = {
   noteRepo: NoteRepository
   chatRepo: ChatRepository
   aiAdapter: AIAdapter
@@ -211,13 +211,18 @@ export const createManualNote = async (
 export const listNotes = async (
   deps: Pick<NoteDeps, "noteRepo">,
   userId: string
-): Promise<NoteListResponse[]> => {
-  const notes = await deps.noteRepo.findByUser(userId)
-  return notes.map((note) => ({
-    ...toNoteResponse(note),
-    topicName: note.topicName,
-    subjectName: note.subjectName,
-  }))
+): Promise<Result<NoteListResponse[], AppError>> => {
+  try {
+    const notes = await deps.noteRepo.findByUser(userId)
+    return ok(notes.map((note) => ({
+      ...toNoteResponse(note),
+      topicName: note.topicName,
+      subjectName: note.subjectName,
+    })))
+  } catch (e) {
+    console.error("[Note] listNotes error:", e)
+    return err(internalError("ノート一覧の取得に失敗しました"))
+  }
 }
 
 // 論点別ノート一覧取得
@@ -225,9 +230,14 @@ export const listNotesByTopic = async (
   deps: Pick<NoteDeps, "noteRepo">,
   userId: string,
   topicId: string
-): Promise<NoteResponse[]> => {
-  const notes = await deps.noteRepo.findByTopic(userId, topicId)
-  return notes.map(toNoteResponse)
+): Promise<Result<NoteResponse[], AppError>> => {
+  try {
+    const notes = await deps.noteRepo.findByTopic(userId, topicId)
+    return ok(notes.map(toNoteResponse))
+  } catch (e) {
+    console.error("[Note] listNotesByTopic error:", e)
+    return err(internalError("論点別ノート一覧の取得に失敗しました"))
+  }
 }
 
 // ノート詳細取得
@@ -282,14 +292,19 @@ export const getNoteBySession = async (
   deps: Pick<NoteDeps, "noteRepo">,
   userId: string,
   sessionId: string
-): Promise<NoteResponse | null> => {
-  const note = await deps.noteRepo.findBySessionId(sessionId)
+): Promise<Result<NoteResponse | null, AppError>> => {
+  try {
+    const note = await deps.noteRepo.findBySessionId(sessionId)
 
-  if (!note || note.userId !== userId) {
-    return null
+    if (!note || note.userId !== userId) {
+      return ok(null)
+    }
+
+    return ok(toNoteResponse(note))
+  } catch (e) {
+    console.error("[Note] getNoteBySession error:", e)
+    return err(internalError("ノートの取得に失敗しました"))
   }
-
-  return toNoteResponse(note)
 }
 
 // ノート再生成（最新の会話を反映）

@@ -5,10 +5,8 @@ import type { Db } from "@cpa-study/db"
 import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
 import { errorResponse } from "@/shared/lib/route-helpers"
-import { ok, type Result } from "@/shared/lib/result"
-import type { AppError } from "@/shared/lib/errors"
 import { createLearningRepository } from "./repository"
-import { createSubjectRepository, type SubjectRepository } from "../subject/repository"
+import { createSubjectRepository } from "../subject/repository"
 import {
   touchTopic,
   getProgress,
@@ -16,6 +14,7 @@ import {
   listUserProgress,
   getCheckHistory,
   listRecentTopics,
+  getSubjectProgressStats,
 } from "./usecase"
 
 // Request schemas
@@ -111,43 +110,10 @@ export const learningRoutes = ({ db }: LearningDeps) => {
     .get("/subjects/progress-stats", authMiddleware, async (c) => {
       const user = c.get("user")
 
-      const result = await getSubjectProgressStats(subjectRepo, user.id)
+      const result = await getSubjectProgressStats({ subjectRepo }, user.id)
       if (!result.ok) return errorResponse(c, result.error)
       return c.json({ stats: result.value })
     })
 
   return app
-}
-
-// Helper function for subject progress stats (uses subject repository)
-type SubjectProgressStats = {
-  subjectId: string
-  subjectName: string
-  totalTopics: number
-  understoodTopics: number
-}
-
-const getSubjectProgressStats = async (
-  subjectRepo: SubjectRepository,
-  userId: string
-): Promise<Result<SubjectProgressStats[], AppError>> => {
-  const [subjects, progressCounts] = await Promise.all([
-    subjectRepo.findAllSubjectsForUser(undefined, userId),
-    subjectRepo.getProgressCountsBySubject(userId),
-  ])
-
-  const subjectIds = subjects.map((s) => s.id)
-  const batchStats = await subjectRepo.getBatchSubjectStats(subjectIds, userId)
-
-  const topicCountMap = new Map(batchStats.map((s) => [s.subjectId, s.topicCount]))
-  const progressMap = new Map(progressCounts.map((p) => [p.subjectId, p.understoodCount]))
-
-  return ok(
-    subjects.map((subject) => ({
-      subjectId: subject.id,
-      subjectName: subject.name,
-      totalTopics: topicCountMap.get(subject.id) ?? 0,
-      understoodTopics: progressMap.get(subject.id) ?? 0,
-    }))
-  )
 }

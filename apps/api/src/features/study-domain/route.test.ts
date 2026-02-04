@@ -45,7 +45,7 @@ describe("Study Domain Routes", () => {
     ctx = setupTestContext()
 
     // Create routes
-    const routes = studyDomainRoutes({ env: ctx.env, db: ctx.db as any })
+    const routes = studyDomainRoutes({ db: ctx.db as any })
 
     // Mount on main app with environment setup
     app = new Hono<{ Bindings: Env; Variables: Variables }>()
@@ -149,7 +149,7 @@ describe("Study Domain Routes", () => {
     it("should require authentication", async () => {
       const prodEnv = { ...ctx.env, ENVIRONMENT: "production" as const }
       const prodApp = new Hono<{ Bindings: Env; Variables: Variables }>()
-      prodApp.route("/study-domains", studyDomainRoutes({ env: prodEnv, db: ctx.db as any }))
+      prodApp.route("/study-domains", studyDomainRoutes({ db: ctx.db as any }))
 
       const res = await prodApp.request("/study-domains", {}, prodEnv)
 
@@ -226,7 +226,7 @@ describe("Study Domain Routes", () => {
     it("should require authentication", async () => {
       const prodEnv = { ...ctx.env, ENVIRONMENT: "production" as const }
       const prodApp = new Hono<{ Bindings: Env; Variables: Variables }>()
-      prodApp.route("/study-domains", studyDomainRoutes({ env: prodEnv, db: ctx.db as any }))
+      prodApp.route("/study-domains", studyDomainRoutes({ db: ctx.db as any }))
 
       const res = await prodApp.request("/study-domains/any", {}, prodEnv)
 
@@ -281,7 +281,7 @@ describe("Study Domain Routes", () => {
     it("should require authentication", async () => {
       const prodEnv = { ...ctx.env, ENVIRONMENT: "production" as const }
       const prodApp = new Hono<{ Bindings: Env; Variables: Variables }>()
-      prodApp.route("/study-domains", studyDomainRoutes({ env: prodEnv, db: ctx.db as any }))
+      prodApp.route("/study-domains", studyDomainRoutes({ db: ctx.db as any }))
 
       const res = await prodApp.request(
         "/study-domains",
@@ -408,7 +408,7 @@ describe("Study Domain Routes", () => {
     it("should require authentication", async () => {
       const prodEnv = { ...ctx.env, ENVIRONMENT: "production" as const }
       const prodApp = new Hono<{ Bindings: Env; Variables: Variables }>()
-      prodApp.route("/study-domains", studyDomainRoutes({ env: prodEnv, db: ctx.db as any }))
+      prodApp.route("/study-domains", studyDomainRoutes({ db: ctx.db as any }))
 
       const res = await prodApp.request(
         "/study-domains/any",
@@ -536,7 +536,7 @@ describe("Study Domain Routes", () => {
     it("should require authentication", async () => {
       const prodEnv = { ...ctx.env, ENVIRONMENT: "production" as const }
       const prodApp = new Hono<{ Bindings: Env; Variables: Variables }>()
-      prodApp.route("/study-domains", studyDomainRoutes({ env: prodEnv, db: ctx.db as any }))
+      prodApp.route("/study-domains", studyDomainRoutes({ db: ctx.db as any }))
 
       const res = await prodApp.request(
         "/study-domains/any",
