@@ -18,7 +18,7 @@ import {
   evaluateQuestion,
   listGoodQuestionsByTopic,
 } from "./usecase"
-import { handleResult, errorResponse } from "@/shared/lib/route-helpers"
+import { handleResult } from "@/shared/lib/route-helpers"
 
 type ChatDeps = {
   env: Env
@@ -46,7 +46,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
           topicId
         )
 
-        if (!result.ok) return errorResponse(c, result.error)
+        if (!result.ok) return handleResult(c, result)
         return c.json({ session: result.value }, 201)
       }
     )
@@ -61,7 +61,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
 
         const result = await listSessionsByTopic({ chatRepo }, user.id, topicId)
 
-        if (!result.ok) return errorResponse(c, result.error)
+        if (!result.ok) return handleResult(c, result)
         return c.json({ sessions: result.value })
       }
     )
@@ -76,7 +76,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
 
         const result = await listGoodQuestionsByTopic({ chatRepo }, user.id, topicId)
 
-        if (!result.ok) return errorResponse(c, result.error)
+        if (!result.ok) return handleResult(c, result)
         return c.json({ questions: result.value })
       }
     )
@@ -87,7 +87,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
       const user = c.get("user")
 
       const result = await getSession({ chatRepo }, user.id, sessionId)
-      if (!result.ok) return errorResponse(c, result.error)
+      if (!result.ok) return handleResult(c, result)
       return c.json({ session: result.value })
     })
 
@@ -97,7 +97,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
       const user = c.get("user")
 
       const result = await listMessages({ chatRepo }, user.id, sessionId)
-      if (!result.ok) return errorResponse(c, result.error)
+      if (!result.ok) return handleResult(c, result)
       return c.json({ messages: result.value })
     })
 
@@ -183,7 +183,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         result.value
       )
 
-      if (!evalResult.ok) return errorResponse(c, evalResult.error)
+      if (!evalResult.ok) return handleResult(c, evalResult)
       return c.json({ quality: evalResult.value })
     })
 

@@ -37,6 +37,111 @@ apps/api/src/features/{feature-name}/
 4. **Hono RPC**: メソッドチェーンで型推論、型エクスポート
 5. **Feature単位でDI**: index.tsでAdapter/Repository注入
 
+## 一貫性ルール（必須）
+
+新規Feature作成時は以下のパターンに従うこと。既存Featureと異なる実装は禁止。
+
+### エラーハンドリング
+```typescript
+// ✅ 正しい: handleResult を使用
+if (!result.ok) return handleResult(c, result)
+
+// ✅ 正しい: handleResultWith でレスポンス形式を指定
+return handleResultWith(c, result, (data) => ({ items: data }))
+
+// ✅ 正しい: 直接エラー生成する場合も err() + handleResult
+if (body.byteLength > MAX_SIZE) {
+  return handleResult(c, err(payloadTooLarge("ファイルサイズが大きすぎます")))
+}
+
+// ❌ 禁止: errorResponse を直接使用
+if (!result.ok) return errorResponse(c, result.error)
+
+// ❌ 禁止: c.json で直接エラーを返す
+return c.json({ error: "Not found" }, 404)
+```
+
+### Deps型定義
+```typescript
+// ✅ 正しい: XxxDeps 形式、db のみ含む
+type BookmarkDeps = {
+  db: Db
+}
+
+// ✅ 正しい: env が必要な場合のみ含める（AI機能等）
+type ChatDeps = {
+  env: Env  // AI_PROVIDER, OPENROUTER_API_KEY を使用
+  db: Db
+}
+
+// ❌ 禁止: env を使わないのに含める
+type SubjectDeps = {
+  env: Env  // 使っていない
+  db: Db
+}
+```
+
+### DIパターン（route.ts）
+```typescript
+// ✅ 正しい: deps オブジェクトを作成
+export const bookmarkRoutes = ({ db }: BookmarkDeps) => {
+  const repo = createBookmarkRepository(db)
+  const deps = { repo }
+
+  return new Hono()
+    .get("/", async (c) => {
+      const result = await getBookmarks(deps, userId)
+      // ...
+    })
+}
+
+// ❌ 禁止: インラインで渡す
+const result = await getBookmarks({ repo: createRepo(db) }, userId)
+```
+
+### Indexシグネチャ
+```typescript
+// ✅ 正しい: env を使わなくても _env として受け取る（インターフェース統一）
+export const createBookmarkFeature = (_env: Env, db: Db) => {
+  return bookmarkRoutes({ db })
+}
+
+// ❌ 禁止: env を省略
+export const createBookmarkFeature = (db: Db) => {
+  return bookmarkRoutes({ db })
+}
+```
+
+### Zodスキーマ
+```typescript
+// ✅ 正しい: shared から import
+import { createBookmarkRequestSchema } from "@cpa-study/shared/schemas"
+
+// ❌ 禁止: ローカルで定義
+const createBookmarkRequestSchema = z.object({ ... })
+```
+
+### レスポンス形式
+```typescript
+// ✅ 正しい: POST/PUT は詳細データを返す
+return c.json({ bookmark: result.value }, 201)
+
+// ❌ 禁止: メッセージだけ返す
+return c.json({ message: "Bookmark added" }, 201)
+```
+
+### UseCase の Deps型
+```typescript
+// ✅ 正しい: XxxDeps 形式でエクスポート
+export type BookmarkDeps = {
+  repo: BookmarkRepository
+}
+
+// ❌ 禁止: 異なる命名
+export type BookmarkUseCaseDeps = { ... }
+export type Deps = { ... }
+```
+
 ## テンプレート
 
 ### domain.ts
@@ -55,20 +160,66 @@ export type {FeatureName}Error =
 
 ### usecase.ts
 ```typescript
-import type { Result } from "@/shared/lib/result"
-import { ok, err } from "@/shared/lib/result"
+import { ok, err, type Result } from "@/shared/lib/result"
+import { notFound, internalError, type AppError } from "@/shared/lib/errors"
 import type { {FeatureName}Repository } from "./repository"
 
-type Deps = {
-  repository: {FeatureName}Repository
+// Deps型: XxxDeps 形式で命名し、エクスポート
+export type {FeatureName}Deps = {
+  repo: {FeatureName}Repository
+}
+
+// 全ての関数は Result<T, AppError> を返す
+export const get{FeatureName} = async (
+  deps: {FeatureName}Deps,
+  userId: string,
+  id: string
+): Promise<Result<{FeatureName}Response, AppError>> => {
+  try {
+    const item = await deps.repo.findById(id, userId)
+    if (!item) {
+      return err(notFound("{featureName}が見つかりません"))
+    }
+    return ok(formatResponse(item))
+  } catch (e) {
+    console.error("[{FeatureName}] get{FeatureName} error:", e)
+    return err(internalError("{featureName}の取得に失敗しました"))
+  }
+}
+
+export const list{FeatureName}s = async (
+  deps: {FeatureName}Deps,
+  userId: string
+): Promise<Result<{FeatureName}Response[], AppError>> => {
+  try {
+    const items = await deps.repo.findByUser(userId)
+    return ok(items.map(formatResponse))
+  } catch (e) {
+    console.error("[{FeatureName}] list{FeatureName}s error:", e)
+    return err(internalError("{featureName}一覧の取得に失敗しました"))
+  }
 }
 
 export const create{FeatureName} = async (
-  deps: Deps,
+  deps: {FeatureName}Deps,
+  userId: string,
   input: Create{FeatureName}Input
-): Promise<Result<{FeatureName}, {FeatureName}Error>> => {
-  // 純粋なビジネスロジック
+): Promise<Result<{FeatureName}Response, AppError>> => {
+  try {
+    const item = await deps.repo.create({ ...input, userId })
+    return ok(formatResponse(item))
+  } catch (e) {
+    console.error("[{FeatureName}] create{FeatureName} error:", e)
+    return err(internalError("{featureName}の作成に失敗しました"))
+  }
 }
+
+// レスポンス変換（Date → ISO文字列など）
+const formatResponse = (item: {FeatureName}): {FeatureName}Response => ({
+  ...item,
+  createdAt: item.createdAt.toISOString(),
+  updatedAt: item.updatedAt.toISOString(),
+})
 ```
 
 ### repository.ts
@@ -94,53 +245,62 @@ export type {FeatureName}Repository = ReturnType<typeof createRepository>
 ```typescript
 import { Hono } from "hono"
 import { zValidator } from "@hono/zod-validator"
-import {
-  create{FeatureName}RequestSchema,
-  {featureName}Schema,
-} from "@cpa-study/shared/schemas"
-import { create{FeatureName} } from "./usecase"
-import type { {FeatureName}Repository } from "./repository"
+import type { Db } from "@cpa-study/db"
+import { create{FeatureName}RequestSchema } from "@cpa-study/shared/schemas"
+import type { Env, Variables } from "@/shared/types/env"
+import { authMiddleware } from "@/shared/middleware/auth"
+import { handleResult, handleResultWith } from "@/shared/lib/route-helpers"
+import { create{FeatureName}Repository } from "./repository"
+import { get{FeatureName}, create{FeatureName} } from "./usecase"
 
-type Deps = {
-  repository: {FeatureName}Repository
+// Deps型: db のみ（env は使わないなら含めない）
+type {FeatureName}Deps = {
+  db: Db
 }
 
-// メソッドチェーンで型推論を活かす
-export const {featureName}Routes = (deps: Deps) =>
-  new Hono()
-    .get("/:id", async (c) => {
+export const {featureName}Routes = ({ db }: {FeatureName}Deps) => {
+  // DIパターン: deps オブジェクトを作成
+  const repo = create{FeatureName}Repository(db)
+  const deps = { repo }
+
+  const app = new Hono<{ Bindings: Env; Variables: Variables }>()
+    // GET: handleResultWith でレスポンス形式を指定
+    .get("/:id", authMiddleware, async (c) => {
       const id = c.req.param("id")
-      const result = await deps.repository.findById(id)
-      if (!result) return c.json({ error: "Not found" }, 404)
-      return c.json(result)
+      const user = c.get("user")
+      const result = await get{FeatureName}(deps, user.id, id)
+      return handleResultWith(c, result, (data) => ({ {featureName}: data }))
     })
+
+    // POST: handleResult + 詳細データを返す
     .post(
       "/",
+      authMiddleware,
       zValidator("json", create{FeatureName}RequestSchema),
       async (c) => {
+        const user = c.get("user")
         const input = c.req.valid("json")
-        const result = await create{FeatureName}(deps, input)
+        const result = await create{FeatureName}(deps, user.id, input)
 
-        if (!result.ok) {
-          return c.json({ error: result.error }, 400)
-        }
-
-        return c.json(result.value, 201)
+        if (!result.ok) return handleResult(c, result)
+        return c.json({ {featureName}: result.value }, 201)
       }
     )
+
+  return app
+}
 ```
 
 ### index.ts（DI + 型エクスポート）
 ```typescript
-import { createRepository } from "./repository"
+import type { Db } from "@cpa-study/db"
+import type { Env } from "@/shared/types/env"
 import { {featureName}Routes } from "./route"
 
-// Feature単位でDI
-export const create{FeatureName}Feature = (env: Env) => {
-  const deps = {
-    repository: createRepository(env.DB),
-  }
-  return {featureName}Routes(deps)
+// シグネチャ: (_env: Env, db: Db) 形式で統一
+// env を使わない場合も _env として受け取る（インターフェース統一）
+export const create{FeatureName}Feature = (_env: Env, db: Db) => {
+  return {featureName}Routes({ db })
 }
 
 // Hono RPC用の型エクスポート
@@ -205,9 +365,10 @@ export type ChatRoutes = ReturnType<typeof createChatFeature>
 import { Hono } from "hono"
 import { create{FeatureName}Feature } from "./features/{feature-name}"
 
-const createApp = (env: Env) =>
+// env と db を受け取り、各Feature に渡す
+const createApp = (env: Env, db: Db) =>
   new Hono()
-    .route("/api/{feature-name}", create{FeatureName}Feature(env))
+    .route("/api/{feature-name}", create{FeatureName}Feature(env, db))
     // 他のFeatureも同様に追加
 
 export type AppType = ReturnType<typeof createApp>
