@@ -111,7 +111,7 @@ const createApp = (env: Env) => {
     .route("/api/chat", createChatFeature(env, db))
     .route("/api/notes", createNoteFeature(env, db))
     .route("/api/images", createImageFeature(env, db))
-    .route("/api/metrics", createMetricsFeature(env, db))
+    .route("/api/metrics", createMetricsFeature(db))
     .route("/api/study-domains", createStudyDomainFeature(db))
     .route("/api/subjects", createSubjectFeature(env, db))
     .route("/api/bookmarks", createBookmarkFeature(env, db))

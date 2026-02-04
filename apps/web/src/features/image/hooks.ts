@@ -49,7 +49,7 @@ export const useImageUpload = () => {
       }))
 
       // 1. アップロードURL取得
-      const { uploadUrl, imageId } = await api.getUploadUrl(
+      const { imageId } = await api.getUploadUrl(
         file.name,
         file.type
       )

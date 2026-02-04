@@ -1,5 +1,5 @@
 import type { AIAdapter, AIMessage, StreamChunk, AIConfig } from "@/shared/lib/ai"
-import type { ChatRepository, ChatMessage } from "./repository"
+import type { ChatRepository } from "./repository"
 import type { LearningRepository } from "../learning/repository"
 import { buildSystemPrompt, buildEvaluationPrompt } from "./domain/prompts"
 import { parseLLMJson } from "@cpa-study/shared"

@@ -7,7 +7,6 @@
 import type {
   RateLimitStore,
   RateLimitConfig,
-  RateLimitResult,
   RateLimitInfo,
 } from "../types"
 

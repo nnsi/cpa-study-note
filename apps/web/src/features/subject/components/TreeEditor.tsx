@@ -1,17 +1,16 @@
 import { useEffect, useState } from "react"
 import { useTreeState } from "../hooks/useTreeState"
 import { useSubjectTree, useUpdateSubjectTree, useImportCSV } from "../hooks/useSubjects"
-import type { CategoryNode, TopicNodeInput } from "../api"
+import type { TopicNodeInput } from "../api"
 import { TreeNode } from "./TreeNode"
 import { TopicDetailEditor } from "./TopicDetailEditor"
 import { CSVImporter } from "./CSVImporter"
 
 type TreeEditorProps = {
   subjectId: string
-  subjectName: string
 }
 
-export function TreeEditor({ subjectId, subjectName }: TreeEditorProps) {
+export function TreeEditor({ subjectId }: TreeEditorProps) {
   const { tree, isLoading, error, refetch } = useSubjectTree(subjectId)
   const updateTreeMutation = useUpdateSubjectTree()
   const importCSVMutation = useImportCSV()

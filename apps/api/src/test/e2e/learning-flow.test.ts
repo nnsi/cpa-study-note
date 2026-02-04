@@ -31,46 +31,6 @@ const subjectResponseSchema = z.object({
   subject: subjectSchema,
 })
 
-const categorySchema = z.object({
-  id: z.string(),
-  name: z.string(),
-})
-
-const categoriesResponseSchema = z.object({
-  categories: z.array(categorySchema),
-})
-
-const topicSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  description: z.string(),
-})
-
-const topicsResponseSchema = z.object({
-  topics: z.array(topicSchema),
-})
-
-const topicResponseSchema = z.object({
-  topic: topicSchema,
-})
-
-const progressSchema = z.object({
-  topicId: z.string(),
-  understood: z.boolean(),
-})
-
-const progressResponseSchema = z.object({
-  progress: progressSchema,
-})
-
-const userProgressResponseSchema = z.object({
-  progress: z.array(progressSchema),
-})
-
-const statsResponseSchema = z.object({
-  stats: z.unknown(),
-})
-
 describe("E2E: Learning Flow", () => {
   let ctx: TestContext
   let req: ReturnType<typeof createTestRequest>

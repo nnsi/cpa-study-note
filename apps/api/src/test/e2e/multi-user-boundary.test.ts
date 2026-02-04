@@ -413,9 +413,6 @@ describe("E2E: Multi-user boundary tests", () => {
   })
 
   describe("Bookmark boundary", () => {
-    // UserAのブックマークID（テスト中に設定）
-    let userABookmarkSubjectId: string
-
     it("should not allow bookmarking other user's subject", async () => {
       // UserBがUserAの科目をブックマークしようとする
       const res = await makeRequest("/api/bookmarks", {

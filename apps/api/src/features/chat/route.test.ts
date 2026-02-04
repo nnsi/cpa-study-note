@@ -1,5 +1,5 @@
 /// <reference types="@cloudflare/workers-types" />
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
+import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import { Hono } from "hono"
 import { SignJWT } from "jose"
 import { z } from "zod"
@@ -10,7 +10,6 @@ import {
   seedTestData,
   type TestDatabase,
 } from "../../test/mocks/db"
-import { createMockAIAdapter } from "../../test/mocks/ai"
 import type { Env, Variables } from "../../shared/types/env"
 import { parseJson, errorResponseSchema } from "../../test/helpers"
 import Database from "better-sqlite3"

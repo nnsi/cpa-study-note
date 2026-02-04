@@ -1,7 +1,7 @@
 /// <reference types="@cloudflare/workers-types" />
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
+import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import { Hono } from "hono"
-import { SignJWT, jwtVerify } from "jose"
+import { SignJWT } from "jose"
 import { z } from "zod"
 import * as schema from "@cpa-study/db/schema"
 import { authRoutes } from "./route"
@@ -275,7 +275,6 @@ describe("Auth Routes", () => {
       const { Hono } = await import("hono")
       const { setCookie, getCookie } = await import("hono/cookie")
       const { SignJWT } = await import("jose")
-      const { authMiddleware } = await import("../../shared/middleware/auth")
       const { createAuthRepository } = await import("./repository")
 
       const repo = createAuthRepository(db as any)

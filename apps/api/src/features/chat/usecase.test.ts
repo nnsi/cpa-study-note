@@ -1,5 +1,5 @@
 /// <reference types="@cloudflare/workers-types" />
-import { describe, it, expect, beforeEach, vi } from "vitest"
+import { describe, it, expect, beforeEach } from "vitest"
 import { createTestDatabase, seedTestData, type TestDatabase } from "../../test/mocks/db"
 import { createChatRepository, type ChatRepository } from "./repository"
 import { createLearningRepository, type LearningRepository } from "../learning/repository"

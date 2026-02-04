@@ -14,7 +14,6 @@ import {
   createTestTopic,
 } from "@/test/helpers"
 import { subjectRoutes } from "./route"
-import { authMiddleware } from "@/shared/middleware/auth"
 import { createMockSimpleTransactionRunner } from "@/shared/lib/transaction"
 
 // Helper to create test app with proper typing

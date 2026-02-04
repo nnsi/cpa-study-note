@@ -12,7 +12,6 @@ import {
   createAuthHeaders,
   createAdditionalTestData,
   createProgressTestData,
-  createTestUser,
   createTestStudyDomain,
   createTestSubject,
   createTestCategory,

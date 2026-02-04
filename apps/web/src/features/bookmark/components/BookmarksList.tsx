@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router"
 import { useBookmarks } from "../hooks"
-import type { BookmarkWithDetails, BookmarkTargetType } from "../api"
+import type { BookmarkWithDetails } from "../api"
 
 type GroupedBookmarks = {
   subjects: BookmarkWithDetails[]
@@ -54,12 +54,10 @@ const BookmarkGroup = ({
   title,
   icon,
   bookmarks,
-  emptyMessage,
 }: {
   title: string
   icon: React.ReactNode
   bookmarks: BookmarkWithDetails[]
-  emptyMessage: string
 }) => {
   if (bookmarks.length === 0) {
     return null
@@ -162,7 +160,6 @@ export const BookmarksList = () => {
             </svg>
           }
           bookmarks={grouped.topics}
-          emptyMessage=""
         />
         <BookmarkGroup
           title="単元"
@@ -172,7 +169,6 @@ export const BookmarksList = () => {
             </svg>
           }
           bookmarks={grouped.categories}
-          emptyMessage=""
         />
         <BookmarkGroup
           title="科目"
@@ -182,7 +178,6 @@ export const BookmarksList = () => {
             </svg>
           }
           bookmarks={grouped.subjects}
-          emptyMessage=""
         />
       </div>
     </div>

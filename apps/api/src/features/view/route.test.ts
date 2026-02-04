@@ -475,11 +475,10 @@ describe("View Routes - Read-Only Guarantee", () => {
 describe("View Routes - Functional Tests", () => {
   let ctx: TestContext
   let app: Hono<{ Bindings: Env; Variables: Variables }>
-  let additionalData: ReturnType<typeof createAdditionalTestData>
 
   beforeEach(() => {
     ctx = setupTestContext()
-    additionalData = createAdditionalTestData(ctx.db, ctx.testData)
+    createAdditionalTestData(ctx.db, ctx.testData)
 
     // テストデータを追加
     createProgressTestData(ctx.db, ctx.testData.userId, ctx.testData.topicId, true)

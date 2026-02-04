@@ -1,7 +1,7 @@
 /**
  * Image UseCase のテスト
  */
-import { describe, it, expect, vi, beforeEach } from "vitest"
+import { describe, it, expect, vi } from "vitest"
 import type { ImageRepository } from "./repository"
 import type { AIAdapter } from "@/shared/lib/ai"
 import {

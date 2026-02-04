@@ -6,7 +6,6 @@ import {
   categories,
   topics,
   userTopicProgress,
-  topicCheckHistory,
 } from "@cpa-study/db/schema"
 
 export type Subject = {

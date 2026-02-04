@@ -5,14 +5,12 @@ import { createAuthRepository, type AuthRepository } from "./repository"
 describe("AuthRepository", () => {
   let repository: AuthRepository
   let testData: ReturnType<typeof seedTestData>
-  let resetDb: () => void
 
   beforeEach(() => {
-    const { db, sqlite } = createTestDatabase()
+    const { db } = createTestDatabase()
     testData = seedTestData(db)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     repository = createAuthRepository(db as any)
-    resetDb = () => sqlite.close()
   })
 
   describe("findUserById", () => {

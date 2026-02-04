@@ -7,14 +7,13 @@ import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
 import { createMetricsRepository } from "./repository"
 import { getDailyMetrics, createSnapshot, getTodayMetrics } from "./usecase"
-import { handleResult, errorResponse } from "@/shared/lib/route-helpers"
+import { errorResponse } from "@/shared/lib/route-helpers"
 
 type MetricsDeps = {
-  env: Env
   db: Db
 }
 
-export const metricsRoutes = ({ env, db }: MetricsDeps) => {
+export const metricsRoutes = ({ db }: MetricsDeps) => {
   const metricsRepo = createMetricsRepository(db)
 
   const app = new Hono<{ Bindings: Env; Variables: Variables }>()

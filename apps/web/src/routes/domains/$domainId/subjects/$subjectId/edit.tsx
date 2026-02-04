@@ -71,10 +71,7 @@ function SubjectEditPage() {
         </div>
 
         {/* Tree Editor */}
-        <TreeEditor
-          subjectId={subjectId}
-          subjectName={subjectData?.subject.name ?? "科目"}
-        />
+        <TreeEditor subjectId={subjectId} />
       </div>
     </PageWrapper>
   )

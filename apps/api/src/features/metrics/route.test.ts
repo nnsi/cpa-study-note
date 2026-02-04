@@ -14,10 +14,6 @@ import type { Env, Variables } from "../../shared/types/env"
 import Database from "better-sqlite3"
 
 // Zod schemas for response validation
-const errorResponseSchema = z.object({
-  error: z.string(),
-})
-
 const metricSnapshotSchema = z.object({
   id: z.string(),
   date: z.string(),
@@ -108,7 +104,7 @@ describe("Metrics Routes", () => {
 
     // Create Hono app with metrics routes
     app = new Hono<{ Bindings: Env; Variables: Variables }>()
-    app.route("/metrics", metricsRoutes({ env: testEnv, db: db as any }))
+    app.route("/metrics", metricsRoutes({ db: db as any }))
   })
 
   afterEach(() => {
@@ -186,7 +182,7 @@ describe("Metrics Routes", () => {
     it("should return 401 when unauthenticated in production mode", async () => {
       const prodEnv = { ...testEnv, ENVIRONMENT: "production" as const }
       const prodApp = new Hono<{ Bindings: Env; Variables: Variables }>()
-      prodApp.route("/metrics", metricsRoutes({ env: prodEnv, db: db as any }))
+      prodApp.route("/metrics", metricsRoutes({ db: db as any }))
 
       const res = await prodApp.request("/metrics/today", {}, prodEnv)
 
@@ -276,7 +272,7 @@ describe("Metrics Routes", () => {
     it("should return 401 when unauthenticated in production mode", async () => {
       const prodEnv = { ...testEnv, ENVIRONMENT: "production" as const }
       const prodApp = new Hono<{ Bindings: Env; Variables: Variables }>()
-      prodApp.route("/metrics", metricsRoutes({ env: prodEnv, db: db as any }))
+      prodApp.route("/metrics", metricsRoutes({ db: db as any }))
 
       const res = await prodApp.request(
         "/metrics/daily?from=2024-01-01&to=2024-01-31",
@@ -438,7 +434,7 @@ describe("Metrics Routes", () => {
     beforeEach(() => {
       prodEnv = { ...testEnv, ENVIRONMENT: "production" as const }
       prodApp = new Hono<{ Bindings: Env; Variables: Variables }>()
-      prodApp.route("/metrics", metricsRoutes({ env: prodEnv, db: db as any }))
+      prodApp.route("/metrics", metricsRoutes({ db: db as any }))
     })
 
     it("should return 401 for GET daily without auth", async () => {

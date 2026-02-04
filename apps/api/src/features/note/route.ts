@@ -1,6 +1,5 @@
 import { Hono } from "hono"
 import { zValidator } from "@hono/zod-validator"
-import { z } from "zod"
 import type { Db } from "@cpa-study/db"
 import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
@@ -23,7 +22,7 @@ import {
   updateNote,
   refreshNoteFromSession,
 } from "./usecase"
-import { handleResult, handleResultWith, errorResponse } from "@/shared/lib/route-helpers"
+import { handleResultWith, errorResponse } from "@/shared/lib/route-helpers"
 
 type NoteDeps = {
   env: Env
