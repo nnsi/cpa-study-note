@@ -86,7 +86,7 @@ describe("Learning Routes", () => {
     additionalData = createAdditionalTestData(ctx.db, ctx.testData)
 
     // ルートを作成
-    const routes = learningRoutes({ env: ctx.env, db: ctx.db as any })
+    const routes = learningRoutes({ db: ctx.db as any })
 
     // メインアプリにマウント（環境変数を初期化）
     app = new Hono<{ Bindings: Env; Variables: Variables }>()
@@ -528,7 +528,7 @@ describe("Learning Routes", () => {
   describe("認証エラー", () => {
     it("本番環境で認証なしの場合は401を返す（POST /learning/topics/:topicId/touch）", async () => {
       const prodEnv = { ...ctx.env, ENVIRONMENT: "production" as const }
-      const routes = learningRoutes({ env: prodEnv, db: ctx.db as any })
+      const routes = learningRoutes({ db: ctx.db as any })
 
       const prodApp = new Hono<{ Bindings: Env; Variables: Variables }>()
       prodApp.use("*", async (c, next) => {
@@ -552,7 +552,7 @@ describe("Learning Routes", () => {
 
     it("本番環境で認証なしの場合は401を返す（GET /learning/topics/recent）", async () => {
       const prodEnv = { ...ctx.env, ENVIRONMENT: "production" as const }
-      const routes = learningRoutes({ env: prodEnv, db: ctx.db as any })
+      const routes = learningRoutes({ db: ctx.db as any })
 
       const prodApp = new Hono<{ Bindings: Env; Variables: Variables }>()
       prodApp.use("*", async (c, next) => {
@@ -575,7 +575,7 @@ describe("Learning Routes", () => {
 
     it("本番環境で認証なしの場合は401を返す（GET /learning/subjects/progress-stats）", async () => {
       const prodEnv = { ...ctx.env, ENVIRONMENT: "production" as const }
-      const routes = learningRoutes({ env: prodEnv, db: ctx.db as any })
+      const routes = learningRoutes({ db: ctx.db as any })
 
       const prodApp = new Hono<{ Bindings: Env; Variables: Variables }>()
       prodApp.use("*", async (c, next) => {

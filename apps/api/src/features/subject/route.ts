@@ -16,22 +16,23 @@ import {
   createSubject,
   updateSubject,
   deleteSubject,
-  getSubjectTree,
-  updateSubjectTree,
-  importCSVToSubject,
   listSubjects,
   resolveStudyDomainId,
 } from "./usecase"
+import {
+  getSubjectTree,
+  updateSubjectTree,
+  importCSVToSubject,
+} from "./tree-usecase"
 import type { SimpleTransactionRunner } from "../../shared/lib/transaction"
 import { handleResult, handleResultWith } from "@/shared/lib/route-helpers"
 
-type SubjectDeps = {
-  env: Env
+type SubjectRouteDeps = {
   db: Db
   txRunner?: SimpleTransactionRunner
 }
 
-export const subjectRoutes = ({ db, txRunner }: SubjectDeps) => {
+export const subjectRoutes = ({ db, txRunner }: SubjectRouteDeps) => {
   const subjectRepo = createSubjectRepository(db)
   const deps = { subjectRepo }
   const treeDeps = { subjectRepo, db, txRunner }

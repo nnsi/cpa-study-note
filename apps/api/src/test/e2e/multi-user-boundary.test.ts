@@ -458,8 +458,8 @@ describe("E2E: Multi-user boundary tests", () => {
       })
 
       expect(res.status).toBe(201)
-      const data = await res.json() as { message: string }
-      expect(data.message).toBe("Bookmark added")
+      const data = await res.json() as { bookmark: unknown }
+      expect(data.bookmark).toBeDefined()
     })
 
     it("should not return other user's bookmarks in list", async () => {

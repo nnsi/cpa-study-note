@@ -9,10 +9,9 @@ import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
 import { createBookmarkRepository } from "./repository"
 import { getBookmarks, addBookmark, removeBookmark } from "./usecase"
-import { errorResponse } from "@/shared/lib/route-helpers"
+import { handleResult, handleResultWith } from "@/shared/lib/route-helpers"
 
 type BookmarkDeps = {
-  env: Env
   db: Db
 }
 
@@ -25,8 +24,7 @@ export const bookmarkRoutes = ({ db }: BookmarkDeps) => {
     .get("/", authMiddleware, async (c) => {
       const user = c.get("user")
       const result = await getBookmarks(deps, user.id)
-      if (!result.ok) return errorResponse(c, result.error)
-      return c.json({ bookmarks: result.value })
+      return handleResultWith(c, result, (bookmarks) => ({ bookmarks }))
     })
 
     // ブックマーク追加
@@ -37,14 +35,11 @@ export const bookmarkRoutes = ({ db }: BookmarkDeps) => {
       const result = await addBookmark(deps, user.id, targetType, targetId)
 
       if (!result.ok) {
-        return errorResponse(c, result.error)
+        return handleResult(c, result)
       }
 
-      if (result.value.alreadyExists) {
-        return c.json({ message: "Already bookmarked" }, 200)
-      }
-
-      return c.json({ message: "Bookmark added" }, 201)
+      const status = result.value.alreadyExists ? 200 : 201
+      return c.json({ bookmark: result.value.bookmark }, status)
     })
 
     // ブックマーク削除
@@ -57,12 +52,7 @@ export const bookmarkRoutes = ({ db }: BookmarkDeps) => {
         const { targetType, targetId } = c.req.valid("param")
 
         const result = await removeBookmark(deps, user.id, targetType, targetId)
-
-        if (!result.ok) {
-          return errorResponse(c, result.error)
-        }
-
-        return c.json({ message: "Bookmark removed" }, 200)
+        return handleResult(c, result, 204)
       }
     )
 

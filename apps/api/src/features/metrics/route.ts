@@ -7,7 +7,7 @@ import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
 import { createMetricsRepository } from "./repository"
 import { getDailyMetrics, createSnapshot, getTodayMetrics } from "./usecase"
-import { errorResponse } from "@/shared/lib/route-helpers"
+import { handleResult } from "@/shared/lib/route-helpers"
 
 type MetricsDeps = {
   db: Db
@@ -15,13 +15,14 @@ type MetricsDeps = {
 
 export const metricsRoutes = ({ db }: MetricsDeps) => {
   const metricsRepo = createMetricsRepository(db)
+  const deps = { metricsRepo }
 
   const app = new Hono<{ Bindings: Env; Variables: Variables }>()
     // 今日の活動メトリクス取得（リアルタイム、タイムゾーン考慮）
     .get("/today", authMiddleware, async (c) => {
       const user = c.get("user")
-      const result = await getTodayMetrics({ metricsRepo }, user.id, user.timezone)
-      if (!result.ok) return errorResponse(c, result.error)
+      const result = await getTodayMetrics(deps, user.id, user.timezone)
+      if (!result.ok) return handleResult(c, result)
       return c.json({ metrics: result.value })
     })
 
@@ -34,9 +35,8 @@ export const metricsRoutes = ({ db }: MetricsDeps) => {
         const user = c.get("user")
         const { from, to } = c.req.valid("query")
 
-        const result = await getDailyMetrics({ metricsRepo }, user.id, from, to, user.timezone)
-
-        if (!result.ok) return errorResponse(c, result.error)
+        const result = await getDailyMetrics(deps, user.id, from, to, user.timezone)
+        if (!result.ok) return handleResult(c, result)
         return c.json({ metrics: result.value })
       }
     )
@@ -45,9 +45,8 @@ export const metricsRoutes = ({ db }: MetricsDeps) => {
     .post("/snapshot", authMiddleware, async (c) => {
       const user = c.get("user")
 
-      const result = await createSnapshot({ metricsRepo }, user.id)
-
-      if (!result.ok) return errorResponse(c, result.error)
+      const result = await createSnapshot(deps, user.id)
+      if (!result.ok) return handleResult(c, result)
       return c.json({ snapshot: result.value }, 201)
     })
 
@@ -60,9 +59,8 @@ export const metricsRoutes = ({ db }: MetricsDeps) => {
         const user = c.get("user")
         const { date } = c.req.valid("param")
 
-        const result = await createSnapshot({ metricsRepo }, user.id, date)
-
-        if (!result.ok) return errorResponse(c, result.error)
+        const result = await createSnapshot(deps, user.id, date)
+        if (!result.ok) return handleResult(c, result)
         return c.json({ snapshot: result.value }, 201)
       }
     )

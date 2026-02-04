@@ -38,7 +38,7 @@ export type SubjectProgressStats = {
 }
 
 // Dependencies
-export type LearningUseCaseDeps = {
+export type LearningDeps = {
   learningRepo: LearningRepository
 }
 
@@ -58,7 +58,7 @@ const formatProgress = (progress: TopicProgress): ProgressResponse => ({
  * Touch a topic to update lastAccessedAt
  */
 export const touchTopic = async (
-  deps: LearningUseCaseDeps,
+  deps: LearningDeps,
   userId: string,
   topicId: string
 ): Promise<Result<ProgressResponse, AppError>> => {
@@ -76,7 +76,7 @@ export const touchTopic = async (
  * Get progress for a topic
  */
 export const getProgress = async (
-  deps: LearningUseCaseDeps,
+  deps: LearningDeps,
   userId: string,
   topicId: string
 ): Promise<Result<ProgressResponse | null, AppError>> => {
@@ -94,7 +94,7 @@ export const getProgress = async (
  * Update progress for a topic
  */
 export const updateProgress = async (
-  deps: LearningUseCaseDeps,
+  deps: LearningDeps,
   userId: string,
   topicId: string,
   understood?: boolean
@@ -131,7 +131,7 @@ export const updateProgress = async (
  * List all progress for a user
  */
 export const listUserProgress = async (
-  deps: LearningUseCaseDeps,
+  deps: LearningDeps,
   userId: string
 ): Promise<Result<ProgressResponse[], AppError>> => {
   const progressList = await deps.learningRepo.findProgressByUser(userId)
@@ -142,7 +142,7 @@ export const listUserProgress = async (
  * Get check history for a topic
  */
 export const getCheckHistory = async (
-  deps: LearningUseCaseDeps,
+  deps: LearningDeps,
   userId: string,
   topicId: string
 ): Promise<Result<CheckHistoryResponse[], AppError>> => {
@@ -167,7 +167,7 @@ export const getCheckHistory = async (
  * List recent topics
  */
 export const listRecentTopics = async (
-  deps: LearningUseCaseDeps,
+  deps: LearningDeps,
   userId: string,
   limit: number = 10
 ): Promise<Result<RecentTopicResponse[], AppError>> => {

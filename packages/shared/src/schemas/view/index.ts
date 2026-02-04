@@ -1,6 +1,6 @@
 import { z } from "zod"
 import { topicResponseSchema } from "../topic"
-import { userTopicProgressSchema } from "../learning"
+import { userTopicProgressSchema } from "../topic"
 
 // TopicView: トピック詳細画面用の合成ビュー
 export const topicViewSchema = z.object({

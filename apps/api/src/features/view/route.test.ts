@@ -192,7 +192,7 @@ describe("View Routes - Read-Only Guarantee", () => {
     createNoteTestData(ctx.db, ctx.testData.userId, ctx.testData.topicId)
 
     // ルートを作成
-    const routes = viewRoutes({ env: ctx.env, db: ctx.db as any })
+    const routes = viewRoutes({ db: ctx.db as any })
 
     // メインアプリにマウント
     app = new Hono<{ Bindings: Env; Variables: Variables }>()
@@ -484,7 +484,7 @@ describe("View Routes - Functional Tests", () => {
     createProgressTestData(ctx.db, ctx.testData.userId, ctx.testData.topicId, true)
     createNoteTestData(ctx.db, ctx.testData.userId, ctx.testData.topicId)
 
-    const routes = viewRoutes({ env: ctx.env, db: ctx.db as any })
+    const routes = viewRoutes({ db: ctx.db as any })
     app = new Hono<{ Bindings: Env; Variables: Variables }>()
     app.use("*", async (c, next) => {
       if (!c.env) {

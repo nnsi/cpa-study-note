@@ -97,7 +97,7 @@ export type SearchTopicsResponse = {
 }
 
 // Dependencies
-export type ViewUseCaseDeps = {
+export type ViewDeps = {
   topicViewRepo: TopicViewRepo
   subjectDashboardViewRepo: SubjectDashboardViewRepo
   reviewListViewRepo: ReviewListViewRepo
@@ -109,7 +109,7 @@ export type ViewUseCaseDeps = {
  * Get topic view data for the topic detail screen
  */
 export const getTopicView = async (
-  deps: ViewUseCaseDeps,
+  deps: ViewDeps,
   userId: string,
   topicId: string
 ): Promise<Result<TopicViewResponse, AppError>> => {
@@ -126,7 +126,7 @@ export const getTopicView = async (
  * Get subject dashboard data
  */
 export const getSubjectDashboard = async (
-  deps: ViewUseCaseDeps,
+  deps: ViewDeps,
   userId: string,
   subjectId: string
 ): Promise<Result<SubjectDashboardResponse, AppError>> => {
@@ -143,7 +143,7 @@ export const getSubjectDashboard = async (
  * Get review list data
  */
 export const getReviewList = async (
-  deps: ViewUseCaseDeps,
+  deps: ViewDeps,
   userId: string,
   filters?: ReviewListFilters
 ): Promise<Result<ReviewListResponse, AppError>> => {
@@ -156,7 +156,7 @@ export const getReviewList = async (
  * Get topics for a category
  */
 export const getCategoryTopics = async (
-  deps: ViewUseCaseDeps,
+  deps: ViewDeps,
   userId: string,
   categoryId: string
 ): Promise<Result<CategoryTopicsResponse, AppError>> => {
@@ -177,7 +177,7 @@ export const getCategoryTopics = async (
  * Search topics
  */
 export const searchTopics = async (
-  deps: ViewUseCaseDeps,
+  deps: ViewDeps,
   userId: string,
   query: string,
   studyDomainId?: string,

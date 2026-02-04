@@ -7,7 +7,7 @@ import { authMiddleware } from "@/shared/middleware/auth"
 import { createAuthRepository } from "./repository"
 import { createProviders } from "./providers"
 import { handleOAuthCallback, refreshAccessToken, getOrCreateDevUser, saveRefreshToken, logout } from "./usecase"
-import { handleResult, errorResponse } from "@/shared/lib/route-helpers"
+import { handleResult } from "@/shared/lib/route-helpers"
 import { notFound, badRequest, unauthorized } from "@/shared/lib/errors"
 
 // Token expiration times
@@ -82,7 +82,7 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
       const provider = providers.get(providerName)
 
       if (!provider) {
-        return errorResponse(c, notFound("Provider not found"))
+        return handleResult(c, { ok: false, error: notFound("Provider not found") })
       }
 
       const state = crypto.randomUUID()
@@ -106,11 +106,11 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
       const storedState = getCookie(c, "oauth_state")
 
       if (!code) {
-        return errorResponse(c, badRequest("Missing code"))
+        return handleResult(c, { ok: false, error: badRequest("Missing code") })
       }
 
       if (state !== storedState) {
-        return errorResponse(c, badRequest("Invalid state"))
+        return handleResult(c, { ok: false, error: badRequest("Invalid state") })
       }
 
       const result = await handleOAuthCallback(
@@ -188,7 +188,7 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
       const refreshToken = getCookie(c, "refresh_token")
 
       if (!refreshToken) {
-        return errorResponse(c, unauthorized("No refresh token"))
+        return handleResult(c, { ok: false, error: unauthorized("No refresh token") })
       }
 
       const result = await refreshAccessToken(
@@ -207,7 +207,7 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
           maxAge: 0,
           path: "/api/auth",
         })
-        return errorResponse(c, result.error)
+        return handleResult(c, result)
       }
 
       return c.json({
@@ -220,7 +220,7 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
     .post("/dev-login", async (c) => {
       // ローカル環境以外では無効
       if (env.ENVIRONMENT !== "local") {
-        return errorResponse(c, notFound("Not available"))
+        return handleResult(c, { ok: false, error: notFound("Not available") })
       }
 
       const devUserId = env.DEV_USER_ID || "test-user-1"

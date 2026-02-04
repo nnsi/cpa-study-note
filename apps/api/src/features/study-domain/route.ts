@@ -17,7 +17,7 @@ import {
   deleteStudyDomain,
 } from "./usecase"
 import { createSubjectRepository } from "../subject/repository"
-import { bulkImportCSVToStudyDomain } from "../subject/usecase"
+import { bulkImportCSVToStudyDomain } from "../subject/tree-usecase"
 import { createNoTransactionRunner } from "@/shared/lib/transaction"
 import { handleResult, handleResultWith, errorResponse } from "@/shared/lib/route-helpers"
 import { internalError } from "@/shared/lib/errors"

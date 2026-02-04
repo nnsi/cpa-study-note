@@ -1,10 +1,13 @@
 import { Hono } from "hono"
 import { zValidator } from "@hono/zod-validator"
-import { z } from "zod"
 import type { Db } from "@cpa-study/db"
+import {
+  updateProgressRequestSchema,
+  recentTopicsQuerySchema,
+} from "@cpa-study/shared/schemas"
 import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
-import { errorResponse } from "@/shared/lib/route-helpers"
+import { handleResult } from "@/shared/lib/route-helpers"
 import { createLearningRepository } from "./repository"
 import { createSubjectRepository } from "../subject/repository"
 import {
@@ -17,23 +20,15 @@ import {
   getSubjectProgressStats,
 } from "./usecase"
 
-// Request schemas
-const updateProgressSchema = z.object({
-  understood: z.boolean().optional(),
-})
-
-const recentTopicsQuerySchema = z.object({
-  limit: z.coerce.number().min(1).max(50).optional().default(10),
-})
-
 type LearningDeps = {
-  env: Env
   db: Db
 }
 
 export const learningRoutes = ({ db }: LearningDeps) => {
   const learningRepo = createLearningRepository(db)
   const subjectRepo = createSubjectRepository(db)
+  const deps = { learningRepo }
+  const subjectDeps = { subjectRepo }
 
   const app = new Hono<{ Bindings: Env; Variables: Variables }>()
     // Touch topic - update lastAccessedAt
@@ -41,8 +36,8 @@ export const learningRoutes = ({ db }: LearningDeps) => {
       const topicId = c.req.param("topicId")
       const user = c.get("user")
 
-      const result = await touchTopic({ learningRepo }, user.id, topicId)
-      if (!result.ok) return errorResponse(c, result.error)
+      const result = await touchTopic(deps, user.id, topicId)
+      if (!result.ok) return handleResult(c, result)
       return c.json({ progress: result.value })
     })
 
@@ -51,8 +46,8 @@ export const learningRoutes = ({ db }: LearningDeps) => {
       const topicId = c.req.param("topicId")
       const user = c.get("user")
 
-      const result = await getProgress({ learningRepo }, user.id, topicId)
-      if (!result.ok) return errorResponse(c, result.error)
+      const result = await getProgress(deps, user.id, topicId)
+      if (!result.ok) return handleResult(c, result)
       return c.json({ progress: result.value })
     })
 
@@ -60,14 +55,14 @@ export const learningRoutes = ({ db }: LearningDeps) => {
     .put(
       "/topics/:topicId/progress",
       authMiddleware,
-      zValidator("json", updateProgressSchema),
+      zValidator("json", updateProgressRequestSchema),
       async (c) => {
         const topicId = c.req.param("topicId")
         const user = c.get("user")
         const { understood } = c.req.valid("json")
 
-        const result = await updateProgress({ learningRepo }, user.id, topicId, understood)
-        if (!result.ok) return errorResponse(c, result.error)
+        const result = await updateProgress(deps, user.id, topicId, understood)
+        if (!result.ok) return handleResult(c, result)
         return c.json({ progress: result.value })
       }
     )
@@ -77,8 +72,8 @@ export const learningRoutes = ({ db }: LearningDeps) => {
       const topicId = c.req.param("topicId")
       const user = c.get("user")
 
-      const result = await getCheckHistory({ learningRepo }, user.id, topicId)
-      if (!result.ok) return errorResponse(c, result.error)
+      const result = await getCheckHistory(deps, user.id, topicId)
+      if (!result.ok) return handleResult(c, result)
       return c.json({ history: result.value })
     })
 
@@ -91,8 +86,8 @@ export const learningRoutes = ({ db }: LearningDeps) => {
         const user = c.get("user")
         const { limit } = c.req.valid("query")
 
-        const result = await listRecentTopics({ learningRepo }, user.id, limit)
-        if (!result.ok) return errorResponse(c, result.error)
+        const result = await listRecentTopics(deps, user.id, limit)
+        if (!result.ok) return handleResult(c, result)
         return c.json({ topics: result.value })
       }
     )
@@ -101,8 +96,8 @@ export const learningRoutes = ({ db }: LearningDeps) => {
     .get("/progress", authMiddleware, async (c) => {
       const user = c.get("user")
 
-      const result = await listUserProgress({ learningRepo }, user.id)
-      if (!result.ok) return errorResponse(c, result.error)
+      const result = await listUserProgress(deps, user.id)
+      if (!result.ok) return handleResult(c, result)
       return c.json({ progress: result.value })
     })
 
@@ -110,8 +105,8 @@ export const learningRoutes = ({ db }: LearningDeps) => {
     .get("/subjects/progress-stats", authMiddleware, async (c) => {
       const user = c.get("user")
 
-      const result = await getSubjectProgressStats({ subjectRepo }, user.id)
-      if (!result.ok) return errorResponse(c, result.error)
+      const result = await getSubjectProgressStats(subjectDeps, user.id)
+      if (!result.ok) return handleResult(c, result)
       return c.json({ stats: result.value })
     })
 

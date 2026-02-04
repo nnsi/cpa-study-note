@@ -1,7 +1,7 @@
 import { Hono } from "hono"
 import { zValidator } from "@hono/zod-validator"
-import { z } from "zod"
 import type { Db } from "@cpa-study/db"
+import { reviewListQuerySchema, searchQuerySchema } from "@cpa-study/shared/schemas"
 import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
 import { handleResult } from "@/shared/lib/route-helpers"
@@ -13,26 +13,8 @@ import { createSearchViewRepo } from "./repositories/searchViewRepo"
 import { getTopicView, getSubjectDashboard, getReviewList, getCategoryTopics, searchTopics } from "./usecase"
 
 type ViewDeps = {
-  env: Env
   db: Db
 }
-
-// Query schema for review list
-const reviewListQuerySchema = z.object({
-  understood: z
-    .enum(["true", "false"])
-    .transform((v) => v === "true")
-    .optional(),
-  daysSince: z.coerce.number().int().min(0).optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(50),
-})
-
-// Query schema for search
-const searchQuerySchema = z.object({
-  q: z.string().min(1),
-  studyDomainId: z.string().optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
-})
 
 export const viewRoutes = ({ db }: ViewDeps) => {
   const topicViewRepo = createTopicViewRepo(db)

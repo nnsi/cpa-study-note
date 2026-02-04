@@ -24,7 +24,7 @@ const createTestApp = (env: Env, db: Db) => {
       c.env = env
       return next()
     })
-    .route("/api/subjects", subjectRoutes({ env, db, txRunner }))
+    .route("/api/subjects", subjectRoutes({ db, txRunner }))
 }
 
 type TestApp = ReturnType<typeof createTestApp>
