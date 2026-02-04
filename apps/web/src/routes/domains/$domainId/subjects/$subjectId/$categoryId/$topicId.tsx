@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router"
 import { useState, useCallback } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { api } from "@/lib/api-client"
-import { ChatContainer } from "@/features/chat"
+import { ChatContainer, getSessionsByTopic } from "@/features/chat"
 import { TopicInfo } from "@/features/topic"
 import { TopicNotes } from "@/features/note"
 import { requireAuth } from "@/lib/auth"
@@ -86,13 +86,7 @@ function TopicDetailPage() {
   // セッション一覧を取得
   const { data: sessionsData } = useQuery({
     queryKey: ["chat", "sessions", topicId],
-    queryFn: async () => {
-      const res = await api.api.chat.topics[":topicId"].sessions.$get({
-        param: { topicId },
-      })
-      if (!res.ok) throw new Error("Failed to fetch sessions")
-      return res.json()
-    },
+    queryFn: () => getSessionsByTopic(topicId),
   })
 
   const sessions: Session[] = sessionsData?.sessions ?? []

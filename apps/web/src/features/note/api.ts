@@ -1,12 +1,26 @@
 import { api } from "@/lib/api-client"
-import type { CreateManualNoteRequest } from "@cpa-study/shared/schemas"
+import {
+  type CreateManualNoteRequest,
+  noteSingleResponseSchema,
+  notesListResponseSchema,
+  notesFullListResponseSchema,
+} from "@cpa-study/shared/schemas"
+
+// 全ノート一覧取得
+export const getNotes = async () => {
+  const res = await api.api.notes.$get()
+  if (!res.ok) throw new Error("Failed to fetch notes")
+  const data = await res.json()
+  return notesFullListResponseSchema.parse(data)
+}
 
 export const getNotesByTopic = async (topicId: string) => {
   const res = await api.api.notes.topic[":topicId"].$get({
     param: { topicId },
   })
   if (!res.ok) throw new Error("Failed to fetch notes")
-  return res.json()
+  const data = await res.json()
+  return notesListResponseSchema.parse(data)
 }
 
 // セッションからノート作成
@@ -15,7 +29,8 @@ export const createNote = async (sessionId: string) => {
     json: { sessionId },
   })
   if (!res.ok) throw new Error("Failed to create note")
-  return res.json()
+  const data = await res.json()
+  return noteSingleResponseSchema.parse(data)
 }
 
 // 独立ノート作成（手動）
@@ -24,7 +39,8 @@ export const createManualNote = async (data: CreateManualNoteRequest) => {
     json: data,
   })
   if (!res.ok) throw new Error("Failed to create manual note")
-  return res.json()
+  const json = await res.json()
+  return noteSingleResponseSchema.parse(json)
 }
 
 export const getNoteBySession = async (sessionId: string) => {
@@ -32,7 +48,8 @@ export const getNoteBySession = async (sessionId: string) => {
     param: { sessionId },
   })
   if (!res.ok) throw new Error("Failed to fetch note by session")
-  return res.json()
+  const data = await res.json()
+  return noteSingleResponseSchema.parse(data)
 }
 
 export const refreshNote = async (noteId: string) => {

@@ -77,3 +77,27 @@ export const goodQuestionResponseSchema = z.object({
 })
 
 export type GoodQuestionResponse = z.infer<typeof goodQuestionResponseSchema>
+
+// 深掘り質問一覧レスポンス
+export const goodQuestionsListResponseSchema = z.object({
+  questions: z.array(goodQuestionResponseSchema),
+})
+
+export type GoodQuestionsListResponse = z.infer<typeof goodQuestionsListResponseSchema>
+
+// セッション + 統計情報
+export const sessionWithStatsSchema = chatSessionSchema.extend({
+  messageCount: z.number(),
+  goodCount: z.number(),
+  surfaceCount: z.number(),
+  firstMessagePreview: z.string().nullable(),
+})
+
+export type SessionWithStats = z.infer<typeof sessionWithStatsSchema>
+
+// セッション一覧レスポンス
+export const sessionsListResponseSchema = z.object({
+  sessions: z.array(sessionWithStatsSchema),
+})
+
+export type SessionsListResponse = z.infer<typeof sessionsListResponseSchema>

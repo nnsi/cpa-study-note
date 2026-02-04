@@ -3,7 +3,12 @@ import type { ChatRepository } from "./repository"
 import type { LearningRepository } from "../learning/repository"
 import { buildSystemPrompt, buildEvaluationPrompt } from "./domain/prompts"
 import { parseLLMJson } from "@cpa-study/shared"
-import type { GoodQuestionResponse } from "@cpa-study/shared/schemas"
+import type {
+  GoodQuestionResponse,
+  ChatSession,
+  ChatMessage,
+  SessionWithStats,
+} from "@cpa-study/shared/schemas"
 import { z } from "zod"
 import { ok, err, type Result } from "@/shared/lib/result"
 import { notFound, forbidden, type AppError } from "@/shared/lib/errors"
@@ -15,31 +20,12 @@ export type ChatDeps = {
   aiConfig: AIConfig
 }
 
-type SessionResponse = {
-  id: string
-  userId: string
-  topicId: string
-  createdAt: string
-  updatedAt: string
-}
-
-type MessageResponse = {
-  id: string
-  sessionId: string
-  role: string
-  content: string
-  imageId: string | null
-  ocrResult: string | null
-  questionQuality: string | null
-  createdAt: string
-}
-
 // セッション作成
 export const createSession = async (
   deps: Pick<ChatDeps, "chatRepo" | "learningRepo">,
   userId: string,
   topicId: string
-): Promise<Result<SessionResponse, AppError>> => {
+): Promise<Result<ChatSession, AppError>> => {
   const exists = await deps.learningRepo.verifyTopicExists(userId, topicId)
   if (!exists) {
     return err(notFound("論点が見つかりません"))
@@ -55,13 +41,6 @@ export const createSession = async (
     createdAt: session.createdAt.toISOString(),
     updatedAt: session.updatedAt.toISOString(),
   })
-}
-
-type SessionWithStats = SessionResponse & {
-  messageCount: number
-  goodCount: number
-  surfaceCount: number
-  firstMessagePreview: string | null
 }
 
 // セッション一覧取得（メッセージが1件以上あるセッションのみ）
@@ -87,7 +66,7 @@ export const getSession = async (
   deps: Pick<ChatDeps, "chatRepo">,
   userId: string,
   sessionId: string
-): Promise<Result<SessionResponse, AppError>> => {
+): Promise<Result<ChatSession, AppError>> => {
   const session = await deps.chatRepo.findSessionById(sessionId)
   if (!session) {
     return err(notFound("セッションが見つかりません"))
@@ -109,7 +88,7 @@ export const listMessages = async (
   deps: Pick<ChatDeps, "chatRepo">,
   userId: string,
   sessionId: string
-): Promise<Result<MessageResponse[], AppError>> => {
+): Promise<Result<ChatMessage[], AppError>> => {
   const session = await deps.chatRepo.findSessionById(sessionId)
   if (!session) {
     return err(notFound("セッションが見つかりません"))

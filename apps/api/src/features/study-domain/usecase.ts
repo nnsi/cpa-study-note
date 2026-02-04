@@ -3,23 +3,12 @@ import type {
   CreateStudyDomainInput,
   UpdateStudyDomainInput,
 } from "./repository"
+import type { StudyDomainResponse } from "@cpa-study/shared/schemas"
 import { ok, err, type Result } from "@/shared/lib/result"
 import { notFound, conflict, type AppError } from "@/shared/lib/errors"
 
 type StudyDomainDeps = {
   repo: StudyDomainRepository
-}
-
-// Response types
-type StudyDomainResponse = {
-  id: string
-  userId: string
-  name: string
-  description: string | null
-  emoji: string | null
-  color: string | null
-  createdAt: string
-  updatedAt: string
 }
 
 // List user's study domains

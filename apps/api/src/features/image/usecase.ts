@@ -1,5 +1,6 @@
 import type { ImageRepository } from "./repository"
 import type { AIAdapter, AIConfig } from "@/shared/lib/ai"
+import type { Image as ImageResponse } from "@cpa-study/shared/schemas"
 import { ok, err, type Result } from "@/shared/lib/result"
 import { notFound, forbidden, badRequest, type AppError } from "@/shared/lib/errors"
 
@@ -45,17 +46,6 @@ type ImageDeps = {
   aiConfig: AIConfig
   r2: R2Bucket
   apiBaseUrl: string
-}
-
-type ImageResponse = {
-  id: string
-  userId: string
-  filename: string
-  mimeType: string
-  size: number
-  r2Key: string
-  ocrText: string | null
-  createdAt: string
 }
 
 type CreateUploadInput = {

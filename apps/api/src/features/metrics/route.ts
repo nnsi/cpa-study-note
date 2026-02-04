@@ -7,7 +7,7 @@ import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
 import { createMetricsRepository } from "./repository"
 import { getDailyMetrics, createSnapshot, getTodayMetrics } from "./usecase"
-import { handleResult } from "@/shared/lib/route-helpers"
+import { handleResultWith } from "@/shared/lib/route-helpers"
 
 type MetricsDeps = {
   db: Db
@@ -22,8 +22,7 @@ export const metricsRoutes = ({ db }: MetricsDeps) => {
     .get("/today", authMiddleware, async (c) => {
       const user = c.get("user")
       const result = await getTodayMetrics(deps, user.id, user.timezone)
-      if (!result.ok) return handleResult(c, result)
-      return c.json({ metrics: result.value })
+      return handleResultWith(c, result, (value) => ({ metrics: value }))
     })
 
     // 日次メトリクス取得（タイムゾーン考慮）
@@ -36,8 +35,7 @@ export const metricsRoutes = ({ db }: MetricsDeps) => {
         const { from, to } = c.req.valid("query")
 
         const result = await getDailyMetrics(deps, user.id, from, to, user.timezone)
-        if (!result.ok) return handleResult(c, result)
-        return c.json({ metrics: result.value })
+        return handleResultWith(c, result, (value) => ({ metrics: value }))
       }
     )
 
@@ -46,8 +44,7 @@ export const metricsRoutes = ({ db }: MetricsDeps) => {
       const user = c.get("user")
 
       const result = await createSnapshot(deps, user.id)
-      if (!result.ok) return handleResult(c, result)
-      return c.json({ snapshot: result.value }, 201)
+      return handleResultWith(c, result, (value) => ({ snapshot: value }), 201)
     })
 
     // スナップショット作成（指定日）
@@ -60,8 +57,7 @@ export const metricsRoutes = ({ db }: MetricsDeps) => {
         const { date } = c.req.valid("param")
 
         const result = await createSnapshot(deps, user.id, date)
-        if (!result.ok) return handleResult(c, result)
-        return c.json({ snapshot: result.value }, 201)
+        return handleResultWith(c, result, (value) => ({ snapshot: value }), 201)
       }
     )
 

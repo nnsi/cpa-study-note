@@ -329,13 +329,13 @@ describe("ChatRepository", () => {
         content: "Question",
         imageId: null,
         ocrResult: null,
-        questionQuality: "normal",
+        questionQuality: null,
       })
 
-      await repository.updateMessageQuality(message.id, "excellent")
+      await repository.updateMessageQuality(message.id, "good")
 
       const updated = await repository.findMessageById(message.id)
-      expect(updated?.questionQuality).toBe("excellent")
+      expect(updated?.questionQuality).toBe("good")
     })
   })
 })

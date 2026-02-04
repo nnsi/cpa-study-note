@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
-import { api } from "@/lib/api-client"
 import { requireAuth } from "@/lib/auth"
 import { PageWrapper } from "@/components/layout"
+import { getNotes } from "@/features/note/api"
 
 export const Route = createFileRoute("/notes/")({
   beforeLoad: requireAuth,
@@ -12,11 +12,7 @@ export const Route = createFileRoute("/notes/")({
 function NotesPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["notes"],
-    queryFn: async () => {
-      const res = await api.api.notes.$get()
-      if (!res.ok) throw new Error("Failed to fetch notes")
-      return res.json()
-    },
+    queryFn: getNotes,
   })
 
   if (isLoading) {

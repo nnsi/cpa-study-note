@@ -22,7 +22,7 @@ import {
   updateNote,
   refreshNoteFromSession,
 } from "./usecase"
-import { handleResult, handleResultWith } from "@/shared/lib/route-helpers"
+import { handleResultWith } from "@/shared/lib/route-helpers"
 
 type NoteDeps = {
   env: Env
@@ -87,8 +87,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
     .get("/", authMiddleware, async (c) => {
       const user = c.get("user")
       const result = await listNotes({ noteRepo }, user.id)
-      if (!result.ok) return handleResult(c, result)
-      return c.json({ notes: result.value })
+      return handleResultWith(c, result, (value) => ({ notes: value }))
     })
 
     // 論点別ノート一覧
@@ -96,8 +95,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
       const user = c.get("user")
       const topicId = c.req.param("topicId")
       const result = await listNotesByTopic({ noteRepo }, user.id, topicId)
-      if (!result.ok) return handleResult(c, result)
-      return c.json({ notes: result.value })
+      return handleResultWith(c, result, (value) => ({ notes: value }))
     })
 
     // セッション別ノート取得
@@ -105,8 +103,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
       const user = c.get("user")
       const sessionId = c.req.param("sessionId")
       const result = await getNoteBySession({ noteRepo }, user.id, sessionId)
-      if (!result.ok) return handleResult(c, result)
-      return c.json({ note: result.value })
+      return handleResultWith(c, result, (value) => ({ note: value }))
     })
 
     // ノート詳細

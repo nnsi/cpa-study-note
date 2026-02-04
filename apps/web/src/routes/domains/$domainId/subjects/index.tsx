@@ -13,7 +13,7 @@ import {
   type CategoryNode,
 } from "@/features/subject/api"
 import { filterTopics, type FilteredTopic } from "@/features/review/api"
-import { api } from "@/lib/api-client"
+import { getMyProgress } from "@/features/progress/api"
 import { useDebounce } from "@/lib/hooks/useDebounce"
 import { BulkCSVImporter } from "@/features/subject/components/BulkCSVImporter"
 
@@ -72,11 +72,7 @@ function SubjectsPage() {
   // Fetch user progress
   const { data: progressData } = useQuery({
     queryKey: ["progress", "me"],
-    queryFn: async () => {
-      const res = await api.api.learning.progress.$get()
-      if (!res.ok) throw new Error("進捗の取得に失敗しました")
-      return res.json()
-    },
+    queryFn: getMyProgress,
   })
 
   // Fetch topic stats

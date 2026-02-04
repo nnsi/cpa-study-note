@@ -2,40 +2,12 @@ import { ok, err, type Result } from "@/shared/lib/result"
 import { notFound, type AppError } from "@/shared/lib/errors"
 import type { LearningRepository, TopicProgress } from "./repository"
 import type { SubjectRepository } from "../subject/repository"
-
-// Response types
-export type ProgressResponse = {
-  userId: string
-  topicId: string
-  understood: boolean
-  lastAccessedAt: string | null
-  questionCount: number
-  goodQuestionCount: number
-  createdAt: string
-  updatedAt: string
-}
-
-export type CheckHistoryResponse = {
-  id: string
-  action: "checked" | "unchecked"
-  checkedAt: string
-}
-
-export type RecentTopicResponse = {
-  topicId: string
-  topicName: string
-  subjectId: string
-  subjectName: string
-  categoryId: string
-  lastAccessedAt: string
-}
-
-export type SubjectProgressStats = {
-  subjectId: string
-  subjectName: string
-  totalTopics: number
-  understoodTopics: number
-}
+import type {
+  ProgressResponse,
+  SubjectProgressStats,
+  TopicCheckHistoryResponse,
+  RecentTopic,
+} from "@cpa-study/shared/schemas"
 
 // Dependencies
 export type LearningDeps = {
@@ -145,7 +117,7 @@ export const getCheckHistory = async (
   deps: LearningDeps,
   userId: string,
   topicId: string
-): Promise<Result<CheckHistoryResponse[], AppError>> => {
+): Promise<Result<TopicCheckHistoryResponse[], AppError>> => {
   // Verify topic exists and belongs to user
   const exists = await deps.learningRepo.verifyTopicExists(userId, topicId)
   if (!exists) {
@@ -170,7 +142,7 @@ export const listRecentTopics = async (
   deps: LearningDeps,
   userId: string,
   limit: number = 10
-): Promise<Result<RecentTopicResponse[], AppError>> => {
+): Promise<Result<RecentTopic[], AppError>> => {
   const topics = await deps.learningRepo.findRecentTopics(userId, limit)
 
   return ok(

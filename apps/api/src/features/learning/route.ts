@@ -7,7 +7,7 @@ import {
 } from "@cpa-study/shared/schemas"
 import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
-import { handleResult } from "@/shared/lib/route-helpers"
+import { handleResultWith } from "@/shared/lib/route-helpers"
 import { createLearningRepository } from "./repository"
 import { createSubjectRepository } from "../subject/repository"
 import {
@@ -37,8 +37,7 @@ export const learningRoutes = ({ db }: LearningDeps) => {
       const user = c.get("user")
 
       const result = await touchTopic(deps, user.id, topicId)
-      if (!result.ok) return handleResult(c, result)
-      return c.json({ progress: result.value })
+      return handleResultWith(c, result, (value) => ({ progress: value }))
     })
 
     // Get progress for a topic
@@ -47,8 +46,7 @@ export const learningRoutes = ({ db }: LearningDeps) => {
       const user = c.get("user")
 
       const result = await getProgress(deps, user.id, topicId)
-      if (!result.ok) return handleResult(c, result)
-      return c.json({ progress: result.value })
+      return handleResultWith(c, result, (value) => ({ progress: value }))
     })
 
     // Update progress for a topic
@@ -62,8 +60,7 @@ export const learningRoutes = ({ db }: LearningDeps) => {
         const { understood } = c.req.valid("json")
 
         const result = await updateProgress(deps, user.id, topicId, understood)
-        if (!result.ok) return handleResult(c, result)
-        return c.json({ progress: result.value })
+        return handleResultWith(c, result, (value) => ({ progress: value }))
       }
     )
 
@@ -73,8 +70,7 @@ export const learningRoutes = ({ db }: LearningDeps) => {
       const user = c.get("user")
 
       const result = await getCheckHistory(deps, user.id, topicId)
-      if (!result.ok) return handleResult(c, result)
-      return c.json({ history: result.value })
+      return handleResultWith(c, result, (value) => ({ history: value }))
     })
 
     // List recent topics
@@ -87,8 +83,7 @@ export const learningRoutes = ({ db }: LearningDeps) => {
         const { limit } = c.req.valid("query")
 
         const result = await listRecentTopics(deps, user.id, limit)
-        if (!result.ok) return handleResult(c, result)
-        return c.json({ topics: result.value })
+        return handleResultWith(c, result, (value) => ({ topics: value }))
       }
     )
 
@@ -97,8 +92,7 @@ export const learningRoutes = ({ db }: LearningDeps) => {
       const user = c.get("user")
 
       const result = await listUserProgress(deps, user.id)
-      if (!result.ok) return handleResult(c, result)
-      return c.json({ progress: result.value })
+      return handleResultWith(c, result, (value) => ({ progress: value }))
     })
 
     // Get subject progress stats
@@ -106,8 +100,7 @@ export const learningRoutes = ({ db }: LearningDeps) => {
       const user = c.get("user")
 
       const result = await getSubjectProgressStats(subjectDeps, user.id)
-      if (!result.ok) return handleResult(c, result)
-      return c.json({ stats: result.value })
+      return handleResultWith(c, result, (value) => ({ stats: value }))
     })
 
   return app

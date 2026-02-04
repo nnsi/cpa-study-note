@@ -1,9 +1,15 @@
 import { api } from "@/lib/api-client"
+import {
+  userProgressListResponseSchema,
+  subjectsListResponseSchema,
+  subjectProgressStatsListResponseSchema,
+} from "@cpa-study/shared/schemas"
 
 export const getMyProgress = async () => {
   const res = await api.api.learning.progress.$get()
   if (!res.ok) throw new Error("Failed to fetch progress")
-  return res.json()
+  const data = await res.json()
+  return userProgressListResponseSchema.parse(data)
 }
 
 export const getSubjects = async (studyDomainId?: string) => {
@@ -11,11 +17,13 @@ export const getSubjects = async (studyDomainId?: string) => {
     query: studyDomainId ? { studyDomainId } : {},
   })
   if (!res.ok) throw new Error("Failed to fetch subjects")
-  return res.json()
+  const data = await res.json()
+  return subjectsListResponseSchema.parse(data)
 }
 
 export const getSubjectProgressStats = async () => {
   const res = await api.api.learning.subjects["progress-stats"].$get()
   if (!res.ok) throw new Error("Failed to fetch subject progress")
-  return res.json()
+  const data = await res.json()
+  return subjectProgressStatsListResponseSchema.parse(data)
 }

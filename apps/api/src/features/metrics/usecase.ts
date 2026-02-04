@@ -1,28 +1,13 @@
 import type { MetricsRepository, MetricSnapshot, TodayMetrics, DailyMetric } from "./repository"
+import type {
+  MetricSnapshot as MetricSnapshotResponse,
+  DailyMetric as DailyMetricResponse,
+} from "@cpa-study/shared/schemas"
 import { ok, err, type Result } from "@/shared/lib/result"
 import { badRequest, type AppError } from "@/shared/lib/errors"
 
 export type MetricsDeps = {
   metricsRepo: MetricsRepository
-}
-
-type MetricSnapshotResponse = {
-  id: string
-  date: string
-  userId: string
-  checkedTopicCount: number
-  sessionCount: number
-  messageCount: number
-  goodQuestionCount: number
-  createdAt: string
-}
-
-type DailyMetricResponse = {
-  date: string
-  checkedTopicCount: number
-  sessionCount: number
-  messageCount: number
-  goodQuestionCount: number
 }
 
 const toResponse = (snapshot: MetricSnapshot): MetricSnapshotResponse => ({

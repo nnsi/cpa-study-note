@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { api } from "@/lib/api-client"
 import { requireAuth } from "@/lib/auth"
 import { filterTopics, type FilteredTopic } from "@/features/review/api"
+import { getMyProgress } from "@/features/progress/api"
 import { PageWrapper } from "@/components/layout"
 import { BookmarkButton } from "@/features/bookmark"
 
@@ -43,11 +44,7 @@ function CategoryPage() {
   // ユーザーの進捗情報を取得
   const { data: progressData } = useQuery({
     queryKey: ["progress", "me"],
-    queryFn: async () => {
-      const res = await api.api.learning.progress.$get()
-      if (!res.ok) throw new Error(`進捗の取得に失敗しました (${res.status})`)
-      return res.json()
-    },
+    queryFn: getMyProgress,
   })
 
   // 論点の統計情報を取得（セッション数、深掘り質問数など）

@@ -87,6 +87,13 @@ export const subjectWithStatsSchema = subjectResponseSchema.extend({
 
 export type SubjectWithStats = z.infer<typeof subjectWithStatsSchema>
 
+// 科目一覧レスポンス
+export const subjectsListResponseSchema = z.object({
+  subjects: z.array(subjectResponseSchema),
+})
+
+export type SubjectsListResponse = z.infer<typeof subjectsListResponseSchema>
+
 // Type for recursive structure
 export type CategoryWithChildren = CategoryResponse & {
   children?: CategoryWithChildren[]
