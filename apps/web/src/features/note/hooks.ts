@@ -56,3 +56,16 @@ export const useRefreshNote = (topicId: string) => {
     },
   })
 }
+
+// ノート削除
+export const useDeleteNote = (topicId: string) => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (noteId: string) => api.deleteNote(noteId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notes", "topic", topicId] })
+      queryClient.invalidateQueries({ queryKey: ["notes"] })
+    },
+  })
+}

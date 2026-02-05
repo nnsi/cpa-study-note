@@ -21,8 +21,9 @@ import {
   getNoteBySession,
   updateNote,
   refreshNoteFromSession,
+  deleteNote,
 } from "./usecase"
-import { handleResultWith } from "@/shared/lib/route-helpers"
+import { handleResult, handleResultWith } from "@/shared/lib/route-helpers"
 
 type NoteDeps = {
   env: Env
@@ -147,6 +148,19 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
       )
 
       return handleResultWith(c, result, (note) => ({ note }))
+    })
+
+    // ノート削除
+    .delete("/:noteId", authMiddleware, async (c) => {
+      const user = c.get("user")
+      const noteId = c.req.param("noteId")
+
+      const result = await deleteNote({ noteRepo }, user.id, noteId)
+      if (!result.ok) {
+        return handleResult(c, result)
+      }
+
+      return c.json({ success: true })
     })
 
   return app

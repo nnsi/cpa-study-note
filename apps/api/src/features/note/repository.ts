@@ -38,6 +38,7 @@ export type NoteRepository = {
     id: string,
     data: Partial<Pick<Note, "aiSummary" | "userMemo" | "keyPoints" | "stumbledPoints">>
   ) => Promise<Note | null>
+  deleteById: (id: string) => Promise<boolean>
 }
 
 export const createNoteRepository = (db: Db): NoteRepository => ({
@@ -192,5 +193,10 @@ export const createNoteRepository = (db: Db): NoteRepository => ({
         data.stumbledPoints ?? (existing[0].stumbledPoints as string[]) ?? [],
       updatedAt: now,
     }
+  },
+
+  deleteById: async (id) => {
+    const result = await db.delete(notes).where(eq(notes.id, id)).returning()
+    return result.length > 0
   },
 })

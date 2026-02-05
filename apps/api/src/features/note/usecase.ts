@@ -266,6 +266,26 @@ export const updateNote = async (
   return ok(toNoteWithSource(note!))
 }
 
+// ノート削除
+export const deleteNote = async (
+  deps: Pick<NoteDeps, "noteRepo">,
+  userId: string,
+  noteId: string
+): Promise<Result<void, AppError>> => {
+  const existing = await deps.noteRepo.findById(noteId)
+
+  if (!existing) {
+    return err(notFound("ノートが見つかりません"))
+  }
+
+  if (existing.userId !== userId) {
+    return err(forbidden("このノートへのアクセス権限がありません"))
+  }
+
+  await deps.noteRepo.deleteById(noteId)
+  return ok(undefined)
+}
+
 // セッションIDからノート取得
 export const getNoteBySession = async (
   deps: Pick<NoteDeps, "noteRepo">,
