@@ -16,7 +16,7 @@ import {
   errorResponseSchema,
   type TestContext,
 } from "../../test/helpers"
-import { createMockAIAdapter, mockAIPresets } from "../../test/mocks/ai"
+import { mockAIPresets } from "../../test/mocks/ai"
 
 // レスポンススキーマ定義
 const noteSchema = z.object({

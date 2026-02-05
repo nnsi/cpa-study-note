@@ -2,7 +2,12 @@ import type { NoteRepository } from "./repository"
 import type { ChatRepository } from "../chat/repository"
 import type { SubjectRepository } from "../subject/repository"
 import type { AIAdapter, AIModelConfig } from "@/shared/lib/ai"
-import type { NoteSource } from "@cpa-study/shared/schemas"
+import type {
+  NoteSource,
+  NoteWithSource,
+  NoteDetailResponse,
+  NoteListItem,
+} from "@cpa-study/shared/schemas"
 import { parseLLMJson, stripCodeBlock } from "@cpa-study/shared"
 import { z } from "zod"
 import { ok, err, type Result } from "@/shared/lib/result"
@@ -15,37 +20,11 @@ const noteSummaryParseSchema = z.object({
   stumbledPoints: z.array(z.string()).default([]),
 })
 
-type NoteDeps = {
+export type NoteDeps = {
   noteRepo: NoteRepository
   chatRepo: ChatRepository
   aiAdapter: AIAdapter
   noteSummaryConfig: AIModelConfig
-}
-
-type NoteResponse = {
-  id: string
-  userId: string
-  topicId: string
-  sessionId: string | null
-  aiSummary: string | null
-  userMemo: string | null
-  keyPoints: string[]
-  stumbledPoints: string[]
-  createdAt: string
-  updatedAt: string
-  source: NoteSource
-}
-
-type NoteDetailResponse = NoteResponse & {
-  topicName: string
-  categoryId: string
-  subjectId: string
-  subjectName: string
-}
-
-type NoteListResponse = NoteResponse & {
-  topicName: string
-  subjectName: string
 }
 
 type CreateNoteFromSessionInput = {
@@ -72,7 +51,7 @@ const deriveSource = (sessionId: string | null): NoteSource =>
   sessionId ? "chat" : "manual"
 
 // ノートをレスポンス形式に変換
-const toNoteResponse = (note: {
+const toNoteWithSource = (note: {
   id: string
   userId: string
   topicId: string
@@ -83,7 +62,7 @@ const toNoteResponse = (note: {
   stumbledPoints: string[]
   createdAt: Date
   updatedAt: Date
-}): NoteResponse => ({
+}): NoteWithSource => ({
   ...note,
   createdAt: note.createdAt.toISOString(),
   updatedAt: note.updatedAt.toISOString(),
@@ -94,7 +73,7 @@ const toNoteResponse = (note: {
 export const createNoteFromSession = async (
   deps: NoteDeps,
   input: CreateNoteFromSessionInput
-): Promise<Result<NoteResponse, AppError>> => {
+): Promise<Result<NoteWithSource, AppError>> => {
   const { noteRepo, chatRepo, aiAdapter, noteSummaryConfig } = deps
   const { userId, sessionId } = input
 
@@ -176,14 +155,14 @@ ${conversationText}${goodQuestionsSection}
     stumbledPoints,
   })
 
-  return ok(toNoteResponse(note))
+  return ok(toNoteWithSource(note))
 }
 
 // 独立ノート作成（手動）
 export const createManualNote = async (
   deps: { noteRepo: NoteRepository; subjectRepo: SubjectRepository },
   input: CreateManualNoteInput
-): Promise<Result<NoteResponse, AppError>> => {
+): Promise<Result<NoteWithSource, AppError>> => {
   const { noteRepo, subjectRepo } = deps
   const { userId, topicId, userMemo, keyPoints = [], stumbledPoints = [] } = input
 
@@ -204,20 +183,25 @@ export const createManualNote = async (
     stumbledPoints,
   })
 
-  return ok(toNoteResponse(note))
+  return ok(toNoteWithSource(note))
 }
 
 // ノート一覧取得
 export const listNotes = async (
   deps: Pick<NoteDeps, "noteRepo">,
   userId: string
-): Promise<NoteListResponse[]> => {
-  const notes = await deps.noteRepo.findByUser(userId)
-  return notes.map((note) => ({
-    ...toNoteResponse(note),
-    topicName: note.topicName,
-    subjectName: note.subjectName,
-  }))
+): Promise<Result<NoteListItem[], AppError>> => {
+  try {
+    const notes = await deps.noteRepo.findByUser(userId)
+    return ok(notes.map((note) => ({
+      ...toNoteWithSource(note),
+      topicName: note.topicName,
+      subjectName: note.subjectName,
+    })))
+  } catch (e) {
+    console.error("[Note] listNotes error:", e)
+    return err(internalError("ノート一覧の取得に失敗しました"))
+  }
 }
 
 // 論点別ノート一覧取得
@@ -225,9 +209,14 @@ export const listNotesByTopic = async (
   deps: Pick<NoteDeps, "noteRepo">,
   userId: string,
   topicId: string
-): Promise<NoteResponse[]> => {
-  const notes = await deps.noteRepo.findByTopic(userId, topicId)
-  return notes.map(toNoteResponse)
+): Promise<Result<NoteWithSource[], AppError>> => {
+  try {
+    const notes = await deps.noteRepo.findByTopic(userId, topicId)
+    return ok(notes.map(toNoteWithSource))
+  } catch (e) {
+    console.error("[Note] listNotesByTopic error:", e)
+    return err(internalError("論点別ノート一覧の取得に失敗しました"))
+  }
 }
 
 // ノート詳細取得
@@ -247,7 +236,7 @@ export const getNote = async (
   }
 
   return ok({
-    ...toNoteResponse(note),
+    ...toNoteWithSource(note),
     topicName: note.topicName,
     categoryId: note.categoryId,
     subjectId: note.subjectId,
@@ -261,7 +250,7 @@ export const updateNote = async (
   userId: string,
   noteId: string,
   input: UpdateNoteInput
-): Promise<Result<NoteResponse, AppError>> => {
+): Promise<Result<NoteWithSource, AppError>> => {
   const existing = await deps.noteRepo.findById(noteId)
 
   if (!existing) {
@@ -274,7 +263,7 @@ export const updateNote = async (
 
   const note = await deps.noteRepo.update(noteId, input)
 
-  return ok(toNoteResponse(note!))
+  return ok(toNoteWithSource(note!))
 }
 
 // セッションIDからノート取得
@@ -282,14 +271,19 @@ export const getNoteBySession = async (
   deps: Pick<NoteDeps, "noteRepo">,
   userId: string,
   sessionId: string
-): Promise<NoteResponse | null> => {
-  const note = await deps.noteRepo.findBySessionId(sessionId)
+): Promise<Result<NoteWithSource | null, AppError>> => {
+  try {
+    const note = await deps.noteRepo.findBySessionId(sessionId)
 
-  if (!note || note.userId !== userId) {
-    return null
+    if (!note || note.userId !== userId) {
+      return ok(null)
+    }
+
+    return ok(toNoteWithSource(note))
+  } catch (e) {
+    console.error("[Note] getNoteBySession error:", e)
+    return err(internalError("ノートの取得に失敗しました"))
   }
-
-  return toNoteResponse(note)
 }
 
 // ノート再生成（最新の会話を反映）
@@ -297,7 +291,7 @@ export const refreshNoteFromSession = async (
   deps: NoteDeps,
   userId: string,
   noteId: string
-): Promise<Result<NoteResponse, AppError>> => {
+): Promise<Result<NoteWithSource, AppError>> => {
   const { noteRepo, chatRepo, aiAdapter, noteSummaryConfig } = deps
 
   const existing = await noteRepo.findById(noteId)
@@ -378,5 +372,5 @@ ${conversationText}${goodQuestionsSection}
     stumbledPoints,
   })
 
-  return ok(toNoteResponse(note!))
+  return ok(toNoteWithSource(note!))
 }

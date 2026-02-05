@@ -188,7 +188,7 @@ describe("E2E: Image Flow", () => {
 
       expect(res.status).toBe(413)
       const data = errorResponseSchema.parse(await res.json())
-      expect(data.error.code).toBe("BAD_REQUEST")
+      expect(data.error.code).toBe("PAYLOAD_TOO_LARGE")
     })
   })
 

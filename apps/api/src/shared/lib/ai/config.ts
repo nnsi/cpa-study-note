@@ -16,6 +16,7 @@ export type AIConfig = {
   chat: AIModelConfig
   evaluation: AIModelConfig
   noteSummary: AIModelConfig
+  ocr: AIModelConfig
 }
 
 /** ローカル開発用（安価なモデル） */
@@ -35,6 +36,11 @@ const localAIConfig: AIConfig = {
     temperature: 0.3,
     maxTokens: 1000,
   },
+  ocr: {
+    model: "openai/gpt-4o-mini",
+    temperature: 0,
+    maxTokens: 2000,
+  },
 }
 
 /** staging/production用 */
@@ -53,6 +59,11 @@ const productionAIConfig: AIConfig = {
     model: "z-ai/glm-4.7-flash",
     temperature: 0.3,
     maxTokens: 1000,
+  },
+  ocr: {
+    model: "openai/gpt-4o-mini",
+    temperature: 0,
+    maxTokens: 2000,
   },
 }
 

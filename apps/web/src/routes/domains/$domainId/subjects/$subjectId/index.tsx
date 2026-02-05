@@ -4,8 +4,8 @@ import { requireAuth } from "@/lib/auth"
 import { PageWrapper } from "@/components/layout"
 import { getSubject, getSubjectTree, type CategoryNode } from "@/features/subject/api"
 import { getStudyDomain } from "@/features/study-domain/api"
-import { api } from "@/lib/api-client"
 import { filterTopics, type FilteredTopic } from "@/features/review/api"
+import { getMyProgress } from "@/features/progress/api"
 import { BookmarkButton } from "@/features/bookmark"
 
 export const Route = createFileRoute("/domains/$domainId/subjects/$subjectId/")({
@@ -37,11 +37,7 @@ function SubjectCategoriesPage() {
   // Fetch user progress
   const { data: progressData } = useQuery({
     queryKey: ["progress", "me"],
-    queryFn: async () => {
-      const res = await api.api.subjects.progress.me.$get()
-      if (!res.ok) throw new Error("進捗の取得に失敗しました")
-      return res.json()
-    },
+    queryFn: getMyProgress,
   })
 
   // Fetch topic stats for session counts

@@ -43,7 +43,7 @@ const createWrapper = () => {
 const createMockFile = (
   name: string,
   type: string,
-  size: number = 1024
+  _size: number = 1024
 ): File => {
   const blob = new Blob(["test"], { type })
   return new File([blob], name, { type })

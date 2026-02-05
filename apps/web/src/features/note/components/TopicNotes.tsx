@@ -3,17 +3,14 @@ import { Link } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
 import { useNotesByTopic, useRefreshNote, useCreateManualNote } from "../hooks"
 import { api } from "@/lib/api-client"
-import type { Note, NoteSource } from "@cpa-study/shared/schemas"
+import type { Note, NoteSource, GoodQuestionResponse } from "@cpa-study/shared/schemas"
+import { goodQuestionsListResponseSchema } from "@cpa-study/shared/schemas"
 
 // APIレスポンスのNote型（sourceはオプショナルで追加される場合がある）
 type NoteWithOptionalSource = Note & { source?: NoteSource }
 
-type GoodQuestion = {
-  id: string
-  sessionId: string
-  content: string
-  createdAt: string
-}
+// Re-export for local use
+type GoodQuestion = GoodQuestionResponse
 
 // 深掘り質問を取得するカスタムフック（バッチ取得でN+1解消）
 const useGoodQuestionsByTopic = (topicId: string) => {
@@ -25,7 +22,8 @@ const useGoodQuestionsByTopic = (topicId: string) => {
       })
       if (!res.ok) return []
       const data = await res.json()
-      return data.questions as GoodQuestion[]
+      const parsed = goodQuestionsListResponseSchema.parse(data)
+      return parsed.questions
     },
   })
 }

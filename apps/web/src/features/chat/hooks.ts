@@ -196,6 +196,7 @@ export const useSendMessage = ({ sessionId, topicId, onSessionCreated }: UseSend
         let userMessageId: string | undefined
         let currentSessionId = sessionId
         let newSessionId: string | undefined
+        let receivedAnyChunk = false
 
         // セッションがない場合は新規セッション作成APIを使用
         const streamSource = sessionId
@@ -203,6 +204,7 @@ export const useSendMessage = ({ sessionId, topicId, onSessionCreated }: UseSend
           : api.streamMessageWithNewSession(topicId, content, imageId, ocrResult)
 
         for await (const chunk of streamSource) {
+          receivedAnyChunk = true
           if (chunk.type === "session_created") {
             // 新規セッションが作成された（ストリーミング完了後に通知）
             currentSessionId = chunk.sessionId
@@ -240,6 +242,11 @@ export const useSendMessage = ({ sessionId, topicId, onSessionCreated }: UseSend
           cancelAnimationFrame(rafId)
         }
         flushBuffer()
+
+        // ストリームが何もチャンクを返さずに終了した場合
+        if (!receivedAnyChunk) {
+          setError(new Error("サーバーから応答がありませんでした"))
+        }
 
         // ユーザーメッセージの質問評価を実行（バックグラウンド）
         if (userMessageId && currentSessionId) {

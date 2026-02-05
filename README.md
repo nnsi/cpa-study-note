@@ -63,7 +63,7 @@ apps/api/src/
 │   │   ├── usecase.test.ts     # ビジネスロジック
 │   │   └── route.test.ts       # APIエンドポイント
 │   ├── chat/
-│   ├── topic/
+│   ├── subject/                # 科目・単元・論点管理
 │   ├── note/
 │   └── image/
 │       └── security.test.ts    # セキュリティ（マジックバイト検証等）

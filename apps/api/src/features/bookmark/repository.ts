@@ -1,4 +1,4 @@
-import { eq, and } from "drizzle-orm"
+import { eq, and, isNull } from "drizzle-orm"
 import type { Db } from "@cpa-study/db"
 import { userBookmarks, subjects, categories, topics } from "@cpa-study/db/schema"
 import type { BookmarkTargetType } from "@cpa-study/db/schema"
@@ -38,11 +38,13 @@ export type BookmarkRepository = {
   ) => Promise<boolean>
   targetExists: (
     targetType: BookmarkTargetType,
-    targetId: string
+    targetId: string,
+    userId: string
   ) => Promise<boolean>
   getBookmarkDetails: (
     targetType: BookmarkTargetType,
-    targetId: string
+    targetId: string,
+    userId: string
   ) => Promise<BookmarkDetails | null>
 }
 
@@ -146,14 +148,20 @@ export const createBookmarkRepository = (db: Db): BookmarkRepository => ({
     return result.length > 0
   },
 
-  // 対象が存在するかチェック
-  targetExists: async (targetType, targetId) => {
+  // 対象が存在するかチェック（ユーザー境界 + 削除フラグを考慮）
+  targetExists: async (targetType, targetId, userId) => {
     switch (targetType) {
       case "subject": {
         const result = await db
           .select({ id: subjects.id })
           .from(subjects)
-          .where(eq(subjects.id, targetId))
+          .where(
+            and(
+              eq(subjects.id, targetId),
+              eq(subjects.userId, userId),
+              isNull(subjects.deletedAt)
+            )
+          )
           .limit(1)
         return result.length > 0
       }
@@ -161,7 +169,13 @@ export const createBookmarkRepository = (db: Db): BookmarkRepository => ({
         const result = await db
           .select({ id: categories.id })
           .from(categories)
-          .where(eq(categories.id, targetId))
+          .where(
+            and(
+              eq(categories.id, targetId),
+              eq(categories.userId, userId),
+              isNull(categories.deletedAt)
+            )
+          )
           .limit(1)
         return result.length > 0
       }
@@ -169,7 +183,13 @@ export const createBookmarkRepository = (db: Db): BookmarkRepository => ({
         const result = await db
           .select({ id: topics.id })
           .from(topics)
-          .where(eq(topics.id, targetId))
+          .where(
+            and(
+              eq(topics.id, targetId),
+              eq(topics.userId, userId),
+              isNull(topics.deletedAt)
+            )
+          )
           .limit(1)
         return result.length > 0
       }
@@ -178,8 +198,8 @@ export const createBookmarkRepository = (db: Db): BookmarkRepository => ({
     }
   },
 
-  // ブックマーク対象の詳細情報を取得（遷移用の階層IDを含む）
-  getBookmarkDetails: async (targetType, targetId) => {
+  // ブックマーク対象の詳細情報を取得（遷移用の階層IDを含む、ユーザー境界 + 削除フラグを考慮）
+  getBookmarkDetails: async (targetType, targetId, userId) => {
     switch (targetType) {
       case "subject": {
         const result = await db
@@ -188,7 +208,13 @@ export const createBookmarkRepository = (db: Db): BookmarkRepository => ({
             domainId: subjects.studyDomainId,
           })
           .from(subjects)
-          .where(eq(subjects.id, targetId))
+          .where(
+            and(
+              eq(subjects.id, targetId),
+              eq(subjects.userId, userId),
+              isNull(subjects.deletedAt)
+            )
+          )
           .limit(1)
 
         if (result.length === 0) return null
@@ -212,7 +238,14 @@ export const createBookmarkRepository = (db: Db): BookmarkRepository => ({
           })
           .from(categories)
           .innerJoin(subjects, eq(categories.subjectId, subjects.id))
-          .where(eq(categories.id, targetId))
+          .where(
+            and(
+              eq(categories.id, targetId),
+              eq(categories.userId, userId),
+              isNull(categories.deletedAt),
+              isNull(subjects.deletedAt)
+            )
+          )
           .limit(1)
 
         if (result.length === 0) return null
@@ -239,7 +272,15 @@ export const createBookmarkRepository = (db: Db): BookmarkRepository => ({
           .from(topics)
           .innerJoin(categories, eq(topics.categoryId, categories.id))
           .innerJoin(subjects, eq(categories.subjectId, subjects.id))
-          .where(eq(topics.id, targetId))
+          .where(
+            and(
+              eq(topics.id, targetId),
+              eq(topics.userId, userId),
+              isNull(topics.deletedAt),
+              isNull(categories.deletedAt),
+              isNull(subjects.deletedAt)
+            )
+          )
           .limit(1)
 
         if (result.length === 0) return null

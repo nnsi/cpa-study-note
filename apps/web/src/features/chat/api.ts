@@ -2,6 +2,7 @@ import { api } from "@/lib/api-client"
 import { useAuthStore } from "@/lib/auth"
 import {
   chatMessagesWrapperResponseSchema,
+  sessionsListResponseSchema,
   type ChatMessage,
   type ChatStreamChunk,
 } from "@cpa-study/shared/schemas"
@@ -18,6 +19,16 @@ export const getMessages = async (sessionId: string): Promise<{ messages: ChatMe
   if (!res.ok) throw new Error("Failed to fetch messages")
   const data = await res.json()
   return chatMessagesWrapperResponseSchema.parse(data)
+}
+
+// 論点別セッション一覧取得
+export const getSessionsByTopic = async (topicId: string) => {
+  const res = await api.api.chat.topics[":topicId"].sessions.$get({
+    param: { topicId },
+  })
+  if (!res.ok) throw new Error("Failed to fetch sessions")
+  const data = await res.json()
+  return sessionsListResponseSchema.parse(data)
 }
 
 export async function* streamMessage(

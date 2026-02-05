@@ -14,6 +14,28 @@ type SuccessStatus = 200 | 201 | 204
 type ErrorStatus = 400 | 401 | 403 | 404 | 409 | 500
 
 /**
+ * AppErrorをHTTPエラーレスポンスに変換する
+ *
+ * @example
+ * const result = await getSubject(deps, userId, id)
+ * if (!result.ok) return errorResponse(c, result.error)
+ * return c.json({ subject: result.value })
+ */
+export const errorResponse = (c: Context, error: AppError) => {
+  const status = errorCodeToStatus[error.code] as ErrorStatus
+  return c.json(
+    {
+      error: {
+        code: error.code,
+        message: error.message,
+        ...(error.details && { details: error.details }),
+      },
+    } satisfies ErrorResponse,
+    status
+  )
+}
+
+/**
  * Result型をHTTPレスポンスに変換する
  *
  * @example

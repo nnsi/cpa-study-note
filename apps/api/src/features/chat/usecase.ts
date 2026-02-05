@@ -1,46 +1,33 @@
 import type { AIAdapter, AIMessage, StreamChunk, AIConfig } from "@/shared/lib/ai"
-import type { ChatRepository, ChatMessage } from "./repository"
-import type { SubjectRepository } from "../subject/repository"
+import type { ChatRepository } from "./repository"
+import type { LearningRepository } from "../learning/repository"
 import { buildSystemPrompt, buildEvaluationPrompt } from "./domain/prompts"
 import { parseLLMJson } from "@cpa-study/shared"
+import type {
+  GoodQuestionResponse,
+  ChatSession,
+  ChatMessage,
+  SessionWithStats,
+} from "@cpa-study/shared/schemas"
 import { z } from "zod"
 import { ok, err, type Result } from "@/shared/lib/result"
 import { notFound, forbidden, type AppError } from "@/shared/lib/errors"
 
-type ChatDeps = {
+export type ChatDeps = {
   chatRepo: ChatRepository
-  subjectRepo: SubjectRepository
+  learningRepo: LearningRepository
   aiAdapter: AIAdapter
   aiConfig: AIConfig
 }
 
-type SessionResponse = {
-  id: string
-  userId: string
-  topicId: string
-  createdAt: string
-  updatedAt: string
-}
-
-type MessageResponse = {
-  id: string
-  sessionId: string
-  role: string
-  content: string
-  imageId: string | null
-  ocrResult: string | null
-  questionQuality: string | null
-  createdAt: string
-}
-
 // セッション作成
 export const createSession = async (
-  deps: Pick<ChatDeps, "chatRepo" | "subjectRepo">,
+  deps: Pick<ChatDeps, "chatRepo" | "learningRepo">,
   userId: string,
   topicId: string
-): Promise<Result<SessionResponse, AppError>> => {
-  const topic = await deps.subjectRepo.findTopicById(topicId, userId)
-  if (!topic) {
+): Promise<Result<ChatSession, AppError>> => {
+  const exists = await deps.learningRepo.verifyTopicExists(userId, topicId)
+  if (!exists) {
     return err(notFound("論点が見つかりません"))
   }
 
@@ -56,27 +43,22 @@ export const createSession = async (
   })
 }
 
-type SessionWithStats = SessionResponse & {
-  messageCount: number
-  goodCount: number
-  surfaceCount: number
-  firstMessagePreview: string | null
-}
-
 // セッション一覧取得（メッセージが1件以上あるセッションのみ）
 // N+1問題を解消: 1クエリでセッションと統計を取得
 export const listSessionsByTopic = async (
   deps: Pick<ChatDeps, "chatRepo">,
   userId: string,
   topicId: string
-): Promise<SessionWithStats[]> => {
+): Promise<Result<SessionWithStats[], AppError>> => {
   const sessions = await deps.chatRepo.findSessionsWithStatsByTopic(userId, topicId)
 
-  return sessions.map((session) => ({
-    ...session,
-    createdAt: session.createdAt.toISOString(),
-    updatedAt: session.updatedAt.toISOString(),
-  }))
+  return ok(
+    sessions.map((session) => ({
+      ...session,
+      createdAt: session.createdAt.toISOString(),
+      updatedAt: session.updatedAt.toISOString(),
+    }))
+  )
 }
 
 // セッション取得
@@ -84,7 +66,7 @@ export const getSession = async (
   deps: Pick<ChatDeps, "chatRepo">,
   userId: string,
   sessionId: string
-): Promise<Result<SessionResponse, AppError>> => {
+): Promise<Result<ChatSession, AppError>> => {
   const session = await deps.chatRepo.findSessionById(sessionId)
   if (!session) {
     return err(notFound("セッションが見つかりません"))
@@ -106,7 +88,7 @@ export const listMessages = async (
   deps: Pick<ChatDeps, "chatRepo">,
   userId: string,
   sessionId: string
-): Promise<Result<MessageResponse[], AppError>> => {
+): Promise<Result<ChatMessage[], AppError>> => {
   const session = await deps.chatRepo.findSessionById(sessionId)
   if (!session) {
     return err(notFound("セッションが見つかりません"))
@@ -257,8 +239,8 @@ export async function* sendMessage(
     })
   }
 
-  // 進捗を更新
-  await deps.subjectRepo.upsertProgress({
+  // 進捗を更新（learning featureのrepositoryを使用）
+  await deps.learningRepo.upsertProgress(input.userId, {
     userId: input.userId,
     topicId: session.topicId,
     incrementQuestionCount: true,
@@ -350,8 +332,8 @@ export async function* sendMessageWithNewSession(
     })
   }
 
-  // 進捗を更新
-  await deps.subjectRepo.upsertProgress({
+  // 進捗を更新（learning featureのrepositoryを使用）
+  await deps.learningRepo.upsertProgress(input.userId, {
     userId: input.userId,
     topicId: input.topicId,
     incrementQuestionCount: true,
@@ -361,27 +343,22 @@ export async function* sendMessageWithNewSession(
   yield { type: "done" as const, messageId: userMessage.id }
 }
 
-type GoodQuestionResponse = {
-  id: string
-  sessionId: string
-  content: string
-  createdAt: string
-}
-
 // トピックに紐づくgood質問を一括取得（N+1解消用）
 export const listGoodQuestionsByTopic = async (
   deps: Pick<ChatDeps, "chatRepo">,
   userId: string,
   topicId: string
-): Promise<GoodQuestionResponse[]> => {
+): Promise<Result<GoodQuestionResponse[], AppError>> => {
   const questions = await deps.chatRepo.findGoodQuestionsByTopic(userId, topicId)
 
-  return questions.map((q) => ({
-    id: q.id,
-    sessionId: q.sessionId,
-    content: q.content,
-    createdAt: q.createdAt.toISOString(),
-  }))
+  return ok(
+    questions.map((q) => ({
+      id: q.id,
+      sessionId: q.sessionId,
+      content: q.content,
+      createdAt: q.createdAt.toISOString(),
+    }))
+  )
 }
 
 type QuestionEvaluation = {
@@ -393,7 +370,7 @@ export const evaluateQuestion = async (
   deps: ChatDeps,
   messageId: string,
   content: string
-): Promise<QuestionEvaluation> => {
+): Promise<Result<QuestionEvaluation, AppError>> => {
   const evaluationPrompt = buildEvaluationPrompt(content)
 
   const result = await deps.aiAdapter.generateText({
@@ -421,5 +398,5 @@ export const evaluateQuestion = async (
 
   await deps.chatRepo.updateMessageQuality(messageId, quality, reason)
 
-  return { quality, reason }
+  return ok({ quality, reason })
 }

@@ -3,10 +3,10 @@ import type { Env } from "@/shared/types/env"
 import { subjectRoutes } from "./route"
 import { createNoTransactionRunner } from "@/shared/lib/transaction"
 
-export const createSubjectFeature = (env: Env, db: Db) => {
+export const createSubjectFeature = (_env: Env, db: Db) => {
   // D1 does not support SQL transactions, use NoTransactionRunner
   const txRunner = createNoTransactionRunner(db)
-  return subjectRoutes({ env, db, txRunner })
+  return subjectRoutes({ db, txRunner })
 }
 
 export type SubjectRoutes = ReturnType<typeof createSubjectFeature>
@@ -18,7 +18,10 @@ export {
   createSubject,
   updateSubject,
   deleteSubject,
+} from "./usecase"
+export {
   getSubjectTree,
   updateSubjectTree,
   importCSVToSubject,
-} from "./usecase"
+  bulkImportCSVToStudyDomain,
+} from "./tree-usecase"

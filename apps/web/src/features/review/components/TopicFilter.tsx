@@ -95,33 +95,6 @@ export const TopicFilter = ({
         </div>
       </div>
 
-      {/* チェック後のチャット */}
-      <div>
-        <label className="block text-sm font-medium text-ink-700 mb-2">
-          チェック後のチャット
-        </label>
-        <div className="flex flex-wrap gap-2">
-          <FilterButton
-            active={filters.hasPostCheckChat === undefined}
-            onClick={() => onUpdateFilter("hasPostCheckChat", undefined)}
-          >
-            すべて
-          </FilterButton>
-          <FilterButton
-            active={filters.hasPostCheckChat === true}
-            onClick={() => onUpdateFilter("hasPostCheckChat", true)}
-          >
-            あり
-          </FilterButton>
-          <FilterButton
-            active={filters.hasPostCheckChat === false}
-            onClick={() => onUpdateFilter("hasPostCheckChat", false)}
-          >
-            なし
-          </FilterButton>
-        </div>
-      </div>
-
       {/* 良質な質問数 */}
       <div>
         <label className="block text-sm font-medium text-ink-700 mb-2">

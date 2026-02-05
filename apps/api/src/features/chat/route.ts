@@ -6,7 +6,7 @@ import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
 import { createAIAdapter, streamToSSE, resolveAIConfig } from "@/shared/lib/ai"
 import { createChatRepository } from "./repository"
-import { createSubjectRepository } from "../subject/repository"
+import { createLearningRepository } from "../learning/repository"
 import {
   createSession,
   getSession,
@@ -18,7 +18,7 @@ import {
   evaluateQuestion,
   listGoodQuestionsByTopic,
 } from "./usecase"
-import { handleResult, handleResultWith } from "@/shared/lib/route-helpers"
+import { handleResultWith, errorResponse } from "@/shared/lib/route-helpers"
 
 type ChatDeps = {
   env: Env
@@ -27,7 +27,7 @@ type ChatDeps = {
 
 export const chatRoutes = ({ env, db }: ChatDeps) => {
   const chatRepo = createChatRepository(db)
-  const subjectRepo = createSubjectRepository(db)
+  const learningRepo = createLearningRepository(db)
   const aiConfig = resolveAIConfig(env.ENVIRONMENT)
 
   const app = new Hono<{ Bindings: Env; Variables: Variables }>()
@@ -41,12 +41,12 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         const { topicId } = c.req.valid("json")
 
         const result = await createSession(
-          { chatRepo, subjectRepo },
+          { chatRepo, learningRepo },
           user.id,
           topicId
         )
 
-        return handleResultWith(c, result, (session) => ({ session }), 201)
+        return handleResultWith(c, result, (value) => ({ session: value }), 201)
       }
     )
 
@@ -58,9 +58,8 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         const topicId = c.req.param("topicId")
         const user = c.get("user")
 
-        const sessions = await listSessionsByTopic({ chatRepo }, user.id, topicId)
-
-        return c.json({ sessions })
+        const result = await listSessionsByTopic({ chatRepo }, user.id, topicId)
+        return handleResultWith(c, result, (value) => ({ sessions: value }))
       }
     )
 
@@ -72,9 +71,8 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         const topicId = c.req.param("topicId")
         const user = c.get("user")
 
-        const questions = await listGoodQuestionsByTopic({ chatRepo }, user.id, topicId)
-
-        return c.json({ questions })
+        const result = await listGoodQuestionsByTopic({ chatRepo }, user.id, topicId)
+        return handleResultWith(c, result, (value) => ({ questions: value }))
       }
     )
 
@@ -84,7 +82,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
       const user = c.get("user")
 
       const result = await getSession({ chatRepo }, user.id, sessionId)
-      return handleResultWith(c, result, (session) => ({ session }))
+      return handleResultWith(c, result, (value) => ({ session: value }))
     })
 
     // メッセージ一覧
@@ -93,7 +91,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
       const user = c.get("user")
 
       const result = await listMessages({ chatRepo }, user.id, sessionId)
-      return handleResultWith(c, result, (messages) => ({ messages }))
+      return handleResultWith(c, result, (value) => ({ messages: value }))
     })
 
     // メッセージ送信（ストリーミング）
@@ -112,7 +110,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         })
 
         const stream = sendMessage(
-          { chatRepo, subjectRepo, aiAdapter, aiConfig },
+          { chatRepo, learningRepo, aiAdapter, aiConfig },
           {
             sessionId,
             userId: user.id,
@@ -142,7 +140,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         })
 
         const stream = sendMessageWithNewSession(
-          { chatRepo, subjectRepo, aiAdapter, aiConfig },
+          { chatRepo, learningRepo, aiAdapter, aiConfig },
           {
             topicId,
             userId: user.id,
@@ -164,7 +162,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
       const result = await getMessageForEvaluation({ chatRepo }, user.id, messageId)
 
       if (!result.ok) {
-        return handleResult(c, result)
+        return errorResponse(c, result.error)
       }
 
       const aiAdapter = createAIAdapter({
@@ -172,13 +170,13 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         apiKey: env.OPENROUTER_API_KEY,
       })
 
-      const quality = await evaluateQuestion(
-        { chatRepo, subjectRepo, aiAdapter, aiConfig },
+      const evalResult = await evaluateQuestion(
+        { chatRepo, learningRepo, aiAdapter, aiConfig },
         messageId,
         result.value
       )
 
-      return c.json({ quality })
+      return handleResultWith(c, evalResult, (value) => ({ quality: value }))
     })
 
   return app

@@ -4,7 +4,7 @@ import type { Db } from "@cpa-study/db"
 import { uploadImageRequestSchema } from "@cpa-study/shared/schemas"
 import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
-import { createAIAdapter } from "@/shared/lib/ai"
+import { createAIAdapter, resolveAIConfig } from "@/shared/lib/ai"
 import { createImageRepository } from "./repository"
 import {
   createUploadUrl,
@@ -14,6 +14,8 @@ import {
   getImageFile,
 } from "./usecase"
 import { handleResult, handleResultWith } from "@/shared/lib/route-helpers"
+import { payloadTooLarge } from "@/shared/lib/errors"
+import { err } from "@/shared/lib/result"
 
 // 10MB制限
 const MAX_UPLOAD_SIZE = 10 * 1024 * 1024
@@ -25,6 +27,7 @@ type ImageDeps = {
 
 export const imageRoutes = ({ env, db }: ImageDeps) => {
   const imageRepo = createImageRepository(db)
+  const aiConfig = resolveAIConfig(env.ENVIRONMENT)
 
   const app = new Hono<{ Bindings: Env; Variables: Variables }>()
     // アップロードURL取得
@@ -53,7 +56,7 @@ export const imageRoutes = ({ env, db }: ImageDeps) => {
 
       // サイズ制限チェック
       if (body.byteLength > MAX_UPLOAD_SIZE) {
-        return c.json({ error: { code: "BAD_REQUEST", message: "ファイルサイズが大きすぎます（最大10MB）" } }, 413)
+        return handleResult(c, err(payloadTooLarge("ファイルサイズが大きすぎます（最大10MB）")))
       }
 
       const result = await uploadImage(
@@ -81,7 +84,7 @@ export const imageRoutes = ({ env, db }: ImageDeps) => {
       })
 
       const result = await performOCR(
-        { imageRepo, aiAdapter, r2: env.R2, apiBaseUrl: env.API_BASE_URL },
+        { imageRepo, aiAdapter, aiConfig, r2: env.R2 },
         user.id,
         imageId
       )

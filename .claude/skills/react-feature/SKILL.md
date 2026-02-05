@@ -60,34 +60,42 @@ apps/web/src/features/{feature-name}/
 
 ## テンプレート
 
-### api.ts（Hono RPC使用）
+### api.ts（Hono RPC使用 + Zod parse）
 ```typescript
 import { api } from "@/lib/api-client"
-import type { StreamChunk } from "@cpa-study/shared/types"
+import {
+  {featureName}ListResponseSchema,
+  {featureName}DetailResponseSchema,
+  type {FeatureName}ListResponse,
+  type {FeatureName}DetailResponse,
+} from "@cpa-study/shared/schemas"
 
-// 型安全なAPI呼び出し（エンドポイント・パラメータ・レスポンスすべて型補完）
-export const getList = async () => {
+// ✅ 正しい: Zod parseでレスポンスを検証
+export const getList = async (): Promise<{FeatureName}ListResponse> => {
   const res = await api.api.{featureName}.$get()
   if (!res.ok) throw new Error("Failed to fetch")
-  return res.json()
+  const json = await res.json()
+  return {featureName}ListResponseSchema.parse(json)
 }
 
-export const getById = async (id: string) => {
+export const getById = async (id: string): Promise<{FeatureName}DetailResponse> => {
   const res = await api.api.{featureName}[":id"].$get({
     param: { id },
   })
   if (!res.ok) throw new Error("Not found")
-  return res.json()
+  const json = await res.json()
+  return {featureName}DetailResponseSchema.parse(json)
 }
 
-export const create = async (data: Create{FeatureName}Input) => {
-  const res = await api.api.{featureName}.$post({
-    json: data,
-  })
-  if (!res.ok) throw new Error("Failed to create")
-  return res.json()
+// ❌ 禁止: as キャストでレスポンス型を指定
+export const getList = async () => {
+  const res = await api.api.{featureName}.$get()
+  if (!res.ok) throw new Error("Failed to fetch")
+  return res.json() as Promise<{FeatureName}Response[]>  // ❌ 実行時検証なし
 }
 ```
+
+**理由:** `as` キャストは実行時検証がなく、APIレスポンスが想定と異なっても気づけない。Zod parseでスキーマ検証することで、型の不整合を即座に検出できる。
 
 ### api.ts（SSEストリーミング対応）
 ```typescript

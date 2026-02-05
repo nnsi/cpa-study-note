@@ -97,6 +97,27 @@ curl -N -X POST http://localhost:8787/api/sessions/{sessionId}/messages/stream \
 - [ ] 必須フィールドが含まれている
 - [ ] エラー時に適切なエラーメッセージが返る
 
+### 一貫性チェックリスト
+
+**route.ts**
+- [ ] エラーハンドリングは `handleResult(c, result)` または `handleResultWith` を使用
+- [ ] 直接エラー生成は `handleResult(c, err(xxxError("message")))` 形式
+- [ ] `errorResponse` や `c.json({ error: ... })` を直接使用していない
+- [ ] DIは `const deps = { repo }` 形式で作成
+- [ ] POST/PUT のレスポンスは `{ message: "..." }` ではなく詳細データを返す
+
+**usecase.ts**
+- [ ] 全ての関数が `Result<T, AppError>` を返す
+- [ ] Deps型は `XxxDeps` 形式で命名（例: `BookmarkDeps`）
+- [ ] try-catch でDBエラーを捕捉し `err(internalError(...))` を返す
+
+**index.ts**
+- [ ] シグネチャは `(_env: Env, db: Db)` 形式（envを使わなくても `_env` として受け取る）
+
+**スキーマ**
+- [ ] Zodスキーマは `@cpa-study/shared/schemas` から import
+- [ ] ローカルでスキーマを定義していない
+
 ---
 
 ## 2. Playwright MCPでの動作確認

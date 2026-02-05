@@ -1,6 +1,5 @@
 import { Hono } from "hono"
 import { zValidator } from "@hono/zod-validator"
-import { z } from "zod"
 import type { Db } from "@cpa-study/db"
 import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
@@ -23,7 +22,7 @@ import {
   updateNote,
   refreshNoteFromSession,
 } from "./usecase"
-import { handleResult, handleResultWith } from "@/shared/lib/route-helpers"
+import { handleResultWith } from "@/shared/lib/route-helpers"
 
 type NoteDeps = {
   env: Env
@@ -87,24 +86,24 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
     // ノート一覧
     .get("/", authMiddleware, async (c) => {
       const user = c.get("user")
-      const notes = await listNotes({ noteRepo }, user.id)
-      return c.json({ notes })
+      const result = await listNotes({ noteRepo }, user.id)
+      return handleResultWith(c, result, (value) => ({ notes: value }))
     })
 
     // 論点別ノート一覧
     .get("/topic/:topicId", authMiddleware, async (c) => {
       const user = c.get("user")
       const topicId = c.req.param("topicId")
-      const notes = await listNotesByTopic({ noteRepo }, user.id, topicId)
-      return c.json({ notes })
+      const result = await listNotesByTopic({ noteRepo }, user.id, topicId)
+      return handleResultWith(c, result, (value) => ({ notes: value }))
     })
 
     // セッション別ノート取得
     .get("/session/:sessionId", authMiddleware, async (c) => {
       const user = c.get("user")
       const sessionId = c.req.param("sessionId")
-      const note = await getNoteBySession({ noteRepo }, user.id, sessionId)
-      return c.json({ note })
+      const result = await getNoteBySession({ noteRepo }, user.id, sessionId)
+      return handleResultWith(c, result, (value) => ({ note: value }))
     })
 
     // ノート詳細

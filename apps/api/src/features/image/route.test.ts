@@ -16,13 +16,7 @@ import {
   errorResponseSchema,
   type TestContext,
 } from "../../test/helpers"
-import { createMockAIAdapter, mockAIPresets } from "../../test/mocks/ai"
-import { MAGIC_BYTES } from "./usecase"
-import type {
-  Image,
-  UploadUrlResponse,
-  OcrResultResponse,
-} from "@cpa-study/shared/schemas"
+import { mockAIPresets } from "../../test/mocks/ai"
 
 // レスポンススキーマ定義
 const uploadUrlResponseSchema = z.object({
@@ -54,6 +48,12 @@ const ocrResultResponseSchema = z.object({
 // AI Adapterをモック
 vi.mock("../../shared/lib/ai", () => ({
   createAIAdapter: () => mockAIPresets.ocr,
+  resolveAIConfig: () => ({
+    chat: { model: "test-model", temperature: 0.7, maxTokens: 2000 },
+    evaluation: { model: "test-model", temperature: 0, maxTokens: 100 },
+    noteSummary: { model: "test-model", temperature: 0.3, maxTokens: 1000 },
+    ocr: { model: "openai/gpt-4o-mini", temperature: 0, maxTokens: 2000 },
+  }),
 }))
 
 describe("Image Routes", () => {
@@ -177,16 +177,6 @@ describe("Image Routes", () => {
       view[1] = 0x50
       view[2] = 0x4e
       view[3] = 0x47
-      return buffer
-    }
-
-    // JPEG magic bytes: 0xFF, 0xD8, 0xFF
-    const createJpegBuffer = () => {
-      const buffer = new ArrayBuffer(100)
-      const view = new Uint8Array(buffer)
-      view[0] = 0xff
-      view[1] = 0xd8
-      view[2] = 0xff
       return buffer
     }
 

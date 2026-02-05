@@ -40,7 +40,7 @@ export const createStudyDomain = async (
   })
   if (!res.ok) {
     const error = await res.json()
-    throw new Error((error as { error?: string }).error ?? "Failed to create study domain")
+    throw new Error((error as { error?: { message?: string } }).error?.message ?? "Failed to create study domain")
   }
   const responseData = await res.json()
   return studyDomainSingleResponseSchema.parse(responseData)
@@ -56,7 +56,7 @@ export const updateStudyDomain = async (
   })
   if (!res.ok) {
     const error = await res.json()
-    throw new Error((error as { error?: string }).error ?? "Failed to update study domain")
+    throw new Error((error as { error?: { message?: string } }).error?.message ?? "Failed to update study domain")
   }
   const responseData = await res.json()
   return studyDomainSingleResponseSchema.parse(responseData)
@@ -68,7 +68,7 @@ export const deleteStudyDomain = async (id: string): Promise<{ success: boolean 
   })
   if (!res.ok) {
     const error = await res.json()
-    throw new Error((error as { error?: string }).error ?? "Failed to delete study domain")
+    throw new Error((error as { error?: { message?: string } }).error?.message ?? "Failed to delete study domain")
   }
   const data = await res.json()
   return successResponseSchema.parse(data)
@@ -84,7 +84,7 @@ export const bulkImportCSV = async (
   })
   if (!res.ok) {
     const error = await res.json()
-    throw new Error((error as { error?: string }).error ?? "CSVインポートに失敗しました")
+    throw new Error((error as { error?: { message?: string } }).error?.message ?? "CSVインポートに失敗しました")
   }
   const data = await res.json()
   return bulkCSVImportResponseSchema.parse(data)

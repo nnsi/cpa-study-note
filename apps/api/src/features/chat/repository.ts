@@ -8,6 +8,7 @@ import {
   subjects,
   studyDomains,
 } from "@cpa-study/db/schema"
+import type { MessageRole, QuestionQuality } from "@cpa-study/shared/schemas"
 
 export type ChatSession = {
   id: string
@@ -20,11 +21,11 @@ export type ChatSession = {
 export type ChatMessage = {
   id: string
   sessionId: string
-  role: string
+  role: MessageRole
   content: string
   imageId: string | null
   ocrResult: string | null
-  questionQuality: string | null
+  questionQuality: QuestionQuality
   createdAt: Date
 }
 
@@ -296,15 +297,36 @@ export const createChatRepository = (db: Db): ChatRepository => ({
       .from(chatMessages)
       .where(eq(chatMessages.id, id))
       .limit(1)
-    return result[0] ?? null
+    const row = result[0]
+    if (!row) return null
+    return {
+      id: row.id,
+      sessionId: row.sessionId,
+      role: row.role as MessageRole,
+      content: row.content,
+      imageId: row.imageId,
+      ocrResult: row.ocrResult,
+      questionQuality: row.questionQuality as QuestionQuality,
+      createdAt: row.createdAt,
+    }
   },
 
   findMessagesBySession: async (sessionId) => {
-    return db
+    const rows = await db
       .select()
       .from(chatMessages)
       .where(eq(chatMessages.sessionId, sessionId))
       .orderBy(chatMessages.createdAt)
+    return rows.map((row) => ({
+      id: row.id,
+      sessionId: row.sessionId,
+      role: row.role as MessageRole,
+      content: row.content,
+      imageId: row.imageId,
+      ocrResult: row.ocrResult,
+      questionQuality: row.questionQuality as QuestionQuality,
+      createdAt: row.createdAt,
+    }))
   },
 
   updateMessageQuality: async (id, quality, reason) => {

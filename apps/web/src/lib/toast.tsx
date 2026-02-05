@@ -1,5 +1,4 @@
 import { create } from "zustand"
-import { useEffect } from "react"
 
 type Toast = {
   id: string

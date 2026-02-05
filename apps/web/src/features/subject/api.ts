@@ -1,18 +1,29 @@
 import { api } from "@/lib/api-client"
-import type {
-  CreateSubjectRequest,
-  UpdateSubjectRequest,
-  TopicSearchResult,
-} from "@cpa-study/shared/schemas"
-import type {
-  TopicNodeResponse,
-  SubcategoryNodeResponse,
-  CategoryNodeResponse,
-  TreeResponse,
-  TopicNode as TopicNodeInput,
-  SubcategoryNode as SubcategoryNodeInput,
-  CategoryNode as CategoryNodeInput,
-  UpdateTreeRequest,
+import {
+  searchTopicsResponseSchema,
+  subjectsWithStatsListResponseSchema,
+  subjectDetailResponseSchema,
+  successResponseSchema,
+  treeDetailResponseSchema,
+  csvImportResponseSchema,
+  type CreateSubjectRequest,
+  type UpdateSubjectRequest,
+  type TopicSearchResult,
+  type SubjectResponse,
+  type SubjectWithStats,
+  type TopicNodeResponse,
+  type SubcategoryNodeResponse,
+  type CategoryNodeResponse,
+  type TreeResponse,
+  type TopicNode as TopicNodeInput,
+  type SubcategoryNode as SubcategoryNodeInput,
+  type CategoryNode as CategoryNodeInput,
+  type UpdateTreeRequest,
+  type SubjectsWithStatsListResponse,
+  type SubjectDetailResponse,
+  type SuccessResponse,
+  type TreeDetailResponse,
+  type CSVImportResponse,
 } from "@cpa-study/shared/schemas"
 
 // Re-export tree response types with convenient names (used by TreeEditor, useTreeState, etc.)
@@ -32,46 +43,23 @@ export type UpdateSubjectInput = UpdateSubjectRequest
 // Re-export search result type
 export type { TopicSearchResult }
 
-// Subject types - based on actual API response (without userId for list, with userId for single)
-export type Subject = {
-  id: string
-  userId: string
-  studyDomainId: string
-  name: string
-  description: string | null
-  emoji: string | null
-  color: string | null
-  displayOrder: number
-  createdAt: string
-  updatedAt: string
-}
-
-export type SubjectWithStats = {
-  id: string
-  studyDomainId: string
-  name: string
-  description: string | null
-  emoji: string | null
-  color: string | null
-  displayOrder: number
-  createdAt: string
-  updatedAt: string
-  categoryCount: number
-  topicCount: number
-}
+// Re-export subject types from shared schema
+export type Subject = SubjectResponse
+export type { SubjectWithStats }
 
 // API functions
-export const getSubjects = async (domainId: string): Promise<{ subjects: SubjectWithStats[] }> => {
+export const getSubjects = async (domainId: string): Promise<SubjectsWithStatsListResponse> => {
   const res = await api.api.subjects.$get({
     query: { studyDomainId: domainId },
   })
   if (!res.ok) {
     throw new Error("科目の取得に失敗しました")
   }
-  return res.json() as Promise<{ subjects: SubjectWithStats[] }>
+  const json = await res.json()
+  return subjectsWithStatsListResponseSchema.parse(json)
 }
 
-export const getSubject = async (id: string): Promise<{ subject: Subject }> => {
+export const getSubject = async (id: string): Promise<SubjectDetailResponse> => {
   const res = await api.api.subjects[":id"].$get({
     param: { id },
   })
@@ -79,51 +67,55 @@ export const getSubject = async (id: string): Promise<{ subject: Subject }> => {
     if (res.status === 404) throw new Error("科目が見つかりません")
     throw new Error("科目の取得に失敗しました")
   }
-  return res.json() as Promise<{ subject: Subject }>
+  const json = await res.json()
+  return subjectDetailResponseSchema.parse(json)
 }
 
 export const createSubject = async (
   domainId: string,
   data: CreateSubjectRequest
-): Promise<{ subject: Subject }> => {
-  const res = await api.api["study-domains"][":domainId"].subjects.$post({
+): Promise<SubjectDetailResponse> => {
+  const res = await api.api.subjects["study-domains"][":domainId"].$post({
     param: { domainId },
     json: data,
   })
   if (!res.ok) {
     const error = await res.json()
-    throw new Error((error as { error?: string }).error ?? "科目の作成に失敗しました")
+    throw new Error((error as { error?: { message?: string } }).error?.message ?? "科目の作成に失敗しました")
   }
-  return res.json() as Promise<{ subject: Subject }>
+  const json = await res.json()
+  return subjectDetailResponseSchema.parse(json)
 }
 
 export const updateSubject = async (
   id: string,
   data: UpdateSubjectRequest
-): Promise<{ subject: Subject }> => {
+): Promise<SubjectDetailResponse> => {
   const res = await api.api.subjects[":id"].$patch({
     param: { id },
     json: data,
   })
   if (!res.ok) {
     const error = await res.json()
-    throw new Error((error as { error?: string }).error ?? "科目の更新に失敗しました")
+    throw new Error((error as { error?: { message?: string } }).error?.message ?? "科目の更新に失敗しました")
   }
-  return res.json() as Promise<{ subject: Subject }>
+  const json = await res.json()
+  return subjectDetailResponseSchema.parse(json)
 }
 
-export const deleteSubject = async (id: string): Promise<{ success: boolean }> => {
+export const deleteSubject = async (id: string): Promise<SuccessResponse> => {
   const res = await api.api.subjects[":id"].$delete({
     param: { id },
   })
   if (!res.ok) {
     const error = await res.json()
-    throw new Error((error as { error?: string }).error ?? "科目の削除に失敗しました")
+    throw new Error((error as { error?: { message?: string } }).error?.message ?? "科目の削除に失敗しました")
   }
-  return res.json() as Promise<{ success: boolean }>
+  const json = await res.json()
+  return successResponseSchema.parse(json)
 }
 
-export const getSubjectTree = async (id: string): Promise<{ tree: TreeResponse }> => {
+export const getSubjectTree = async (id: string): Promise<TreeDetailResponse> => {
   const res = await api.api.subjects[":id"].tree.$get({
     param: { id },
   })
@@ -131,45 +123,40 @@ export const getSubjectTree = async (id: string): Promise<{ tree: TreeResponse }
     if (res.status === 404) throw new Error("科目が見つかりません")
     throw new Error("ツリーの取得に失敗しました")
   }
-  return res.json() as Promise<{ tree: TreeResponse }>
+  const json = await res.json()
+  return treeDetailResponseSchema.parse(json)
 }
 
 export const updateSubjectTree = async (
   id: string,
   tree: UpdateTreeRequest
-): Promise<{ tree: TreeResponse }> => {
+): Promise<TreeDetailResponse> => {
   const res = await api.api.subjects[":id"].tree.$put({
     param: { id },
     json: tree,
   })
   if (!res.ok) {
     const error = await res.json()
-    throw new Error((error as { error?: string }).error ?? "ツリーの更新に失敗しました")
+    throw new Error((error as { error?: { message?: string } }).error?.message ?? "ツリーの更新に失敗しました")
   }
-  return res.json() as Promise<{ tree: TreeResponse }>
+  const json = await res.json()
+  return treeDetailResponseSchema.parse(json)
 }
 
 export const importCSV = async (
   id: string,
   csvContent: string
-): Promise<{
-  success: boolean
-  imported: { categories: number; subcategories: number; topics: number }
-  errors: Array<{ line: number; message: string }>
-}> => {
+): Promise<CSVImportResponse> => {
   const res = await api.api.subjects[":id"].import.$post({
     param: { id },
     json: { csvContent },
   })
   if (!res.ok) {
     const error = await res.json()
-    throw new Error((error as { error?: string }).error ?? "CSVインポートに失敗しました")
+    throw new Error((error as { error?: { message?: string } }).error?.message ?? "CSVインポートに失敗しました")
   }
-  return res.json() as Promise<{
-    success: boolean
-    imported: { categories: number; subcategories: number; topics: number }
-    errors: Array<{ line: number; message: string }>
-  }>
+  const json = await res.json()
+  return csvImportResponseSchema.parse(json)
 }
 
 export const searchTopics = async (
@@ -177,12 +164,23 @@ export const searchTopics = async (
   studyDomainId: string,
   limit: number = 20
 ): Promise<TopicSearchResult[]> => {
-  const res = await api.api.subjects.search.$get({
+  const res = await api.api.view.search.$get({
     query: { q: query, limit: String(limit), studyDomainId },
   })
   if (!res.ok) {
     throw new Error("検索に失敗しました")
   }
-  const data = await res.json()
-  return data.results as TopicSearchResult[]
+  const json = await res.json()
+  const data = searchTopicsResponseSchema.parse(json)
+  // Transform to TopicSearchResult format (topic.ts schema has extra fields)
+  return data.results.map((r) => ({
+    id: r.id,
+    name: r.name,
+    description: null,
+    studyDomainId,
+    subjectId: r.subjectId,
+    categoryId: r.categoryId,
+    subjectName: r.subjectName,
+    categoryName: r.categoryName,
+  }))
 }

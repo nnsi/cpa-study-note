@@ -7,13 +7,15 @@ import type { Db } from "@cpa-study/db"
 import { createSampleDataForNewUser } from "./sample-data"
 import { notFound, unauthorized, internalError, type AppError } from "@/shared/lib/errors"
 
+// OAuth認証用の全依存関係
 type AuthDeps = {
   repo: AuthRepository
   providers: ReturnType<typeof createProviders>
   db: Db
 }
 
-type RefreshDeps = {
+// リポジトリのみを使用する操作用
+type AuthRepoDeps = {
   repo: AuthRepository
 }
 
@@ -102,10 +104,6 @@ const hashToken = async (token: string) => {
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("")
 }
 
-type DevLoginDeps = {
-  repo: AuthRepository
-}
-
 type DevLoginInput = {
   userId: string
   email: string
@@ -124,7 +122,7 @@ type SaveRefreshTokenInput = {
  * Get or create a dev user for local development
  */
 export const getOrCreateDevUser = async (
-  deps: DevLoginDeps,
+  deps: AuthRepoDeps,
   input: DevLoginInput
 ): Promise<Result<User, AppError>> => {
   let user = await deps.repo.findUserById(input.userId)
@@ -148,7 +146,7 @@ export const getOrCreateDevUser = async (
  * Save a refresh token for a user
  */
 export const saveRefreshToken = async (
-  deps: DevLoginDeps,
+  deps: AuthRepoDeps,
   input: SaveRefreshTokenInput
 ): Promise<Result<void, AppError>> => {
   await deps.repo.saveRefreshToken({
@@ -163,7 +161,7 @@ export const saveRefreshToken = async (
  * Logout by deleting the refresh token
  */
 export const logout = async (
-  deps: DevLoginDeps,
+  deps: AuthRepoDeps,
   refreshTokenHash: string
 ): Promise<Result<void, AppError>> => {
   const storedToken = await deps.repo.findRefreshTokenByHash(refreshTokenHash)
@@ -174,7 +172,7 @@ export const logout = async (
 }
 
 export const refreshAccessToken = async (
-  deps: RefreshDeps,
+  deps: AuthRepoDeps,
   refreshToken: string,
   jwtSecret: Uint8Array,
   generateAccessToken: (user: EnvUser, secret: Uint8Array) => Promise<string>

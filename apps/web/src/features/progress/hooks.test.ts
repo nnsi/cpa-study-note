@@ -34,6 +34,8 @@ const createProgressItem = (
     topicId: string
     understood: boolean
     lastAccessedAt: string | null
+    questionCount: number
+    goodQuestionCount: number
     createdAt: string
     updatedAt: string
   }> = {}
@@ -42,6 +44,8 @@ const createProgressItem = (
   topicId: "topic-1",
   understood: false,
   lastAccessedAt: null,
+  questionCount: 0,
+  goodQuestionCount: 0,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
   ...overrides,

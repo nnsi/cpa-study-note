@@ -6,12 +6,14 @@ import {
   createSubject,
   updateSubject,
   deleteSubject,
+  type SubjectDeps,
+} from "./usecase"
+import {
   getSubjectTree,
   updateSubjectTree,
   importCSVToSubject,
-  type SubjectUseCaseDeps,
-  type TreeUseCaseDeps,
-} from "./usecase"
+  type TreeDeps,
+} from "./tree-usecase"
 import { createTestDatabase, type TestDatabase } from "@/test/mocks/db"
 import { createTestUser, createTestStudyDomain, createTestSubject, createTestCategory, createTestTopic } from "@/test/helpers"
 import { createMockSimpleTransactionRunner } from "@/shared/lib/transaction"
@@ -21,7 +23,7 @@ import type { UpdateTreeRequest } from "@cpa-study/shared/schemas"
 
 describe("Subject UseCase", () => {
   let db: TestDatabase
-  let deps: SubjectUseCaseDeps
+  let deps: SubjectDeps
 
   beforeEach(() => {
     const result = createTestDatabase()
@@ -352,7 +354,7 @@ describe("Subject UseCase", () => {
 describe("Subject UseCase - Tree Operations", () => {
   let db: TestDatabase
   let subjectRepo: SubjectRepository
-  let treeDeps: TreeUseCaseDeps
+  let treeDeps: TreeDeps
 
   beforeEach(() => {
     const result = createTestDatabase()

@@ -11,6 +11,9 @@ import { createMetricsFeature } from "./features/metrics"
 import { createStudyDomainFeature } from "./features/study-domain"
 import { createSubjectFeature } from "./features/subject"
 import { createBookmarkFeature } from "./features/bookmark"
+import { createLearningFeature } from "./features/learning"
+import { createViewFeature } from "./features/view"
+import { createExerciseFeature } from "./features/exercise"
 import {
   createRateLimitStore,
   createRateLimiterFactory,
@@ -101,6 +104,7 @@ const createApp = (env: Env) => {
     // AI系は中程度（20 req/min）
     .use("/api/chat/sessions/*/messages", limiter.moderate())
     .use("/api/images/*/ocr", limiter.moderate())
+    .use("/api/exercises/analyze", limiter.moderate())
     .use("/api/notes", limiter.moderate())
     // その他は緩め（100 req/min）
     // rateLimitApplied フラグにより、上記で適用済みの場合はスキップされる
@@ -111,8 +115,11 @@ const createApp = (env: Env) => {
     .route("/api/images", createImageFeature(env, db))
     .route("/api/metrics", createMetricsFeature(env, db))
     .route("/api/study-domains", createStudyDomainFeature(env, db))
-    .route("/api", createSubjectFeature(env, db))
+    .route("/api/subjects", createSubjectFeature(env, db))
     .route("/api/bookmarks", createBookmarkFeature(env, db))
+    .route("/api/learning", createLearningFeature(env, db))
+    .route("/api/view", createViewFeature(env, db))
+    .route("/api/exercises", createExerciseFeature(env, db))
     .get("/api/health", (c) => c.json({ status: "ok" }))
     .onError((error, c) => {
       // ローカル環境では詳細なエラー情報を出力
@@ -136,7 +143,19 @@ const createApp = (env: Env) => {
           console.error(`  Error:`, error)
         }
       }
-      return c.json({ error: "Internal Server Error" }, 500)
+      return c.json(
+        {
+          error: {
+            code: "INTERNAL_ERROR",
+            message: "Internal Server Error",
+            ...(env.ENVIRONMENT === "local" &&
+              error instanceof Error && {
+                details: { name: error.name, path: c.req.path },
+              }),
+          },
+        },
+        500
+      )
     })
 
   return app

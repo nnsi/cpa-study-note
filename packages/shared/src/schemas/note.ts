@@ -87,3 +87,23 @@ export const noteSingleResponseSchema = z.object({
 })
 
 export type NoteSingleResponse = z.infer<typeof noteSingleResponseSchema>
+
+export const notesListResponseSchema = z.object({
+  notes: z.array(noteWithSourceSchema),
+})
+
+export type NotesListResponse = z.infer<typeof notesListResponseSchema>
+
+// ノート一覧用（topicName, subjectName含む）
+export const noteListItemSchema = noteWithSourceSchema.extend({
+  topicName: z.string(),
+  subjectName: z.string(),
+})
+
+export type NoteListItem = z.infer<typeof noteListItemSchema>
+
+export const notesFullListResponseSchema = z.object({
+  notes: z.array(noteListItemSchema),
+})
+
+export type NotesFullListResponse = z.infer<typeof notesFullListResponseSchema>

@@ -7,22 +7,22 @@ import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
 import { createMetricsRepository } from "./repository"
 import { getDailyMetrics, createSnapshot, getTodayMetrics } from "./usecase"
-import { handleResult, handleResultWith } from "@/shared/lib/route-helpers"
+import { handleResultWith } from "@/shared/lib/route-helpers"
 
 type MetricsDeps = {
-  env: Env
   db: Db
 }
 
-export const metricsRoutes = ({ env, db }: MetricsDeps) => {
+export const metricsRoutes = ({ db }: MetricsDeps) => {
   const metricsRepo = createMetricsRepository(db)
+  const deps = { metricsRepo }
 
   const app = new Hono<{ Bindings: Env; Variables: Variables }>()
     // 今日の活動メトリクス取得（リアルタイム、タイムゾーン考慮）
     .get("/today", authMiddleware, async (c) => {
       const user = c.get("user")
-      const metrics = await getTodayMetrics({ metricsRepo }, user.id, user.timezone)
-      return c.json({ metrics })
+      const result = await getTodayMetrics(deps, user.id, user.timezone)
+      return handleResultWith(c, result, (value) => ({ metrics: value }))
     })
 
     // 日次メトリクス取得（タイムゾーン考慮）
@@ -34,9 +34,8 @@ export const metricsRoutes = ({ env, db }: MetricsDeps) => {
         const user = c.get("user")
         const { from, to } = c.req.valid("query")
 
-        const result = await getDailyMetrics({ metricsRepo }, user.id, from, to, user.timezone)
-
-        return handleResultWith(c, result, (metrics) => ({ metrics }))
+        const result = await getDailyMetrics(deps, user.id, from, to, user.timezone)
+        return handleResultWith(c, result, (value) => ({ metrics: value }))
       }
     )
 
@@ -44,9 +43,8 @@ export const metricsRoutes = ({ env, db }: MetricsDeps) => {
     .post("/snapshot", authMiddleware, async (c) => {
       const user = c.get("user")
 
-      const result = await createSnapshot({ metricsRepo }, user.id)
-
-      return handleResultWith(c, result, (snapshot) => ({ snapshot }), 201)
+      const result = await createSnapshot(deps, user.id)
+      return handleResultWith(c, result, (value) => ({ snapshot: value }), 201)
     })
 
     // スナップショット作成（指定日）
@@ -58,9 +56,8 @@ export const metricsRoutes = ({ env, db }: MetricsDeps) => {
         const user = c.get("user")
         const { date } = c.req.valid("param")
 
-        const result = await createSnapshot({ metricsRepo }, user.id, date)
-
-        return handleResultWith(c, result, (snapshot) => ({ snapshot }), 201)
+        const result = await createSnapshot(deps, user.id, date)
+        return handleResultWith(c, result, (value) => ({ snapshot: value }), 201)
       }
     )
 
