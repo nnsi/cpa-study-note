@@ -40,11 +40,6 @@ export type UpdateSubjectInput = {
   displayOrder?: number
 }
 
-export type CanDeleteResult = {
-  canDelete: boolean
-  reason?: string
-}
-
 // Tree-related types
 export type CategoryRecord = {
   id: string
@@ -147,7 +142,6 @@ export type SubjectRepository = {
   create: (data: CreateSubjectInput) => Promise<{ id: string }>
   update: (id: string, userId: string, data: UpdateSubjectInput) => Promise<Subject | null>
   softDelete: (id: string, userId: string) => Promise<boolean>
-  canDeleteSubject: (id: string, userId: string) => Promise<CanDeleteResult>
   verifyStudyDomainOwnership: (studyDomainId: string, userId: string) => Promise<boolean>
   // Hierarchy validation methods
   verifyCategoryBelongsToSubject: (categoryId: string, subjectId: string, userId: string) => Promise<boolean>
@@ -334,48 +328,35 @@ export const createSubjectRepository = (db: Db): SubjectRepository => ({
     }
 
     const now = new Date()
+
+    // Cascade: soft-delete topics under this subject's categories
+    const categoryRows = await db
+      .select({ id: categories.id })
+      .from(categories)
+      .where(and(eq(categories.subjectId, id), eq(categories.userId, userId), isNull(categories.deletedAt)))
+
+    const categoryIds = categoryRows.map((c) => c.id)
+
+    if (categoryIds.length > 0) {
+      await db
+        .update(topics)
+        .set({ deletedAt: now })
+        .where(and(inArray(topics.categoryId, categoryIds), eq(topics.userId, userId), isNull(topics.deletedAt)))
+    }
+
+    // Cascade: soft-delete categories
+    await db
+      .update(categories)
+      .set({ deletedAt: now })
+      .where(and(eq(categories.subjectId, id), eq(categories.userId, userId), isNull(categories.deletedAt)))
+
+    // Soft-delete the subject itself
     await db
       .update(subjects)
       .set({ deletedAt: now })
       .where(and(eq(subjects.id, id), eq(subjects.userId, userId)))
 
     return true
-  },
-
-  canDeleteSubject: async (id, userId) => {
-    // Check if subject exists and belongs to user
-    const subject = await db
-      .select()
-      .from(subjects)
-      .innerJoin(studyDomains, eq(subjects.studyDomainId, studyDomains.id))
-      .where(
-        and(
-          eq(subjects.id, id),
-          eq(subjects.userId, userId),
-          isNull(subjects.deletedAt),
-          isNull(studyDomains.deletedAt)
-        )
-      )
-      .limit(1)
-
-    if (!subject[0]) {
-      return { canDelete: true } // Doesn't exist or doesn't belong to user
-    }
-
-    // Check if there are any non-deleted categories
-    const categoryCount = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(categories)
-      .where(and(eq(categories.subjectId, id), eq(categories.userId, userId), isNull(categories.deletedAt)))
-
-    const count = categoryCount[0]?.count ?? 0
-    if (count > 0) {
-      return {
-        canDelete: false,
-        reason: `${count}件の単元が紐づいています`,
-      }
-    }
-    return { canDelete: true }
   },
 
   verifyStudyDomainOwnership: async (studyDomainId, userId) => {

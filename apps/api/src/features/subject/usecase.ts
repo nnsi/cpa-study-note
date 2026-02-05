@@ -7,7 +7,7 @@ import type {
   BatchSubjectStats,
 } from "./repository"
 import { ok, err, type Result } from "@/shared/lib/result"
-import { notFound, conflict, type AppError } from "@/shared/lib/errors"
+import { notFound, type AppError } from "@/shared/lib/errors"
 
 // User type for resolving studyDomainId
 type User = {
@@ -147,12 +147,6 @@ export const deleteSubject = async (
   userId: string,
   subjectId: string
 ): Promise<Result<void, AppError>> => {
-  // Check if deletion is allowed
-  const canDelete = await deps.subjectRepo.canDeleteSubject(subjectId, userId)
-  if (!canDelete.canDelete) {
-    return err(conflict("単元が紐づいているため削除できません", { reason: "HAS_CATEGORIES" }))
-  }
-
   const result = await deps.subjectRepo.softDelete(subjectId, userId)
   if (!result) {
     return err(notFound("科目が見つかりません"))

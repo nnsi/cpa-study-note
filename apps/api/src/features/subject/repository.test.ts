@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest"
 import { createSubjectRepository, type SubjectRepository } from "./repository"
 import { createTestDatabase, type TestDatabase } from "@/test/mocks/db"
 import { createTestUser, createTestStudyDomain, createTestSubject, createTestCategory, createTestTopic } from "@/test/helpers"
+import * as schema from "@cpa-study/db/schema"
 
 describe("SubjectRepository", () => {
   let db: TestDatabase
@@ -351,50 +352,29 @@ describe("SubjectRepository", () => {
     })
   })
 
-  describe("canDeleteSubject", () => {
-    it("should return canDelete: true if no categories exist", async () => {
+  describe("softDelete cascade", () => {
+    it("should cascade soft-delete categories and topics", async () => {
       const { id: userId } = createTestUser(db)
       const { id: domainId } = createTestStudyDomain(db, userId)
       const { id: subjectId } = createTestSubject(db, userId, domainId)
+      const { id: categoryId } = createTestCategory(db, userId, subjectId, { name: "Category" })
+      createTestTopic(db, userId, categoryId, { name: "Topic" })
 
-      const result = await repo.canDeleteSubject(subjectId, userId)
+      const result = await repo.softDelete(subjectId, userId)
 
-      expect(result.canDelete).toBe(true)
-      expect(result.reason).toBeUndefined()
-    })
+      expect(result).toBe(true)
 
-    it("should return canDelete: false if categories exist", async () => {
-      const { id: userId } = createTestUser(db)
-      const { id: domainId } = createTestStudyDomain(db, userId)
-      const { id: subjectId } = createTestSubject(db, userId, domainId)
-      createTestCategory(db, userId, subjectId, { name: "Category 1" })
-      createTestCategory(db, userId, subjectId, { name: "Category 2" })
+      // Subject should be soft-deleted
+      const subs = db.select().from(schema.subjects).all()
+      expect(subs[0].deletedAt).not.toBeNull()
 
-      const result = await repo.canDeleteSubject(subjectId, userId)
+      // Categories should be soft-deleted
+      const cats = db.select().from(schema.categories).all()
+      expect(cats[0].deletedAt).not.toBeNull()
 
-      expect(result.canDelete).toBe(false)
-      expect(result.reason).toBe("2件の単元が紐づいています")
-    })
-
-    it("should ignore soft-deleted categories", async () => {
-      const { id: userId } = createTestUser(db)
-      const { id: domainId } = createTestStudyDomain(db, userId)
-      const { id: subjectId } = createTestSubject(db, userId, domainId)
-      createTestCategory(db, userId, subjectId, { name: "Active" })
-      createTestCategory(db, userId, subjectId, { name: "Deleted", deletedAt: new Date() })
-
-      const result = await repo.canDeleteSubject(subjectId, userId)
-
-      expect(result.canDelete).toBe(false)
-      expect(result.reason).toBe("1件の単元が紐づいています")
-    })
-
-    it("should return canDelete: true for non-existent subject", async () => {
-      const { id: userId } = createTestUser(db)
-
-      const result = await repo.canDeleteSubject("non-existent-id", userId)
-
-      expect(result.canDelete).toBe(true)
+      // Topics should be soft-deleted
+      const tops = db.select().from(schema.topics).all()
+      expect(tops[0].deletedAt).not.toBeNull()
     })
   })
 
