@@ -1,4 +1,5 @@
 import { useRef, useEffect, useCallback, useState } from "react"
+import { Link } from "@tanstack/react-router"
 import { useChat, useSpeechRecognition } from "../hooks"
 import { ChatMessageView } from "./ChatMessage"
 import { ChatInputView } from "./ChatInput"
@@ -8,10 +9,9 @@ type Props = {
   sessionId: string | null
   topicId: string
   onSessionCreated?: (sessionId: string) => void
-  onNavigateToNotes?: () => void
 }
 
-export const ChatContainer = ({ sessionId, topicId, onSessionCreated, onNavigateToNotes }: Props) => {
+export const ChatContainer = ({ sessionId, topicId, onSessionCreated }: Props) => {
   const { messages, input } = useChat({ sessionId, topicId, onSessionCreated })
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { mutate: createNote, isPending: isCreatingNote } = useCreateNote(topicId)
@@ -116,15 +116,16 @@ export const ChatContainer = ({ sessionId, topicId, onSessionCreated, onNavigate
         {messages.displayMessages.length > 0 && sessionId && (
           <div className="lg:hidden pt-3 pb-0">
             {existingNote?.note ? (
-              <button
-                onClick={onNavigateToNotes}
-                className="flex items-center justify-center gap-2 text-sm text-jade-600"
+              <Link
+                to="/notes/$noteId"
+                params={{ noteId: existingNote.note.id }}
+                className="flex items-center justify-center gap-2 text-sm text-jade-600 hover:text-jade-700"
               >
                 <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                 </svg>
-                ノートに記録済み
-              </button>
+                ノートを確認する
+              </Link>
             ) : (
               <button
                 onClick={() => {
@@ -170,12 +171,13 @@ export const ChatContainer = ({ sessionId, topicId, onSessionCreated, onNavigate
                 </svg>
                 <span className="text-sm font-medium">ノートに記録済み</span>
               </div>
-              <button
-                onClick={onNavigateToNotes}
+              <Link
+                to="/notes/$noteId"
+                params={{ noteId: existingNote.note.id }}
                 className="text-sm text-indigo-500 hover:text-indigo-600 hover:underline"
               >
                 確認する
-              </button>
+              </Link>
             </div>
           ) : (
             <button

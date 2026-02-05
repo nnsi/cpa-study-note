@@ -4,6 +4,8 @@ import {
   noteSingleResponseSchema,
   notesListResponseSchema,
   notesFullListResponseSchema,
+  noteBySessionResponseSchema,
+  noteCreateResponseSchema,
 } from "@cpa-study/shared/schemas"
 
 // 全ノート一覧取得
@@ -30,7 +32,7 @@ export const createNote = async (sessionId: string) => {
   })
   if (!res.ok) throw new Error("Failed to create note")
   const data = await res.json()
-  return noteSingleResponseSchema.parse(data)
+  return noteCreateResponseSchema.parse(data)
 }
 
 // 独立ノート作成（手動）
@@ -49,7 +51,7 @@ export const getNoteBySession = async (sessionId: string) => {
   })
   if (!res.ok) throw new Error("Failed to fetch note by session")
   const data = await res.json()
-  return noteSingleResponseSchema.parse(data)
+  return noteBySessionResponseSchema.parse(data)
 }
 
 export const refreshNote = async (noteId: string) => {

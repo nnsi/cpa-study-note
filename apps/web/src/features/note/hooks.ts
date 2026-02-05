@@ -15,10 +15,11 @@ export const useCreateNote = (topicId: string) => {
 
   return useMutation({
     mutationFn: (sessionId: string) => api.createNote(sessionId),
-    onSuccess: (_, sessionId) => {
+    onSuccess: (data, sessionId) => {
       queryClient.invalidateQueries({ queryKey: ["notes", "topic", topicId] })
       queryClient.invalidateQueries({ queryKey: ["notes"] })
-      queryClient.invalidateQueries({ queryKey: ["notes", "session", sessionId] })
+      // キャッシュに直接セットして即座にUI更新
+      queryClient.setQueryData(["notes", "session", sessionId], { note: data.note })
     },
   })
 }
