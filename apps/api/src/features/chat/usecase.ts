@@ -146,6 +146,8 @@ export async function* sendMessage(
   deps: ChatDeps,
   input: SendMessageInput
 ): AsyncIterable<StreamChunk> {
+  const t0 = performance.now()
+  // Phase 1: セッション取得（階層取得に topicId が必要）
   const session = await deps.chatRepo.findSessionById(input.sessionId)
   if (!session) {
     yield { type: "error", error: "Session not found" }
@@ -157,14 +159,19 @@ export async function* sendMessage(
     return
   }
 
-  // トピックと階層情報を取得
-  const hierarchy = await deps.chatRepo.getTopicWithHierarchy(session.topicId)
-  if (!hierarchy) {
-    yield { type: "error", error: "Topic not found" }
-    return
-  }
+  // Phase 2: 階層取得と履歴取得を並列実行（履歴は新メッセージ保存前に取得）
+  const t1 = performance.now()
+  console.log(`[chat-perf] Phase1 findSession: ${(t1 - t0).toFixed(0)}ms`)
 
-  // ユーザーメッセージを保存
+  const [hierarchy, history] = await Promise.all([
+    deps.chatRepo.getTopicWithHierarchy(session.topicId),
+    deps.chatRepo.findRecentMessagesForContext(input.sessionId),
+  ])
+
+  const t2 = performance.now()
+  console.log(`[chat-perf] Phase2 hierarchy+history: ${(t2 - t1).toFixed(0)}ms`)
+
+  // Phase 3: ユーザーメッセージを保存（履歴取得後に実行して二重送信を防ぐ）
   const userMessage = await deps.chatRepo.createMessage({
     sessionId: input.sessionId,
     role: "user",
@@ -174,8 +181,13 @@ export async function* sendMessage(
     questionQuality: null,
   })
 
-  // 過去のメッセージを取得
-  const history = await deps.chatRepo.findMessagesBySession(input.sessionId)
+  const t3 = performance.now()
+  console.log(`[chat-perf] Phase3 createMessage: ${(t3 - t2).toFixed(0)}ms`)
+
+  if (!hierarchy) {
+    yield { type: "error", error: "Topic not found" }
+    return
+  }
 
   // AI用メッセージを構築
   const messages: AIMessage[] = []
@@ -189,8 +201,8 @@ export async function* sendMessage(
   })
   messages.push({ role: "system", content: systemPrompt })
 
-  // 過去のやり取りを追加（最新のユーザーメッセージを除く）
-  for (const msg of history.slice(0, -1)) {
+  // 過去のやり取りを追加
+  for (const msg of history) {
     if (msg.role === "user" || msg.role === "assistant") {
       const content = msg.ocrResult
         ? `[画像から抽出されたテキスト]\n${msg.ocrResult}\n\n${msg.content}`
@@ -206,7 +218,10 @@ export async function* sendMessage(
   messages.push({ role: "user", content: currentContent })
 
   // AIからのストリーミングレスポンス
-  let fullResponse = ""
+  const responseChunks: string[] = []
+  const t4 = performance.now()
+  console.log(`[chat-perf] Prompt build: ${(t4 - t3).toFixed(0)}ms | Total before AI: ${(t4 - t0).toFixed(0)}ms`)
+  let firstChunkTime: number | null = null
 
   try {
     for await (const chunk of deps.aiAdapter.streamText({
@@ -216,10 +231,13 @@ export async function* sendMessage(
       maxTokens: deps.aiConfig.chat.maxTokens,
     })) {
       if (chunk.type === "text" && chunk.content) {
-        fullResponse += chunk.content
+        if (!firstChunkTime) {
+          firstChunkTime = performance.now()
+          console.log(`[chat-perf] AI TTFB (first chunk): ${(firstChunkTime - t4).toFixed(0)}ms | Total TTFB: ${(firstChunkTime - t0).toFixed(0)}ms`)
+        }
+        responseChunks.push(chunk.content)
         yield chunk
       }
-      // "done"チャンクはメッセージ保存後に送信するためここではyieldしない
     }
   } catch (error) {
     console.error("[AI] Stream error:", error)
@@ -227,26 +245,29 @@ export async function* sendMessage(
     return
   }
 
-  // アシスタントメッセージを保存
-  if (fullResponse) {
-    await deps.chatRepo.createMessage({
-      sessionId: input.sessionId,
-      role: "assistant",
-      content: fullResponse,
-      imageId: null,
-      ocrResult: null,
-      questionQuality: null,
-    })
-  }
+  const t5 = performance.now()
+  console.log(`[chat-perf] AI stream complete: ${(t5 - t4).toFixed(0)}ms`)
 
-  // 進捗を更新（learning featureのrepositoryを使用）
-  await deps.learningRepo.upsertProgress(input.userId, {
-    userId: input.userId,
-    topicId: session.topicId,
-    incrementQuestionCount: true,
-  })
+  // ストリーム後の書き込みを並列実行
+  const fullResponse = responseChunks.join("")
+  await Promise.all([
+    fullResponse
+      ? deps.chatRepo.createMessage({
+          sessionId: input.sessionId,
+          role: "assistant",
+          content: fullResponse,
+          imageId: null,
+          ocrResult: null,
+          questionQuality: null,
+        })
+      : Promise.resolve(),
+    deps.learningRepo.upsertProgress(input.userId, {
+      userId: input.userId,
+      topicId: session.topicId,
+      incrementQuestionCount: true,
+    }),
+  ])
 
-  // メッセージ保存後に"done"を送信（ユーザーメッセージIDを含める）
   yield { type: "done" as const, messageId: userMessage.id }
 }
 
@@ -255,14 +276,14 @@ export async function* sendMessageWithNewSession(
   deps: ChatDeps,
   input: SendMessageWithNewSessionInput
 ): AsyncIterable<StreamChunk & { sessionId?: string }> {
-  // トピックと階層情報を取得
+  // 階層取得（topicId の存在確認を兼ねる）
   const hierarchy = await deps.chatRepo.getTopicWithHierarchy(input.topicId)
   if (!hierarchy) {
     yield { type: "error", error: "Topic not found" }
     return
   }
 
-  // セッションを作成
+  // セッション作成（hierarchy で topic 存在を確認済み）
   const session = await deps.chatRepo.createSession({
     userId: input.userId,
     topicId: input.topicId,
@@ -282,25 +303,24 @@ export async function* sendMessageWithNewSession(
   })
 
   // AI用メッセージを構築
-  const messages: AIMessage[] = []
-
-  // システムプロンプト
   const systemPrompt = buildSystemPrompt({
     studyDomainName: hierarchy.studyDomain.name,
     subjectName: hierarchy.subject.name,
     topicName: hierarchy.topic.name,
     customPrompt: hierarchy.topic.aiSystemPrompt,
   })
-  messages.push({ role: "system", content: systemPrompt })
 
-  // 現在のユーザーメッセージ
   const currentContent = input.ocrResult
     ? `[画像から抽出されたテキスト]\n${input.ocrResult}\n\n${input.content}`
     : input.content
-  messages.push({ role: "user", content: currentContent })
+
+  const messages: AIMessage[] = [
+    { role: "system", content: systemPrompt },
+    { role: "user", content: currentContent },
+  ]
 
   // AIからのストリーミングレスポンス
-  let fullResponse = ""
+  const responseChunks: string[] = []
 
   try {
     for await (const chunk of deps.aiAdapter.streamText({
@@ -310,7 +330,7 @@ export async function* sendMessageWithNewSession(
       maxTokens: deps.aiConfig.chat.maxTokens,
     })) {
       if (chunk.type === "text" && chunk.content) {
-        fullResponse += chunk.content
+        responseChunks.push(chunk.content)
         yield chunk
       }
     }
@@ -320,26 +340,26 @@ export async function* sendMessageWithNewSession(
     return
   }
 
-  // アシスタントメッセージを保存
-  if (fullResponse) {
-    await deps.chatRepo.createMessage({
-      sessionId: session.id,
-      role: "assistant",
-      content: fullResponse,
-      imageId: null,
-      ocrResult: null,
-      questionQuality: null,
-    })
-  }
+  // ストリーム後の書き込みを並列実行
+  const fullResponse = responseChunks.join("")
+  await Promise.all([
+    fullResponse
+      ? deps.chatRepo.createMessage({
+          sessionId: session.id,
+          role: "assistant",
+          content: fullResponse,
+          imageId: null,
+          ocrResult: null,
+          questionQuality: null,
+        })
+      : Promise.resolve(),
+    deps.learningRepo.upsertProgress(input.userId, {
+      userId: input.userId,
+      topicId: input.topicId,
+      incrementQuestionCount: true,
+    }),
+  ])
 
-  // 進捗を更新（learning featureのrepositoryを使用）
-  await deps.learningRepo.upsertProgress(input.userId, {
-    userId: input.userId,
-    topicId: input.topicId,
-    incrementQuestionCount: true,
-  })
-
-  // メッセージ保存後に"done"を送信
   yield { type: "done" as const, messageId: userMessage.id }
 }
 

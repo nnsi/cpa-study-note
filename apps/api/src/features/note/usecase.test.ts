@@ -78,6 +78,7 @@ const createMockChatRepo = (overrides: Partial<ChatRepository> = {}): ChatReposi
     createMessage: vi.fn().mockResolvedValue(createMockMessage()),
     findMessageById: vi.fn().mockResolvedValue(null),
     findMessagesBySession: vi.fn().mockResolvedValue([]),
+    findRecentMessagesForContext: vi.fn().mockResolvedValue([]),
     updateMessageQuality: vi.fn().mockResolvedValue(undefined),
     findGoodQuestionsByTopic: vi.fn().mockResolvedValue([]),
   }

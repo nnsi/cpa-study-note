@@ -30,6 +30,10 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
   const chatRepo = createChatRepository(db)
   const learningRepo = createLearningRepository(db)
   const aiConfig = resolveAIConfig(env.ENVIRONMENT)
+  const aiAdapter = createAIAdapter({
+    provider: env.AI_PROVIDER,
+    apiKey: env.OPENROUTER_API_KEY,
+  })
 
   const app = new Hono<{ Bindings: Env; Variables: Variables }>()
     // セッション作成
@@ -105,11 +109,6 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         const user = c.get("user")
         const { content, imageId, ocrResult } = c.req.valid("json")
 
-        const aiAdapter = createAIAdapter({
-          provider: env.AI_PROVIDER,
-          apiKey: env.OPENROUTER_API_KEY,
-        })
-
         const stream = sendMessage(
           { chatRepo, learningRepo, aiAdapter, aiConfig },
           {
@@ -135,11 +134,6 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         const user = c.get("user")
         const { content, imageId, ocrResult } = c.req.valid("json")
 
-        const aiAdapter = createAIAdapter({
-          provider: env.AI_PROVIDER,
-          apiKey: env.OPENROUTER_API_KEY,
-        })
-
         const stream = sendMessageWithNewSession(
           { chatRepo, learningRepo, aiAdapter, aiConfig },
           {
@@ -163,11 +157,6 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
       async (c) => {
         const { text } = c.req.valid("json")
 
-        const aiAdapter = createAIAdapter({
-          provider: env.AI_PROVIDER,
-          apiKey: env.OPENROUTER_API_KEY,
-        })
-
         const result = await correctSpeechText(
           { aiAdapter, aiConfig },
           text
@@ -187,11 +176,6 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
       if (!result.ok) {
         return errorResponse(c, result.error)
       }
-
-      const aiAdapter = createAIAdapter({
-        provider: env.AI_PROVIDER,
-        apiKey: env.OPENROUTER_API_KEY,
-      })
 
       const evalResult = await evaluateQuestion(
         { chatRepo, learningRepo, aiAdapter, aiConfig },

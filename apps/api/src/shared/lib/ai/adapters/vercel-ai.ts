@@ -5,6 +5,14 @@ import type { AIAdapter, StreamChunk } from "../types"
 export const createVercelAIAdapter = (apiKey: string): AIAdapter => {
   const openrouter = createOpenRouter({ apiKey })
 
+  // レイテンシ優先でプロバイダーを選択（TTFB短縮）
+  const buildModel = (modelId: string) =>
+    openrouter(modelId, {
+      extraBody: {
+        provider: { sort: "latency" },
+      },
+    })
+
   return {
     generateText: async (input) => {
       const messages = input.messages.map((m) => {
@@ -20,7 +28,7 @@ export const createVercelAIAdapter = (apiKey: string): AIAdapter => {
         return { role: m.role, content: m.content }
       })
       const result = await generateText({
-        model: openrouter(input.model),
+        model: buildModel(input.model),
         messages,
         temperature: input.temperature,
         maxTokens: input.maxTokens,
@@ -51,7 +59,7 @@ export const createVercelAIAdapter = (apiKey: string): AIAdapter => {
           return { role: m.role, content: m.content }
         })
         const result = streamText({
-          model: openrouter(input.model),
+          model: buildModel(input.model),
           messages,
           temperature: input.temperature,
           maxTokens: input.maxTokens,

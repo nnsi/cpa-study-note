@@ -20,20 +20,20 @@ export type AIConfig = {
   speechCorrection: AIModelConfig
 }
 
-/** ローカル開発用（安価なモデル） */
+/** ローカル開発用 */
 const localAIConfig: AIConfig = {
   chat: {
-    model: "z-ai/glm-4.7-flash",
+    model: "google/gemini-2.5-flash",
     temperature: 0.7,
     maxTokens: 2000,
   },
   evaluation: {
-    model: "z-ai/glm-4.7-flash",
+    model: "qwen/qwen3-8b",
     temperature: 0,
     maxTokens: 100,
   },
   noteSummary: {
-    model: "z-ai/glm-4.7-flash",
+    model: "google/gemini-2.5-flash",
     temperature: 0.3,
     maxTokens: 1000,
   },
@@ -43,7 +43,7 @@ const localAIConfig: AIConfig = {
     maxTokens: 2000,
   },
   speechCorrection: {
-    model: "deepseek/deepseek-chat",
+    model: "qwen/qwen3-8b",
     temperature: 0,
     maxTokens: 500,
   },
@@ -52,17 +52,17 @@ const localAIConfig: AIConfig = {
 /** staging/production用 */
 const productionAIConfig: AIConfig = {
   chat: {
-    model: "z-ai/glm-4.7-flash",
+    model: "google/gemini-2.5-flash",
     temperature: 0.7,
     maxTokens: 2000,
   },
   evaluation: {
-    model: "z-ai/glm-4.7-flash",
+    model: "qwen/qwen3-8b",
     temperature: 0,
     maxTokens: 100,
   },
   noteSummary: {
-    model: "z-ai/glm-4.7-flash",
+    model: "google/gemini-2.5-flash",
     temperature: 0.3,
     maxTokens: 1000,
   },
@@ -72,7 +72,7 @@ const productionAIConfig: AIConfig = {
     maxTokens: 2000,
   },
   speechCorrection: {
-    model: "deepseek/deepseek-chat",
+    model: "qwen/qwen3-8b",
     temperature: 0,
     maxTokens: 500,
   },
