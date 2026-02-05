@@ -88,6 +88,20 @@ export const noteSingleResponseSchema = z.object({
 
 export type NoteSingleResponse = z.infer<typeof noteSingleResponseSchema>
 
+// Session note check (NoteWithSource | null, no topic detail)
+export const noteBySessionResponseSchema = z.object({
+  note: noteWithSourceSchema.nullable(),
+})
+
+export type NoteBySessionResponse = z.infer<typeof noteBySessionResponseSchema>
+
+// Create/update note response (NoteWithSource, no topic detail)
+export const noteCreateResponseSchema = z.object({
+  note: noteWithSourceSchema,
+})
+
+export type NoteCreateResponse = z.infer<typeof noteCreateResponseSchema>
+
 export const notesListResponseSchema = z.object({
   notes: z.array(noteWithSourceSchema),
 })
