@@ -3,7 +3,6 @@ import { describe, it, expect, vi } from "vitest"
 import type {
   StudyDomainRepository,
   StudyDomain,
-  CanDeleteResult,
 } from "./repository"
 import {
   listStudyDomains,
@@ -33,7 +32,6 @@ const createMockRepository = (overrides: Partial<StudyDomainRepository> = {}): S
   create: vi.fn().mockResolvedValue({ id: mockStudyDomain.id }),
   update: vi.fn().mockResolvedValue(mockStudyDomain),
   softDelete: vi.fn().mockResolvedValue(true),
-  canDeleteStudyDomain: vi.fn().mockResolvedValue({ canDelete: true }),
   ...overrides,
 })
 
@@ -226,10 +224,9 @@ describe("Study Domain UseCase", () => {
   })
 
   describe("deleteStudyDomain", () => {
-    it("should delete study domain successfully when can delete", async () => {
+    it("should delete study domain successfully with cascade", async () => {
       const repo = createMockRepository({
         findById: vi.fn().mockResolvedValue(mockStudyDomain),
-        canDeleteStudyDomain: vi.fn().mockResolvedValue({ canDelete: true }),
         softDelete: vi.fn().mockResolvedValue(true),
       })
       const deps = { repo }
@@ -252,46 +249,7 @@ describe("Study Domain UseCase", () => {
       if (result.ok) return
 
       expect(result.error.code).toBe("NOT_FOUND")
-      expect(repo.canDeleteStudyDomain).not.toHaveBeenCalled()
       expect(repo.softDelete).not.toHaveBeenCalled()
-    })
-
-    it("should return cannot_delete error when subjects exist", async () => {
-      const canDeleteResult: CanDeleteResult = {
-        canDelete: false,
-        reason: "1件の科目が紐づいています",
-      }
-      const repo = createMockRepository({
-        findById: vi.fn().mockResolvedValue(mockStudyDomain),
-        canDeleteStudyDomain: vi.fn().mockResolvedValue(canDeleteResult),
-      })
-      const deps = { repo }
-
-      const result = await deleteStudyDomain(deps, "domain-1", "user-1")
-
-      expect(result.ok).toBe(false)
-      if (result.ok) return
-
-      expect(result.error.code).toBe("CONFLICT")
-      expect(repo.softDelete).not.toHaveBeenCalled()
-    })
-
-    it("should use default message when reason is not provided", async () => {
-      const canDeleteResult: CanDeleteResult = {
-        canDelete: false,
-      }
-      const repo = createMockRepository({
-        findById: vi.fn().mockResolvedValue(mockStudyDomain),
-        canDeleteStudyDomain: vi.fn().mockResolvedValue(canDeleteResult),
-      })
-      const deps = { repo }
-
-      const result = await deleteStudyDomain(deps, "domain-1", "user-1")
-
-      expect(result.ok).toBe(false)
-      if (result.ok) return
-
-      expect(result.error.code).toBe("CONFLICT")
     })
   })
 })
