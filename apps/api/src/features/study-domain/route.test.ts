@@ -465,7 +465,7 @@ describe("Study Domain Routes", () => {
       expect(body.error.message).toBe("学習領域が見つかりません")
     })
 
-    it("should return 409 when subjects are attached", async () => {
+    it("should cascade soft-delete subjects when domain is deleted", async () => {
       const now = new Date()
       ctx.db
         .insert(schema.studyDomains)
@@ -496,9 +496,15 @@ describe("Study Domain Routes", () => {
         headers: createAuthHeaders(ctx.testData.userId),
       })
 
-      expect(res.status).toBe(409)
-      const body = await parseJson(res, errorResponseSchema)
-      expect(body.error.message).toContain("件の科目が紐づいています")
+      expect(res.status).toBe(200)
+      const body = await parseJson(res, successResponseSchema)
+      expect(body.success).toBe(true)
+
+      // Subject should also be soft-deleted
+      const subjectRes = await app.request("/study-domains/has-subjects", {
+        headers: createAuthHeaders(ctx.testData.userId),
+      })
+      expect(subjectRes.status).toBe(404)
     })
 
     it("should return 404 when domain belongs to other user", async () => {
