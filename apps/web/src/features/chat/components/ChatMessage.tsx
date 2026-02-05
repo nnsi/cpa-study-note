@@ -1,5 +1,6 @@
 import { useState } from "react"
 import Markdown, { type Components } from "react-markdown"
+import remarkGfm from "remark-gfm"
 import type { DisplayMessage } from "../logic"
 
 const API_URL = import.meta.env.VITE_API_URL || ""
@@ -41,6 +42,21 @@ const markdownComponents: Components = {
   strong: ({ children }) => <strong className="font-semibold text-ink-900">{children}</strong>,
   // 水平線
   hr: () => <hr className="my-3 border-ink-200" />,
+  // テーブル
+  table: ({ children }) => (
+    <div className="my-3 overflow-x-auto rounded-lg border border-ink-200">
+      <table className="w-full text-sm border-collapse">{children}</table>
+    </div>
+  ),
+  thead: ({ children }) => <thead className="bg-ink-50">{children}</thead>,
+  tbody: ({ children }) => <tbody className="divide-y divide-ink-100">{children}</tbody>,
+  tr: ({ children }) => <tr className="divide-x divide-ink-100">{children}</tr>,
+  th: ({ children }) => (
+    <th className="px-3 py-2 text-left text-xs font-semibold text-ink-700">{children}</th>
+  ),
+  td: ({ children }) => (
+    <td className="px-3 py-2 text-ink-800">{children}</td>
+  ),
 }
 
 type Props = {
@@ -150,7 +166,7 @@ export const ChatMessageView = ({ message, isStreaming }: Props) => {
           </div>
         ) : (
           <div className="prose prose-sm max-w-none break-words text-ink-800">
-            <Markdown components={markdownComponents}>
+            <Markdown components={markdownComponents} remarkPlugins={[remarkGfm]}>
               {message.content}
             </Markdown>
           </div>
