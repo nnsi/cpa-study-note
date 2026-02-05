@@ -16,6 +16,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SubjectsIndexRouteImport } from './routes/subjects/index'
 import { Route as NotesIndexRouteImport } from './routes/notes/index'
+import { Route as ExercisesIndexRouteImport } from './routes/exercises/index'
 import { Route as EditIndexRouteImport } from './routes/edit/index'
 import { Route as DomainsIndexRouteImport } from './routes/domains/index'
 import { Route as NotesNoteIdRouteImport } from './routes/notes/$noteId'
@@ -62,6 +63,11 @@ const SubjectsIndexRoute = SubjectsIndexRouteImport.update({
 const NotesIndexRoute = NotesIndexRouteImport.update({
   id: '/notes/',
   path: '/notes/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExercisesIndexRoute = ExercisesIndexRouteImport.update({
+  id: '/exercises/',
+  path: '/exercises/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EditIndexRoute = EditIndexRouteImport.update({
@@ -142,6 +148,7 @@ export interface FileRoutesByFullPath {
   '/notes/$noteId': typeof NotesNoteIdRoute
   '/domains/': typeof DomainsIndexRoute
   '/edit/': typeof EditIndexRoute
+  '/exercises/': typeof ExercisesIndexRoute
   '/notes/': typeof NotesIndexRoute
   '/subjects/': typeof SubjectsIndexRoute
   '/subjects/$subjectId/': typeof SubjectsSubjectIdIndexRoute
@@ -163,6 +170,7 @@ export interface FileRoutesByTo {
   '/notes/$noteId': typeof NotesNoteIdRoute
   '/domains': typeof DomainsIndexRoute
   '/edit': typeof EditIndexRoute
+  '/exercises': typeof ExercisesIndexRoute
   '/notes': typeof NotesIndexRoute
   '/subjects': typeof SubjectsIndexRoute
   '/subjects/$subjectId': typeof SubjectsSubjectIdIndexRoute
@@ -185,6 +193,7 @@ export interface FileRoutesById {
   '/notes/$noteId': typeof NotesNoteIdRoute
   '/domains/': typeof DomainsIndexRoute
   '/edit/': typeof EditIndexRoute
+  '/exercises/': typeof ExercisesIndexRoute
   '/notes/': typeof NotesIndexRoute
   '/subjects/': typeof SubjectsIndexRoute
   '/subjects/$subjectId/': typeof SubjectsSubjectIdIndexRoute
@@ -208,6 +217,7 @@ export interface FileRouteTypes {
     | '/notes/$noteId'
     | '/domains/'
     | '/edit/'
+    | '/exercises/'
     | '/notes/'
     | '/subjects/'
     | '/subjects/$subjectId/'
@@ -229,6 +239,7 @@ export interface FileRouteTypes {
     | '/notes/$noteId'
     | '/domains'
     | '/edit'
+    | '/exercises'
     | '/notes'
     | '/subjects'
     | '/subjects/$subjectId'
@@ -250,6 +261,7 @@ export interface FileRouteTypes {
     | '/notes/$noteId'
     | '/domains/'
     | '/edit/'
+    | '/exercises/'
     | '/notes/'
     | '/subjects/'
     | '/subjects/$subjectId/'
@@ -272,6 +284,7 @@ export interface RootRouteChildren {
   NotesNoteIdRoute: typeof NotesNoteIdRoute
   DomainsIndexRoute: typeof DomainsIndexRoute
   EditIndexRoute: typeof EditIndexRoute
+  ExercisesIndexRoute: typeof ExercisesIndexRoute
   NotesIndexRoute: typeof NotesIndexRoute
   SubjectsIndexRoute: typeof SubjectsIndexRoute
   SubjectsSubjectIdIndexRoute: typeof SubjectsSubjectIdIndexRoute
@@ -333,6 +346,13 @@ declare module '@tanstack/react-router' {
       path: '/notes'
       fullPath: '/notes/'
       preLoaderRoute: typeof NotesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/exercises/': {
+      id: '/exercises/'
+      path: '/exercises'
+      fullPath: '/exercises/'
+      preLoaderRoute: typeof ExercisesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/edit/': {
@@ -432,6 +452,7 @@ const rootRouteChildren: RootRouteChildren = {
   NotesNoteIdRoute: NotesNoteIdRoute,
   DomainsIndexRoute: DomainsIndexRoute,
   EditIndexRoute: EditIndexRoute,
+  ExercisesIndexRoute: ExercisesIndexRoute,
   NotesIndexRoute: NotesIndexRoute,
   SubjectsIndexRoute: SubjectsIndexRoute,
   SubjectsSubjectIdIndexRoute: SubjectsSubjectIdIndexRoute,

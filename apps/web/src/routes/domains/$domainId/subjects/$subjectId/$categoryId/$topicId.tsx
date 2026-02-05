@@ -1,12 +1,16 @@
-import { createFileRoute, Link } from "@tanstack/react-router"
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import { useState, useCallback } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { api } from "@/lib/api-client"
 import { ChatContainer, getSessionsByTopic } from "@/features/chat"
 import { TopicInfo } from "@/features/topic"
 import { TopicNotes } from "@/features/note"
+import { ExerciseList, useTopicExercises } from "@/features/exercise"
 import { requireAuth } from "@/lib/auth"
 import { topicViewResponseSchema, type SessionWithStats } from "@cpa-study/shared/schemas"
+
+const API_URL = import.meta.env.VITE_API_URL || ""
+const getImageUrl = (imageId: string) => `${API_URL}/api/images/${imageId}/file`
 
 export const Route = createFileRoute(
   "/domains/$domainId/subjects/$subjectId/$categoryId/$topicId"
@@ -20,14 +24,18 @@ type Session = SessionWithStats
 
 function TopicDetailPage() {
   const { domainId, subjectId, categoryId, topicId } = Route.useParams()
-  const [activeTab, setActiveTab] = useState<"info" | "chat" | "notes">("chat")
-  const [sidebarTab, setSidebarTab] = useState<"info" | "notes" | "sessions">(
+  const [activeTab, setActiveTab] = useState<"info" | "chat" | "notes" | "exercises">("chat")
+  const [sidebarTab, setSidebarTab] = useState<"info" | "notes" | "sessions" | "exercises">(
     "info"
   )
   // null = 新規セッションモード（最初のメッセージ送信でセッション作成）
   // "use-latest" = 最新のセッションを使用
   const [selectedSessionId, setSelectedSessionId] = useState<string | null | "use-latest">("use-latest")
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
+
+  const { data: exercisesData } = useTopicExercises(topicId)
+  const exercises = exercisesData?.exercises ?? []
 
   const { data: topic, isLoading } = useQuery({
     queryKey: ["topics", topicId],
@@ -101,7 +109,7 @@ function TopicDetailPage() {
           )}
         </div>
         <div className="flex">
-          {(["info", "chat", "notes"] as const).map((tab) => (
+          {(["info", "chat", "notes", "exercises"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -114,6 +122,7 @@ function TopicDetailPage() {
               {tab === "info" && "情報"}
               {tab === "chat" && "チャット"}
               {tab === "notes" && "ノート"}
+              {tab === "exercises" && "問題"}
             </button>
           ))}
         </div>
@@ -144,7 +153,7 @@ function TopicDetailPage() {
           </div>
           {/* サイドバータブ */}
           <div className="flex border-b border-ink-100">
-            {(["info", "sessions", "notes"] as const).map((tab) => (
+            {(["info", "sessions", "notes", "exercises"] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setSidebarTab(tab)}
@@ -157,6 +166,7 @@ function TopicDetailPage() {
                 {tab === "info" && "情報"}
                 {tab === "sessions" && "履歴"}
                 {tab === "notes" && "ノート"}
+                {tab === "exercises" && "問題"}
               </button>
             ))}
           </div>
@@ -174,6 +184,20 @@ function TopicDetailPage() {
               />
             )}
             {sidebarTab === "notes" && <TopicNotes topicId={topicId} />}
+            {sidebarTab === "exercises" && (
+              <div className="p-4">
+                <button
+                  onClick={() => navigate({ to: "/exercises", search: { topicId } })}
+                  className="w-full mb-4 py-2.5 px-4 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors font-medium"
+                >
+                  + 問題を追加
+                </button>
+                <ExerciseList
+                  exercises={exercises}
+                  getImageUrl={getImageUrl}
+                />
+              </div>
+            )}
           </div>
         </aside>
 
@@ -234,6 +258,20 @@ function TopicDetailPage() {
         {activeTab === "notes" && (
           <div className="h-full overflow-y-auto">
             <TopicNotes topicId={topicId} />
+          </div>
+        )}
+        {activeTab === "exercises" && (
+          <div className="h-full overflow-y-auto p-4">
+            <button
+              onClick={() => navigate({ to: "/exercises", search: { topicId } })}
+              className="w-full mb-4 py-2.5 px-4 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors font-medium"
+            >
+              + 問題を追加
+            </button>
+            <ExerciseList
+              exercises={exercises}
+              getImageUrl={getImageUrl}
+            />
           </div>
         )}
       </div>

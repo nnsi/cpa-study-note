@@ -4,6 +4,7 @@ import type {
   Subject,
   CreateSubjectInput,
   UpdateSubjectInput,
+  BatchSubjectStats,
 } from "./repository"
 import { ok, err, type Result } from "@/shared/lib/result"
 import { notFound, conflict, type AppError } from "@/shared/lib/errors"
@@ -29,12 +30,17 @@ export type SubjectDeps = {
   subjectRepo: SubjectRepository
 }
 
+type SubjectWithStats = Subject & {
+  categoryCount: number
+  topicCount: number
+}
+
 // UseCase functions
 export const listSubjects = async (
   deps: SubjectDeps,
   userId: string,
   studyDomainId: string
-): Promise<Result<Subject[], AppError>> => {
+): Promise<Result<SubjectWithStats[], AppError>> => {
   // Verify the study domain belongs to the user
   const ownsStudyDomain = await deps.subjectRepo.verifyStudyDomainOwnership(studyDomainId, userId)
   if (!ownsStudyDomain) {
@@ -42,7 +48,24 @@ export const listSubjects = async (
   }
 
   const subjects = await deps.subjectRepo.findByStudyDomainId(studyDomainId, userId)
-  return ok(subjects)
+
+  // 統計情報を一括取得してマージ
+  const subjectIds = subjects.map((s) => s.id)
+  const stats = subjectIds.length > 0
+    ? await deps.subjectRepo.getBatchSubjectStats(subjectIds, userId)
+    : []
+  const statsMap = new Map(stats.map((s) => [s.subjectId, s]))
+
+  const subjectsWithStats: SubjectWithStats[] = subjects.map((subject) => {
+    const stat = statsMap.get(subject.id)
+    return {
+      ...subject,
+      categoryCount: stat?.categoryCount ?? 0,
+      topicCount: stat?.topicCount ?? 0,
+    }
+  })
+
+  return ok(subjectsWithStats)
 }
 
 export const getSubject = async (

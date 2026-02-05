@@ -13,6 +13,7 @@ import { createSubjectFeature } from "./features/subject"
 import { createBookmarkFeature } from "./features/bookmark"
 import { createLearningFeature } from "./features/learning"
 import { createViewFeature } from "./features/view"
+import { createExerciseFeature } from "./features/exercise"
 import {
   createRateLimitStore,
   createRateLimiterFactory,
@@ -103,6 +104,7 @@ const createApp = (env: Env) => {
     // AI系は中程度（20 req/min）
     .use("/api/chat/sessions/*/messages", limiter.moderate())
     .use("/api/images/*/ocr", limiter.moderate())
+    .use("/api/exercises/analyze", limiter.moderate())
     .use("/api/notes", limiter.moderate())
     // その他は緩め（100 req/min）
     // rateLimitApplied フラグにより、上記で適用済みの場合はスキップされる
@@ -117,6 +119,7 @@ const createApp = (env: Env) => {
     .route("/api/bookmarks", createBookmarkFeature(env, db))
     .route("/api/learning", createLearningFeature(env, db))
     .route("/api/view", createViewFeature(env, db))
+    .route("/api/exercises", createExerciseFeature(env, db))
     .get("/api/health", (c) => c.json({ status: "ok" }))
     .onError((error, c) => {
       // ローカル環境では詳細なエラー情報を出力
