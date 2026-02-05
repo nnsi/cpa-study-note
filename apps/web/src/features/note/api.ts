@@ -1,11 +1,13 @@
 import { api } from "@/lib/api-client"
 import {
   type CreateManualNoteRequest,
+  type SuccessResponse,
   noteSingleResponseSchema,
   notesListResponseSchema,
   notesFullListResponseSchema,
   noteBySessionResponseSchema,
   noteCreateResponseSchema,
+  successResponseSchema,
 } from "@cpa-study/shared/schemas"
 
 // 全ノート一覧取得
@@ -60,4 +62,17 @@ export const refreshNote = async (noteId: string) => {
   })
   if (!res.ok) throw new Error("Failed to refresh note")
   return res.json()
+}
+
+// ノート削除
+export const deleteNote = async (noteId: string): Promise<SuccessResponse> => {
+  const res = await api.api.notes[":noteId"].$delete({
+    param: { noteId },
+  })
+  if (!res.ok) {
+    const error = await res.json()
+    throw new Error((error as { error?: { message?: string } }).error?.message ?? "ノートの削除に失敗しました")
+  }
+  const json = await res.json()
+  return successResponseSchema.parse(json)
 }

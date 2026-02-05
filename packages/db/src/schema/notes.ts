@@ -22,4 +22,5 @@ export const notes = sqliteTable("notes", {
     .default([]),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+  deletedAt: integer("deleted_at", { mode: "timestamp" }),
 })

@@ -155,7 +155,8 @@ export const createTestDatabase = (): {
       key_points TEXT DEFAULT '[]',
       stumbled_points TEXT DEFAULT '[]',
       created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL
+      updated_at INTEGER NOT NULL,
+      deleted_at INTEGER
     );
 
     CREATE TABLE IF NOT EXISTS images (
