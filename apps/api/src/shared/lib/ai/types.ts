@@ -11,7 +11,9 @@ export type GenerateTextInput = {
   maxTokens?: number
 }
 
-export type StreamTextInput = GenerateTextInput
+export type StreamTextInput = GenerateTextInput & {
+  abortSignal?: AbortSignal
+}
 
 export type GenerateTextResult = {
   content: string

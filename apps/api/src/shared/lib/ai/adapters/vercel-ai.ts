@@ -55,6 +55,7 @@ export const createVercelAIAdapter = (apiKey: string): AIAdapter => {
           messages,
           temperature: input.temperature,
           maxTokens: input.maxTokens,
+          abortSignal: input.abortSignal,
         })
 
         for await (const text of result.textStream) {
@@ -62,7 +63,11 @@ export const createVercelAIAdapter = (apiKey: string): AIAdapter => {
         }
         yield { type: "done" }
       } catch (error) {
-        yield { type: "error", error: String(error) }
+        if (input.abortSignal?.aborted) {
+          yield { type: "error", error: "AI応答がタイムアウトしました" }
+        } else {
+          yield { type: "error", error: String(error) }
+        }
       }
     },
   }

@@ -31,57 +31,111 @@ export const getSessionsByTopic = async (topicId: string) => {
   return sessionsListResponseSchema.parse(data)
 }
 
+// ストリーム全体のタイムアウト（秒）
+const STREAM_TIMEOUT_MS = 60_000
+// チャンク間の最大待機時間（秒）- これを超えるとストール検知
+const STALL_TIMEOUT_MS = 30_000
+
+async function* readSSEStream(
+  res: Response,
+  controller: AbortController
+): AsyncIterable<StreamChunk> {
+  const reader = res.body!.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ""
+  let receivedTerminal = false
+  let stallTimer: ReturnType<typeof setTimeout> | null = null
+
+  const resetStallTimer = () => {
+    if (stallTimer) clearTimeout(stallTimer)
+    stallTimer = setTimeout(() => {
+      controller.abort()
+    }, STALL_TIMEOUT_MS)
+  }
+
+  try {
+    resetStallTimer()
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      resetStallTimer()
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split("\n\n")
+      buffer = lines.pop() || ""
+
+      for (const line of lines) {
+        if (line.startsWith("data: ")) {
+          try {
+            const chunk: StreamChunk = JSON.parse(line.slice(6))
+            yield chunk
+            if (chunk.type === "done" || chunk.type === "error") {
+              receivedTerminal = true
+              return
+            }
+          } catch (e) {
+            if (import.meta.env.DEV) {
+              console.warn("SSE parse error:", line, e)
+            }
+          }
+        }
+      }
+    }
+
+    // readerが終了したのにdone/errorチャンクを受信していない → 異常終了
+    if (!receivedTerminal) {
+      yield { type: "error", error: "接続が中断されました。再度お試しください。" }
+    }
+  } catch (e) {
+    if (controller.signal.aborted) {
+      yield { type: "error", error: "応答がタイムアウトしました。再度お試しください。" }
+    } else {
+      throw e
+    }
+  } finally {
+    if (stallTimer) clearTimeout(stallTimer)
+    reader.cancel().catch(() => {})
+  }
+}
+
 export async function* streamMessage(
   sessionId: string,
   content: string,
   imageId?: string,
   ocrResult?: string
 ): AsyncIterable<StreamChunk> {
-  // Hono RPCではなくfetchを直接使用（SSEストリーミング対応）
   const apiUrl = import.meta.env.VITE_API_URL || ""
   const token = useAuthStore.getState().token
-  const res = await fetch(
-    `${apiUrl}/api/chat/sessions/${sessionId}/messages/stream`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      credentials: "include",
-      body: JSON.stringify({ content, imageId, ocrResult }),
-    }
-  )
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), STREAM_TIMEOUT_MS)
 
-  if (!res.ok || !res.body) throw new Error("Stream failed")
-
-  const reader = res.body.getReader()
-  const decoder = new TextDecoder()
-
-  let buffer = ""
-
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-
-    buffer += decoder.decode(value, { stream: true })
-    const lines = buffer.split("\n\n")
-    buffer = lines.pop() || ""
-
-    for (const line of lines) {
-      if (line.startsWith("data: ")) {
-        try {
-          const chunk: StreamChunk = JSON.parse(line.slice(6))
-          yield chunk
-          if (chunk.type === "done" || chunk.type === "error") return
-        } catch (e) {
-          // 不正なJSONチャンクはスキップ（ネットワーク分断等で発生しうる）
-          if (import.meta.env.DEV) {
-            console.warn("SSE parse error:", line, e)
-          }
-        }
+  try {
+    const res = await fetch(
+      `${apiUrl}/api/chat/sessions/${sessionId}/messages/stream`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: "include",
+        body: JSON.stringify({ content, imageId, ocrResult }),
+        signal: controller.signal,
       }
+    )
+
+    if (!res.ok || !res.body) throw new Error("Stream failed")
+
+    yield* readSSEStream(res, controller)
+  } catch (e) {
+    if (controller.signal.aborted) {
+      yield { type: "error", error: "応答がタイムアウトしました。再度お試しください。" }
+    } else {
+      throw e
     }
+  } finally {
+    clearTimeout(timeout)
   }
 }
 
@@ -94,47 +148,35 @@ export async function* streamMessageWithNewSession(
 ): AsyncIterable<StreamChunk> {
   const apiUrl = import.meta.env.VITE_API_URL || ""
   const token = useAuthStore.getState().token
-  const res = await fetch(
-    `${apiUrl}/api/chat/topics/${topicId}/messages/stream`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      credentials: "include",
-      body: JSON.stringify({ content, imageId, ocrResult }),
-    }
-  )
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), STREAM_TIMEOUT_MS)
 
-  if (!res.ok || !res.body) throw new Error("Stream failed")
-
-  const reader = res.body.getReader()
-  const decoder = new TextDecoder()
-
-  let buffer = ""
-
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-
-    buffer += decoder.decode(value, { stream: true })
-    const lines = buffer.split("\n\n")
-    buffer = lines.pop() || ""
-
-    for (const line of lines) {
-      if (line.startsWith("data: ")) {
-        try {
-          const chunk: StreamChunk = JSON.parse(line.slice(6))
-          yield chunk
-          if (chunk.type === "done" || chunk.type === "error") return
-        } catch (e) {
-          if (import.meta.env.DEV) {
-            console.warn("SSE parse error:", line, e)
-          }
-        }
+  try {
+    const res = await fetch(
+      `${apiUrl}/api/chat/topics/${topicId}/messages/stream`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: "include",
+        body: JSON.stringify({ content, imageId, ocrResult }),
+        signal: controller.signal,
       }
+    )
+
+    if (!res.ok || !res.body) throw new Error("Stream failed")
+
+    yield* readSSEStream(res, controller)
+  } catch (e) {
+    if (controller.signal.aborted) {
+      yield { type: "error", error: "応答がタイムアウトしました。再度お試しください。" }
+    } else {
+      throw e
     }
+  } finally {
+    clearTimeout(timeout)
   }
 }
 

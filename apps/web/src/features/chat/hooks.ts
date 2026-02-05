@@ -203,6 +203,8 @@ export const useSendMessage = ({ sessionId, topicId, onSessionCreated }: UseSend
           ? api.streamMessage(sessionId, content, imageId, ocrResult)
           : api.streamMessageWithNewSession(topicId, content, imageId, ocrResult)
 
+        let streamCompleted = false
+
         for await (const chunk of streamSource) {
           receivedAnyChunk = true
           if (chunk.type === "session_created") {
@@ -216,6 +218,7 @@ export const useSendMessage = ({ sessionId, topicId, onSessionCreated }: UseSend
               rafId = requestAnimationFrame(flushBuffer)
             }
           } else if (chunk.type === "done") {
+            streamCompleted = true
             userMessageId = chunk.messageId
             // メッセージ一覧を再取得
             if (currentSessionId) {
@@ -246,6 +249,14 @@ export const useSendMessage = ({ sessionId, topicId, onSessionCreated }: UseSend
         // ストリームが何もチャンクを返さずに終了した場合
         if (!receivedAnyChunk) {
           setError(new Error("サーバーから応答がありませんでした"))
+        }
+
+        // テキストを受信したがdoneを受信せずにストリームが終了した場合
+        // → メッセージ一覧を再取得して、DB保存済みの状態を反映
+        if (receivedAnyChunk && !streamCompleted && currentSessionId) {
+          queryClient.invalidateQueries({
+            queryKey: ["chat", currentSessionId, "messages"],
+          })
         }
 
         // ユーザーメッセージの質問評価を実行（バックグラウンド）

@@ -132,6 +132,7 @@ type SendMessageInput = {
   content: string
   imageId?: string
   ocrResult?: string
+  abortSignal?: AbortSignal
 }
 
 type SendMessageWithNewSessionInput = {
@@ -140,6 +141,7 @@ type SendMessageWithNewSessionInput = {
   content: string
   imageId?: string
   ocrResult?: string
+  abortSignal?: AbortSignal
 }
 
 export async function* sendMessage(
@@ -214,6 +216,7 @@ export async function* sendMessage(
       messages,
       temperature: deps.aiConfig.chat.temperature,
       maxTokens: deps.aiConfig.chat.maxTokens,
+      abortSignal: input.abortSignal,
     })) {
       if (chunk.type === "text" && chunk.content) {
         fullResponse += chunk.content
@@ -223,6 +226,17 @@ export async function* sendMessage(
     }
   } catch (error) {
     console.error("[AI] Stream error:", error)
+    // 中断された場合でも途中のレスポンスは保存する
+    if (fullResponse) {
+      await deps.chatRepo.createMessage({
+        sessionId: input.sessionId,
+        role: "assistant",
+        content: fullResponse,
+        imageId: null,
+        ocrResult: null,
+        questionQuality: null,
+      })
+    }
     yield { type: "error", error: "AI応答中にエラーが発生しました。再度お試しください。" }
     return
   }
@@ -308,6 +322,7 @@ export async function* sendMessageWithNewSession(
       messages,
       temperature: deps.aiConfig.chat.temperature,
       maxTokens: deps.aiConfig.chat.maxTokens,
+      abortSignal: input.abortSignal,
     })) {
       if (chunk.type === "text" && chunk.content) {
         fullResponse += chunk.content
@@ -316,6 +331,17 @@ export async function* sendMessageWithNewSession(
     }
   } catch (error) {
     console.error("[AI] Stream error:", error)
+    // 中断された場合でも途中のレスポンスは保存する
+    if (fullResponse) {
+      await deps.chatRepo.createMessage({
+        sessionId: session.id,
+        role: "assistant",
+        content: fullResponse,
+        imageId: null,
+        ocrResult: null,
+        questionQuality: null,
+      })
+    }
     yield { type: "error", error: "AI応答中にエラーが発生しました。再度お試しください。" }
     return
   }

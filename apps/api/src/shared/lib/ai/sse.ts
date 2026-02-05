@@ -17,9 +17,13 @@ export const streamToSSE = (
         }
       }
     } catch (error) {
-      await sseStream.writeSSE({
-        data: JSON.stringify({ type: "error", error: String(error) }),
-      })
+      try {
+        await sseStream.writeSSE({
+          data: JSON.stringify({ type: "error", error: String(error) }),
+        })
+      } catch {
+        // クライアント切断済みの場合、書き込みも失敗する。無視する。
+      }
     }
   })
 }

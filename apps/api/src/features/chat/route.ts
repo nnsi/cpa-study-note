@@ -117,6 +117,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
             content,
             imageId,
             ocrResult,
+            abortSignal: c.req.raw.signal,
           }
         )
 
@@ -147,6 +148,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
             content,
             imageId,
             ocrResult,
+            abortSignal: c.req.raw.signal,
           }
         )
 
