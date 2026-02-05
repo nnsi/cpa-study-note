@@ -414,7 +414,7 @@ describe("Subject Routes", () => {
       expect(res.status).toBe(404)
     })
 
-    it("should return 409 if subject has categories", async () => {
+    it("should cascade soft-delete categories when subject is deleted", async () => {
       const { id: userId } = createTestUser(db)
       env.DEV_USER_ID = userId
       const { id: domainId } = createTestStudyDomain(db, userId)
@@ -426,9 +426,7 @@ describe("Subject Routes", () => {
         { headers: createAuthHeaders(userId) }
       )
 
-      expect(res.status).toBe(409)
-      const json = await res.json() as { error: { message: string } }
-      expect(json.error.message).toContain("削除できません")
+      expect(res.status).toBe(200)
     })
   })
 

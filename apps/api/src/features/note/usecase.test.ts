@@ -119,7 +119,6 @@ const createMockSubjectRepo = (overrides: Partial<SubjectRepository> = {}): Subj
   create: vi.fn().mockResolvedValue({ id: "new-subject-1" }),
   update: vi.fn().mockResolvedValue(null),
   softDelete: vi.fn().mockResolvedValue(false),
-  canDeleteSubject: vi.fn().mockResolvedValue({ canDelete: true }),
   verifyStudyDomainOwnership: vi.fn().mockResolvedValue(false),
   verifyCategoryBelongsToSubject: vi.fn().mockResolvedValue(false),
   verifyTopicBelongsToSubject: vi.fn().mockResolvedValue(false),

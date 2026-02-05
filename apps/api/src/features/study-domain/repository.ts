@@ -1,6 +1,6 @@
-import { eq, and, isNull, sql } from "drizzle-orm"
+import { eq, and, isNull, inArray } from "drizzle-orm"
 import type { Db } from "@cpa-study/db"
-import { studyDomains, subjects } from "@cpa-study/db/schema"
+import { studyDomains, subjects, categories, topics } from "@cpa-study/db/schema"
 
 export type StudyDomain = {
   id: string
@@ -29,18 +29,12 @@ export type UpdateStudyDomainInput = {
   color?: string | null
 }
 
-export type CanDeleteResult = {
-  canDelete: boolean
-  reason?: string
-}
-
 export type StudyDomainRepository = {
   findByUserId: (userId: string) => Promise<StudyDomain[]>
   findById: (id: string, userId: string) => Promise<StudyDomain | null>
   create: (data: CreateStudyDomainInput) => Promise<{ id: string }>
   update: (id: string, userId: string, data: UpdateStudyDomainInput) => Promise<StudyDomain | null>
   softDelete: (id: string, userId: string) => Promise<boolean>
-  canDeleteStudyDomain: (id: string, userId: string) => Promise<CanDeleteResult>
 }
 
 export const createStudyDomainRepository = (db: Db): StudyDomainRepository => ({
@@ -121,38 +115,50 @@ export const createStudyDomainRepository = (db: Db): StudyDomainRepository => ({
     }
 
     const now = new Date()
+
+    // Cascade: soft-delete topics under this domain's subjects
+    const subjectRows = await db
+      .select({ id: subjects.id })
+      .from(subjects)
+      .where(and(eq(subjects.studyDomainId, id), eq(subjects.userId, userId), isNull(subjects.deletedAt)))
+
+    const subjectIds = subjectRows.map((s) => s.id)
+
+    if (subjectIds.length > 0) {
+      // Soft-delete topics under those subjects' categories
+      const categoryRows = await db
+        .select({ id: categories.id })
+        .from(categories)
+        .where(and(inArray(categories.subjectId, subjectIds), eq(categories.userId, userId), isNull(categories.deletedAt)))
+
+      const categoryIds = categoryRows.map((c) => c.id)
+
+      if (categoryIds.length > 0) {
+        await db
+          .update(topics)
+          .set({ deletedAt: now })
+          .where(and(inArray(topics.categoryId, categoryIds), eq(topics.userId, userId), isNull(topics.deletedAt)))
+      }
+
+      // Soft-delete categories
+      await db
+        .update(categories)
+        .set({ deletedAt: now })
+        .where(and(inArray(categories.subjectId, subjectIds), eq(categories.userId, userId), isNull(categories.deletedAt)))
+
+      // Soft-delete subjects
+      await db
+        .update(subjects)
+        .set({ deletedAt: now })
+        .where(and(eq(subjects.studyDomainId, id), eq(subjects.userId, userId), isNull(subjects.deletedAt)))
+    }
+
+    // Soft-delete the domain itself
     await db
       .update(studyDomains)
       .set({ deletedAt: now })
       .where(and(eq(studyDomains.id, id), eq(studyDomains.userId, userId)))
 
     return true
-  },
-
-  canDeleteStudyDomain: async (id, userId) => {
-    // First check if the domain exists and belongs to user
-    const domain = await db
-      .select()
-      .from(studyDomains)
-      .where(and(eq(studyDomains.id, id), eq(studyDomains.userId, userId), isNull(studyDomains.deletedAt)))
-      .limit(1)
-
-    if (!domain[0]) {
-      return { canDelete: true } // Doesn't exist or doesn't belong to user
-    }
-
-    const subjectCount = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(subjects)
-      .where(and(eq(subjects.studyDomainId, id), eq(subjects.userId, userId), isNull(subjects.deletedAt)))
-
-    const count = subjectCount[0]?.count ?? 0
-    if (count > 0) {
-      return {
-        canDelete: false,
-        reason: `${count}件の科目が紐づいています`,
-      }
-    }
-    return { canDelete: true }
   },
 })
