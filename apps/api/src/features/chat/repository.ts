@@ -73,6 +73,12 @@ export type GoodQuestion = {
   createdAt: Date
 }
 
+export type ContextMessage = {
+  role: string
+  content: string
+  ocrResult: string | null
+}
+
 export type ChatRepository = {
   createSession: (data: { userId: string; topicId: string }) => Promise<ChatSession>
   findSessionById: (id: string) => Promise<ChatSession | null>
@@ -84,6 +90,7 @@ export type ChatRepository = {
   createMessage: (data: Omit<ChatMessage, "id" | "createdAt">) => Promise<ChatMessage>
   findMessageById: (id: string) => Promise<ChatMessage | null>
   findMessagesBySession: (sessionId: string) => Promise<ChatMessage[]>
+  findRecentMessagesForContext: (sessionId: string, limit?: number) => Promise<ContextMessage[]>
   updateMessageQuality: (id: string, quality: string, reason?: string) => Promise<void>
   findGoodQuestionsByTopic: (userId: string, topicId: string) => Promise<GoodQuestion[]>
 }
@@ -326,6 +333,26 @@ export const createChatRepository = (db: Db): ChatRepository => ({
       ocrResult: row.ocrResult,
       questionQuality: row.questionQuality as QuestionQuality,
       createdAt: row.createdAt,
+    }))
+  },
+
+  // AI context構築用: 必要カラムのみ取得・最新N件に制限
+  findRecentMessagesForContext: async (sessionId, limit = 20) => {
+    const rows = await db
+      .select({
+        role: chatMessages.role,
+        content: chatMessages.content,
+        ocrResult: chatMessages.ocrResult,
+      })
+      .from(chatMessages)
+      .where(eq(chatMessages.sessionId, sessionId))
+      .orderBy(desc(chatMessages.createdAt))
+      .limit(limit)
+    // 降順で取得したので昇順に戻す
+    return rows.reverse().map((row) => ({
+      role: row.role,
+      content: row.content,
+      ocrResult: row.ocrResult,
     }))
   },
 
