@@ -282,7 +282,7 @@ export const deleteNote = async (
     return err(forbidden("このノートへのアクセス権限がありません"))
   }
 
-  await deps.noteRepo.deleteById(noteId)
+  await deps.noteRepo.softDelete(noteId)
   return ok(undefined)
 }
 
