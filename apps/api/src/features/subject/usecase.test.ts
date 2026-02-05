@@ -324,29 +324,24 @@ describe("Subject UseCase", () => {
       }
     })
 
-    it("should return HAS_CATEGORIES if subject has categories", async () => {
+    it("should cascade soft-delete categories and topics", async () => {
       const { id: userId } = createTestUser(db)
       const { id: domainId } = createTestStudyDomain(db, userId)
       const { id: subjectId } = createTestSubject(db, userId, domainId)
-      createTestCategory(db, userId, subjectId, { name: "Category" })
-
-      const result = await deleteSubject(deps, userId, subjectId)
-
-      expect(result.ok).toBe(false)
-      if (!result.ok) {
-        expect(result.error.code).toBe("CONFLICT")
-      }
-    })
-
-    it("should allow deletion if all categories are soft-deleted", async () => {
-      const { id: userId } = createTestUser(db)
-      const { id: domainId } = createTestStudyDomain(db, userId)
-      const { id: subjectId } = createTestSubject(db, userId, domainId)
-      createTestCategory(db, userId, subjectId, { name: "Deleted Category", deletedAt: new Date() })
+      const { id: categoryId } = createTestCategory(db, userId, subjectId, { name: "Category" })
+      createTestTopic(db, userId, categoryId, { name: "Topic" })
 
       const result = await deleteSubject(deps, userId, subjectId)
 
       expect(result.ok).toBe(true)
+
+      // Categories should be soft-deleted
+      const cats = db.select().from(schema.categories).all()
+      expect(cats[0].deletedAt).not.toBeNull()
+
+      // Topics should be soft-deleted
+      const tops = db.select().from(schema.topics).all()
+      expect(tops[0].deletedAt).not.toBeNull()
     })
   })
 })

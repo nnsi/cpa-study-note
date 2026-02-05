@@ -5,7 +5,7 @@ import type {
 } from "./repository"
 import type { StudyDomainResponse } from "@cpa-study/shared/schemas"
 import { ok, err, type Result } from "@/shared/lib/result"
-import { notFound, conflict, type AppError } from "@/shared/lib/errors"
+import { notFound, type AppError } from "@/shared/lib/errors"
 
 type StudyDomainDeps = {
   repo: StudyDomainRepository
@@ -115,7 +115,7 @@ export const updateStudyDomain = async (
   })
 }
 
-// Delete study domain (soft delete)
+// Delete study domain (soft delete with cascade)
 export const deleteStudyDomain = async (
   deps: StudyDomainDeps,
   id: string,
@@ -127,12 +127,6 @@ export const deleteStudyDomain = async (
   const existing = await repo.findById(id, userId)
   if (!existing) {
     return err(notFound("学習領域が見つかりません"))
-  }
-
-  // Check if can delete (no subjects)
-  const canDelete = await repo.canDeleteStudyDomain(id, userId)
-  if (!canDelete.canDelete) {
-    return err(conflict(canDelete.reason ?? "この学習領域は削除できません", { reason: "HAS_SUBJECTS" }))
   }
 
   await repo.softDelete(id, userId)
