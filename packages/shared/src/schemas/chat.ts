@@ -85,6 +85,19 @@ export const goodQuestionsListResponseSchema = z.object({
 
 export type GoodQuestionsListResponse = z.infer<typeof goodQuestionsListResponseSchema>
 
+// 音声認識テキスト補正
+export const correctSpeechRequestSchema = z.object({
+  text: z.string().min(1).max(2000),
+})
+
+export type CorrectSpeechRequest = z.infer<typeof correctSpeechRequestSchema>
+
+export const correctSpeechResponseSchema = z.object({
+  correctedText: z.string(),
+})
+
+export type CorrectSpeechResponse = z.infer<typeof correctSpeechResponseSchema>
+
 // セッション + 統計情報
 export const sessionWithStatsSchema = chatSessionSchema.extend({
   messageCount: z.number(),

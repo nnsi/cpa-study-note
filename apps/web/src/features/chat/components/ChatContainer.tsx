@@ -35,9 +35,12 @@ export const ChatContainer = ({ sessionId, topicId, onSessionCreated, onNavigate
   })
 
   // 新しいメッセージが追加されたら自動スクロール
+  // ストリーミング中はinstantスクロール（smooth だとアニメーションが毎回再起動してカクつく）
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages.displayMessages, input.pendingUserMessage, input.streamingText])
+    messagesEndRef.current?.scrollIntoView({
+      behavior: input.isStreaming ? "instant" : "smooth",
+    })
+  }, [messages.displayMessages, input.pendingUserMessage, input.streamingText, input.isStreaming])
 
   return (
     <div className="flex flex-col flex-1 min-h-0 min-w-0">
@@ -232,11 +235,13 @@ export const ChatContainer = ({ sessionId, topicId, onSessionCreated, onNavigate
         ocrText={input.ocrText}
         isListening={isListening}
         isSpeechSupported={isSupported}
+        isCorrectingSpeech={input.isCorrectingSpeech}
         onContentChange={input.handleContentChange}
         onImageSelect={input.handleImageSelect}
         onImageClear={input.handleImageClear}
         onSubmit={input.handleSubmit}
         onToggleListening={toggleListening}
+        onCorrectSpeech={input.handleCorrectSpeech}
       />
     </div>
   )

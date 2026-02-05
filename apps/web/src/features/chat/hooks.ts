@@ -185,11 +185,15 @@ export const useSendMessage = ({ sessionId, topicId, onSessionCreated }: UseSend
       let rafId: number | null = null
 
       const flushBuffer = () => {
-        if (textBuffer) {
-          setStreamingText((prev) => prev + textBuffer)
-          textBuffer = ""
-        }
+        // textBuffer の値をローカル変数にキャプチャしてからクリアする
+        // React 18 の自動バッチングにより updater 関数の実行が遅延するため、
+        // ミュータブルな textBuffer を直接参照すると、実行時には既に "" になっている
+        const text = textBuffer
+        textBuffer = ""
         rafId = null
+        if (text) {
+          setStreamingText((prev) => prev + text)
+        }
       }
 
       try {
@@ -286,6 +290,7 @@ export const useChatInput = ({ sessionId, topicId, onSessionCreated }: UseChatIn
   const [content, setContent] = useState("")
   const [imageId, setImageId] = useState<string | null>(null)
   const [ocrText, setOcrText] = useState<string | null>(null)
+  const [isCorrectingSpeech, setIsCorrectingSpeech] = useState(false)
   const { sendMessage, isStreaming, pendingUserMessage, error, streamingText } =
     useSendMessage({ sessionId, topicId, onSessionCreated })
 
@@ -302,6 +307,21 @@ export const useChatInput = ({ sessionId, topicId, onSessionCreated }: UseChatIn
     setImageId(null)
     setOcrText(null)
   }, [])
+
+  const handleCorrectSpeech = useCallback(async () => {
+    if (!content.trim() || isCorrectingSpeech) return
+    setIsCorrectingSpeech(true)
+    try {
+      const { correctedText } = await api.correctSpeech(content)
+      setContent(correctedText)
+    } catch (e) {
+      if (import.meta.env.DEV) {
+        console.warn("Speech correction failed:", e)
+      }
+    } finally {
+      setIsCorrectingSpeech(false)
+    }
+  }, [content, isCorrectingSpeech])
 
   const handleSubmit = useCallback(async () => {
     if (!content.trim() || isStreaming) return
@@ -325,12 +345,14 @@ export const useChatInput = ({ sessionId, topicId, onSessionCreated }: UseChatIn
     imageId,
     ocrText,
     isStreaming,
+    isCorrectingSpeech,
     streamingText,
     pendingUserMessage,
     error,
     handleContentChange,
     handleImageSelect,
     handleImageClear,
+    handleCorrectSpeech,
     handleSubmit,
   }
 }
