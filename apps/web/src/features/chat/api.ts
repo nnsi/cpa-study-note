@@ -2,6 +2,7 @@ import { api } from "@/lib/api-client"
 import { useAuthStore } from "@/lib/auth"
 import {
   chatMessagesWrapperResponseSchema,
+  correctSpeechResponseSchema,
   sessionsListResponseSchema,
   type ChatMessage,
   type ChatStreamChunk,
@@ -136,6 +137,15 @@ export async function* streamMessageWithNewSession(
       }
     }
   }
+}
+
+export const correctSpeech = async (text: string) => {
+  const res = await api.api.chat["correct-speech"].$post({
+    json: { text },
+  })
+  if (!res.ok) throw new Error("Failed to correct speech text")
+  const data = await res.json()
+  return correctSpeechResponseSchema.parse(data)
 }
 
 export const evaluateMessage = async (messageId: string) => {

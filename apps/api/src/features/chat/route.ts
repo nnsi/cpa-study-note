@@ -1,7 +1,7 @@
 import { Hono } from "hono"
 import { zValidator } from "@hono/zod-validator"
 import type { Db } from "@cpa-study/db"
-import { createSessionRequestSchema, sendMessageRequestSchema } from "@cpa-study/shared/schemas"
+import { createSessionRequestSchema, sendMessageRequestSchema, correctSpeechRequestSchema } from "@cpa-study/shared/schemas"
 import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
 import { createAIAdapter, streamToSSE, resolveAIConfig } from "@/shared/lib/ai"
@@ -17,6 +17,7 @@ import {
   sendMessageWithNewSession,
   evaluateQuestion,
   listGoodQuestionsByTopic,
+  correctSpeechText,
 } from "./usecase"
 import { handleResultWith, errorResponse } from "@/shared/lib/route-helpers"
 
@@ -151,6 +152,28 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         )
 
         return streamToSSE(c, stream)
+      }
+    )
+
+    // 音声認識テキスト補正
+    .post(
+      "/correct-speech",
+      authMiddleware,
+      zValidator("json", correctSpeechRequestSchema),
+      async (c) => {
+        const { text } = c.req.valid("json")
+
+        const aiAdapter = createAIAdapter({
+          provider: env.AI_PROVIDER,
+          apiKey: env.OPENROUTER_API_KEY,
+        })
+
+        const result = await correctSpeechText(
+          { aiAdapter, aiConfig },
+          text
+        )
+
+        return handleResultWith(c, result, (correctedText) => ({ correctedText }))
       }
     )
 

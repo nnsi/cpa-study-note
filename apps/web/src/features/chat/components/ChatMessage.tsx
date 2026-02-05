@@ -5,6 +5,9 @@ import type { DisplayMessage } from "../logic"
 
 const API_URL = import.meta.env.VITE_API_URL || ""
 
+// remarkPlugins配列をモジュールスコープで安定化（レンダリングごとの再生成を防止）
+const remarkPluginsStable = [remarkGfm]
+
 // マークダウンコンポーネントのカスタム設定
 const markdownComponents: Components = {
   // リンクは新しいタブで開く
@@ -166,7 +169,7 @@ export const ChatMessageView = ({ message, isStreaming }: Props) => {
           </div>
         ) : (
           <div className="prose prose-sm max-w-none break-words text-ink-800">
-            <Markdown components={markdownComponents} remarkPlugins={[remarkGfm]}>
+            <Markdown components={markdownComponents} remarkPlugins={remarkPluginsStable}>
               {message.content}
             </Markdown>
           </div>

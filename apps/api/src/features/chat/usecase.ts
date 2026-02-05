@@ -361,6 +361,41 @@ export const listGoodQuestionsByTopic = async (
   )
 }
 
+// 音声認識テキスト補正
+export const correctSpeechText = async (
+  deps: Pick<ChatDeps, "aiAdapter" | "aiConfig">,
+  text: string
+): Promise<Result<string, AppError>> => {
+  const systemPrompt = [
+    "あなたは音声認識テキストの補正アシスタントです。",
+    "ユーザーから音声認識で取得されたテキストが送られてきます。",
+    "以下のルールに従って補正してください：",
+    "- ひらがなのみのテキストは適切な漢字かな交じり文に変換する",
+    "- 誤認識された単語を文脈から推測して修正する",
+    "- 句読点が欠落している場合は適切に追加する",
+    "- 意味は変えない",
+    "- 補正後のテキストのみを出力する（説明や前置きは不要）",
+  ].join("\n")
+
+  try {
+    const result = await deps.aiAdapter.generateText({
+      model: deps.aiConfig.speechCorrection.model,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: text },
+      ],
+      temperature: deps.aiConfig.speechCorrection.temperature,
+      maxTokens: deps.aiConfig.speechCorrection.maxTokens,
+    })
+
+    const corrected = result.content.trim()
+    return ok(corrected || text)
+  } catch (error) {
+    console.error("[AI] Speech correction error:", error)
+    return ok(text)
+  }
+}
+
 type QuestionEvaluation = {
   quality: "good" | "surface"
   reason: string

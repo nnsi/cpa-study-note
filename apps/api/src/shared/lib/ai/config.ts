@@ -17,6 +17,7 @@ export type AIConfig = {
   evaluation: AIModelConfig
   noteSummary: AIModelConfig
   ocr: AIModelConfig
+  speechCorrection: AIModelConfig
 }
 
 /** ローカル開発用（安価なモデル） */
@@ -41,6 +42,11 @@ const localAIConfig: AIConfig = {
     temperature: 0,
     maxTokens: 2000,
   },
+  speechCorrection: {
+    model: "deepseek/deepseek-chat",
+    temperature: 0,
+    maxTokens: 500,
+  },
 }
 
 /** staging/production用 */
@@ -64,6 +70,11 @@ const productionAIConfig: AIConfig = {
     model: "openai/gpt-4o-mini",
     temperature: 0,
     maxTokens: 2000,
+  },
+  speechCorrection: {
+    model: "deepseek/deepseek-chat",
+    temperature: 0,
+    maxTokens: 500,
   },
 }
 
