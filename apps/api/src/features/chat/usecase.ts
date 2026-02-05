@@ -276,19 +276,18 @@ export async function* sendMessageWithNewSession(
   deps: ChatDeps,
   input: SendMessageWithNewSessionInput
 ): AsyncIterable<StreamChunk & { sessionId?: string }> {
-  // 階層取得とセッション作成を並列実行
-  const [hierarchy, session] = await Promise.all([
-    deps.chatRepo.getTopicWithHierarchy(input.topicId),
-    deps.chatRepo.createSession({
-      userId: input.userId,
-      topicId: input.topicId,
-    }),
-  ])
-
+  // 階層取得（topicId の存在確認を兼ねる）
+  const hierarchy = await deps.chatRepo.getTopicWithHierarchy(input.topicId)
   if (!hierarchy) {
     yield { type: "error", error: "Topic not found" }
     return
   }
+
+  // セッション作成（hierarchy で topic 存在を確認済み）
+  const session = await deps.chatRepo.createSession({
+    userId: input.userId,
+    topicId: input.topicId,
+  })
 
   // セッションIDを最初に通知
   yield { type: "session_created" as const, sessionId: session.id }
