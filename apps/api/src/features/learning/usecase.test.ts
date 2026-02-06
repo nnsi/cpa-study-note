@@ -41,6 +41,7 @@ const mockCheckHistory: CheckHistoryRecord = {
 const mockRecentTopic: RecentTopicRow = {
   topicId: "topic-1",
   topicName: "減価償却",
+  domainId: "domain-1",
   subjectId: "subject-1",
   subjectName: "財務会計論",
   categoryId: "category-1",

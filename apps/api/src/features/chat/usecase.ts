@@ -276,7 +276,14 @@ export async function* sendMessageWithNewSession(
   deps: ChatDeps,
   input: SendMessageWithNewSessionInput
 ): AsyncIterable<StreamChunk & { sessionId?: string }> {
-  // 階層取得（topicId の存在確認を兼ねる）
+  // トピックの存在確認 + userId所有権チェック（deletedAt含む）
+  const exists = await deps.learningRepo.verifyTopicExists(input.userId, input.topicId)
+  if (!exists) {
+    yield { type: "error", error: "Topic not found" }
+    return
+  }
+
+  // 階層取得（AI用システムプロンプト構築に必要）
   const hierarchy = await deps.chatRepo.getTopicWithHierarchy(input.topicId)
   if (!hierarchy) {
     yield { type: "error", error: "Topic not found" }

@@ -47,6 +47,7 @@ export type CreateCheckHistoryInput = {
 export type RecentTopicRow = {
   topicId: string
   topicName: string
+  domainId: string
   subjectId: string
   subjectName: string
   categoryId: string
@@ -136,6 +137,7 @@ export const createLearningRepository = (db: Db): LearningRepository => ({
       .select({
         topicId: topics.id,
         topicName: topics.name,
+        domainId: studyDomains.id,
         subjectId: subjects.id,
         subjectName: subjects.name,
         categoryId: categories.id,

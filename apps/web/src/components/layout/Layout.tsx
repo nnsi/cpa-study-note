@@ -47,7 +47,7 @@ export const Layout = ({ children, onSearchClick }: Props) => {
       </div>
 
       {/* モバイル: ボトムナビ（ログイン時のみ） */}
-      {loggedIn && <BottomNav />}
+      {loggedIn && <BottomNav onSearchClick={onSearchClick} />}
     </div>
   );
 };
