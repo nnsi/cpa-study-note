@@ -1,4 +1,4 @@
-import { eq, and, isNull, desc } from "drizzle-orm"
+import { eq, and, isNull, desc, sql } from "drizzle-orm"
 import type { Db } from "@cpa-study/db"
 import {
   topics,
@@ -232,7 +232,7 @@ export const createLearningRepository = (db: Db): LearningRepository => ({
       .select()
       .from(topicCheckHistory)
       .where(and(eq(topicCheckHistory.userId, userId), eq(topicCheckHistory.topicId, topicId)))
-      .orderBy(desc(topicCheckHistory.checkedAt))
+      .orderBy(desc(topicCheckHistory.checkedAt), desc(sql`rowid`))
   },
 
   verifyTopicExists: async (userId, topicId) => {

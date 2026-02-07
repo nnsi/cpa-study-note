@@ -502,11 +502,9 @@ describe("LearningRepository", () => {
     })
 
     it("should return history ordered by checkedAt desc", async () => {
-      // Create history records with sufficient delay to ensure different timestamps
+      // Records may share the same second-precision timestamp; rowid secondary sort ensures stable ordering
       await repository.createCheckHistory(userId, { userId, topicId, action: "checked" })
-      await new Promise((r) => setTimeout(r, 50))
       await repository.createCheckHistory(userId, { userId, topicId, action: "unchecked" })
-      await new Promise((r) => setTimeout(r, 50))
       await repository.createCheckHistory(userId, { userId, topicId, action: "checked" })
 
       const result = await repository.findCheckHistoryByTopic(userId, topicId)
