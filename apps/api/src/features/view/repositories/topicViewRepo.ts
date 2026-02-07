@@ -115,7 +115,8 @@ export const createTopicViewRepo = (db: Db): TopicViewRepo => ({
       .where(
         and(
           eq(notes.topicId, topicId),
-          eq(notes.userId, userId)
+          eq(notes.userId, userId),
+          isNull(notes.deletedAt)
         )
       )
       .orderBy(desc(notes.updatedAt))

@@ -64,20 +64,17 @@ export const GlobalSearchModal = ({ isOpen, query, setQuery, onClose }: Props) =
   if (!isOpen) return null
 
   return (
-    <>
-      {/* オーバーレイ */}
+    <div
+      className="fixed inset-0 z-50 bg-ink-900/50 animate-fade-in
+                 flex items-start justify-center pt-[10vh] lg:pt-[15vh] px-4"
+      onClick={onClose}
+    >
+      {/* モーダル本体 */}
       <div
-        className="fixed inset-0 bg-ink-900/50 z-50 animate-fade-in"
-        onClick={onClose}
-      />
-
-      {/* モーダル */}
-      <div className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] lg:pt-[15vh] px-4">
-        <div
-          className="w-full max-w-xl bg-white rounded-2xl shadow-2xl overflow-hidden animate-slide-up
-                     flex flex-col max-h-[70vh] lg:max-h-[60vh]"
-          onClick={(e) => e.stopPropagation()}
-        >
+        className="w-full max-w-xl bg-white rounded-2xl shadow-2xl overflow-hidden animate-slide-up
+                   flex flex-col max-h-[70vh] lg:max-h-[60vh]"
+        onClick={(e) => e.stopPropagation()}
+      >
           {/* 検索入力 */}
           <div className="p-4 border-b border-ink-100">
             <SearchInput
@@ -167,7 +164,6 @@ export const GlobalSearchModal = ({ isOpen, query, setQuery, onClose }: Props) =
             </div>
           )}
         </div>
-      </div>
-    </>
+    </div>
   )
 }

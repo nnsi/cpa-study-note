@@ -1,10 +1,12 @@
+import { useState } from "react"
 import { createFileRoute, Link } from "@tanstack/react-router"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { requireAuth } from "@/lib/auth"
 import { PageWrapper } from "@/components/layout"
 import { getSubject } from "@/features/subject/api"
 import { getStudyDomain } from "@/features/study-domain/api"
 import { TreeEditor } from "@/features/subject/components"
+import { TopicGeneratorModal } from "@/features/topic-generator"
 
 export const Route = createFileRoute("/domains/$domainId/subjects/$subjectId/edit")({
   beforeLoad: requireAuth,
@@ -13,6 +15,8 @@ export const Route = createFileRoute("/domains/$domainId/subjects/$subjectId/edi
 
 function SubjectEditPage() {
   const { domainId, subjectId } = Route.useParams()
+  const [showGenerator, setShowGenerator] = useState(false)
+  const queryClient = useQueryClient()
 
   // Fetch domain info
   const { data: domainData } = useQuery({
@@ -56,23 +60,46 @@ function SubjectEditPage() {
             <h1 className="heading-serif text-2xl lg:text-3xl">
               {subjectData?.subject.name ?? "科目"} の構造を編集
             </h1>
-            <Link
-              to="/domains/$domainId/subjects/$subjectId"
-              params={{ domainId, subjectId }}
-              className="btn-secondary text-sm"
-            >
-              <svg className="size-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-              </svg>
-              学習画面を見る
-            </Link>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowGenerator(true)}
+                className="btn-secondary text-sm"
+              >
+                <svg className="size-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456Z" />
+                </svg>
+                AIで論点を追加
+              </button>
+              <Link
+                to="/domains/$domainId/subjects/$subjectId"
+                params={{ domainId, subjectId }}
+                className="btn-secondary text-sm"
+              >
+                <svg className="size-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                </svg>
+                学習画面を見る
+              </Link>
+            </div>
           </div>
         </div>
 
         {/* Tree Editor */}
         <TreeEditor subjectId={subjectId} />
       </div>
+
+      {showGenerator && (
+        <TopicGeneratorModal
+          subjectId={subjectId}
+          onClose={() => setShowGenerator(false)}
+          onComplete={() => {
+            setShowGenerator(false)
+            queryClient.invalidateQueries({ queryKey: ["subject-tree", subjectId] })
+          }}
+        />
+      )}
     </PageWrapper>
   )
 }

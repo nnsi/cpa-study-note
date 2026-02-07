@@ -14,6 +14,7 @@ import { createBookmarkFeature } from "./features/bookmark"
 import { createLearningFeature } from "./features/learning"
 import { createViewFeature } from "./features/view"
 import { createExerciseFeature } from "./features/exercise"
+import { createTopicGeneratorFeature } from "./features/topic-generator"
 import {
   createRateLimitStore,
   createRateLimiterFactory,
@@ -106,6 +107,7 @@ const createApp = (env: Env) => {
     .use("/api/images/*/ocr", limiter.moderate())
     .use("/api/exercises/analyze", limiter.moderate())
     .use("/api/notes", limiter.moderate())
+    .use("/api/topic-generator/*", limiter.moderate())
     // その他は緩め（100 req/min）
     // rateLimitApplied フラグにより、上記で適用済みの場合はスキップされる
     .use("/api/*", limiter.lenient())
@@ -120,6 +122,7 @@ const createApp = (env: Env) => {
     .route("/api/learning", createLearningFeature(env, db))
     .route("/api/view", createViewFeature(env, db))
     .route("/api/exercises", createExerciseFeature(env, db))
+    .route("/api/topic-generator", createTopicGeneratorFeature(env, db))
     .get("/api/health", (c) => c.json({ status: "ok" }))
     .onError((error, c) => {
       // ローカル環境では詳細なエラー情報を出力

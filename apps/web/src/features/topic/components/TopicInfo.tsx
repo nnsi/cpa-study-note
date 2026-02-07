@@ -3,6 +3,7 @@ import { api } from "@/lib/api-client"
 import { useCheckHistory } from "../hooks"
 import type { CheckHistoryItem } from "../api"
 import { BookmarkButton } from "@/features/bookmark"
+import { formatRelativeTime } from "@/lib/date"
 
 type Topic = {
   id: string
@@ -141,21 +142,6 @@ export const TopicInfo = ({ topic, progress, subjectId, sessions = [] }: Props) 
       </div>
     </div>
   )
-}
-
-function formatRelativeTime(dateString: string): string {
-  const date = new Date(dateString)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMinutes = Math.floor(diffMs / 1000 / 60)
-  const diffHours = Math.floor(diffMinutes / 60)
-  const diffDays = Math.floor(diffHours / 24)
-
-  if (diffMinutes < 1) return "たった今"
-  if (diffMinutes < 60) return `${diffMinutes}分前`
-  if (diffHours < 24) return `${diffHours}時間前`
-  if (diffDays < 7) return `${diffDays}日前`
-  return date.toLocaleDateString("ja-JP")
 }
 
 // チェック履歴タイムラインコンポーネント

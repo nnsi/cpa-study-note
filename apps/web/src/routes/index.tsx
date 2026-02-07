@@ -1,8 +1,9 @@
+import { useState } from "react"
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { useAuthStore } from "@/lib/auth"
 import { ProgressStats } from "@/features/progress"
 import { MiniMetricsChart } from "@/features/metrics"
-import { TodayActivityCard, RecentTopicsList, ContinueLearningSection } from "@/features/home"
+import { TodayActivityCard, ContinueLearningSection } from "@/features/home"
 import { BookmarksList } from "@/features/bookmark"
 import { PageWrapper } from "@/components/layout"
 
@@ -155,14 +156,11 @@ function DashboardPage({ user }: { user: User | null }) {
       {/* ブックマーク */}
       <BookmarksList />
 
-      {/* 今日の活動 + 最近の論点 */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <TodayActivityCard />
-        <RecentTopicsList />
-      </div>
+      {/* 今日の活動 */}
+      <TodayActivityCard />
 
       {/* クイックアクセス */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3">
         <QuickAccessCard
           to="/subjects"
           icon={
@@ -188,18 +186,6 @@ function DashboardPage({ user }: { user: User | null }) {
         />
 
         <QuickAccessCard
-          to="/notes"
-          icon={
-            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-            </svg>
-          }
-          title="ノート"
-          description="学習の記録を確認"
-          accentColor="amber"
-        />
-
-        <QuickAccessCard
           to="/exercises"
           icon={
             <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -210,38 +196,62 @@ function DashboardPage({ user }: { user: User | null }) {
           description="問題画像から論点を特定"
           accentColor="crimson"
         />
-
-        <QuickAccessCard
-          to="/edit"
-          icon={
-            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 0 0-1.883 2.542l.857 6a2.25 2.25 0 0 0 2.227 1.932H19.05a2.25 2.25 0 0 0 2.227-1.932l.857-6a2.25 2.25 0 0 0-1.883-2.542m-16.5 0V6A2.25 2.25 0 0 1 6 3.75h3.879a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 0 1.06.44H18A2.25 2.25 0 0 1 20.25 9v.776" />
-            </svg>
-          }
-          title="科目の構造を編集"
-          description="学習領域・科目・単元を管理"
-          accentColor="crimson"
-        />
       </div>
 
-      {/* 学習進捗 */}
-      <section>
-        <div className="flex items-center gap-3 mb-4">
-          <h2 className="heading-serif text-xl">学習進捗</h2>
-          <div className="flex-1 divider" />
-        </div>
-        <ProgressStats />
-      </section>
-
-      {/* 日次推移グラフ（簡易版） */}
-      <section>
-        <div className="flex items-center gap-3 mb-4">
-          <h2 className="heading-serif text-xl">学習推移</h2>
-          <div className="flex-1 divider" />
-        </div>
-        <MiniMetricsChart />
-      </section>
+      {/* 学習統計（折りたたみ） */}
+      <StatsCollapsible />
     </div>
+  )
+}
+
+// 学習統計（折りたたみ）
+function StatsCollapsible() {
+  const [showStats, setShowStats] = useState(false)
+
+  return (
+    <section>
+      <button
+        type="button"
+        onClick={() => setShowStats((prev) => !prev)}
+        className="flex items-center gap-3 w-full text-left btn-ghost px-0 py-2 hover:bg-transparent"
+      >
+        <h2 className="heading-serif text-xl">学習統計</h2>
+        <div className="flex-1 divider" />
+        <svg
+          className={`w-5 h-5 text-ink-400 transition-transform duration-300 ${showStats ? "rotate-180" : ""}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+        </svg>
+      </button>
+
+      <div
+        className={`grid transition-[grid-template-rows] duration-300 ease-out ${showStats ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+      >
+        <div className="overflow-hidden">
+          <div className="space-y-8 pt-4">
+            {/* 学習進捗 */}
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <h3 className="heading-serif text-lg text-ink-700">学習進捗</h3>
+              </div>
+              <ProgressStats />
+            </div>
+
+            {/* 学習推移 */}
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <h3 className="heading-serif text-lg text-ink-700">学習推移</h3>
+              </div>
+              <MiniMetricsChart />
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   )
 }
 

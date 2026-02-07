@@ -54,6 +54,7 @@ vi.mock("../../shared/lib/ai", () => ({
     noteSummary: { model: "test-model", temperature: 0.3, maxTokens: 1000 },
     ocr: { model: "openai/gpt-4o-mini", temperature: 0, maxTokens: 2000 },
     speechCorrection: { model: "test-model", temperature: 0, maxTokens: 500 },
+    topicGenerator: { model: "test-model", temperature: 0.5, maxTokens: 3000 },
   }),
 }))
 

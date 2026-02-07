@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { api } from "@/lib/api-client"
 import { ChatContainer, getSessionsByTopic } from "@/features/chat"
@@ -56,6 +56,17 @@ function TopicDetailPage() {
   })
 
   const sessions: Session[] = sessionsData?.sessions ?? []
+
+  // 初回データ取得時にセッション有無でデフォルトタブを決定
+  const hasInitializedTab = useRef(false)
+  useEffect(() => {
+    if (sessionsData && !hasInitializedTab.current) {
+      hasInitializedTab.current = true
+      if (sessions.length === 0) {
+        setActiveTab("info")
+      }
+    }
+  }, [sessionsData, sessions.length])
 
   // 新しいチャットを開始（セッションIDをnullにして新規モードに）
   const startNewChat = useCallback(() => {

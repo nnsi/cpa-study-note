@@ -22,6 +22,7 @@ export type TodayMetricsResponse = z.infer<typeof todayMetricsResponseSchema>
 export const recentTopicSchema = z.object({
   topicId: z.string(),
   topicName: z.string(),
+  domainId: z.string(),
   subjectId: z.string(),
   subjectName: z.string(),
   categoryId: z.string(),

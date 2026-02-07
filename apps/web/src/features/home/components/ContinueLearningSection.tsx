@@ -1,27 +1,17 @@
 import { Link } from "@tanstack/react-router"
 import { useRecentTopics } from "../hooks"
-
-const formatRelativeTime = (dateStr: string): string => {
-  const date = new Date(dateStr)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMins = Math.floor(diffMs / (1000 * 60))
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-
-  if (diffMins < 1) return "たった今"
-  if (diffMins < 60) return `${diffMins}分前`
-  if (diffHours < 24) return `${diffHours}時間前`
-  if (diffDays < 7) return `${diffDays}日前`
-
-  return date.toLocaleDateString("ja-JP", {
-    month: "short",
-    day: "numeric",
-  })
-}
+import { useStudyDomains } from "@/features/study-domain"
+import { formatRelativeTime } from "@/lib/date"
 
 export const ContinueLearningSection = () => {
   const { topics, isLoading } = useRecentTopics()
+  const { studyDomains } = useStudyDomains()
+
+  // 学習領域が1つなら直接その科目一覧へ、複数または0なら領域選択へ
+  const subjectsTo =
+    studyDomains.length === 1
+      ? `/domains/${studyDomains[0].id}/subjects`
+      : "/domains"
 
   // Limit to 5 most recent topics
   const recentTopics = topics.slice(0, 5)
@@ -71,7 +61,7 @@ export const ContinueLearningSection = () => {
           <p className="text-sm mb-2">まだ学習を始めていません</p>
           <p className="text-xs text-ink-400 mb-4">論点マップから学習を始めましょう</p>
           <Link
-            to="/subjects"
+            to={subjectsTo}
             className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-700 text-sm font-medium"
           >
             論点マップを見る
@@ -96,7 +86,7 @@ export const ContinueLearningSection = () => {
           <h2 className="heading-serif text-lg">続きから学習</h2>
         </div>
         <Link
-          to="/subjects"
+          to={subjectsTo}
           className="text-sm text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1"
         >
           すべて見る
@@ -127,6 +117,7 @@ type TopicCardProps = {
   topic: {
     topicId: string
     topicName: string
+    domainId: string
     subjectId: string
     subjectName: string
     categoryId: string
@@ -140,8 +131,9 @@ const TopicCard = ({ topic, variant }: TopicCardProps) => {
 
   return (
     <Link
-      to="/subjects/$subjectId/$categoryId/$topicId"
+      to="/domains/$domainId/subjects/$subjectId/$categoryId/$topicId"
       params={{
+        domainId: topic.domainId,
         subjectId: topic.subjectId,
         categoryId: topic.categoryId,
         topicId: topic.topicId,

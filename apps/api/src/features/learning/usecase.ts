@@ -149,6 +149,7 @@ export const listRecentTopics = async (
     topics.map((t) => ({
       topicId: t.topicId,
       topicName: t.topicName,
+      domainId: t.domainId,
       subjectId: t.subjectId,
       subjectName: t.subjectName,
       categoryId: t.categoryId,
