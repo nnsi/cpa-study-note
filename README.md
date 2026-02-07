@@ -57,7 +57,7 @@
 | DB | Cloudflare D1 + Drizzle ORM |
 | ストレージ | Cloudflare R2 |
 | 認証 | Google OAuth + JWT (jose) |
-| AI | OpenRouter経由（GLM-4.7-flash, Vision OCR） |
+| AI | OpenRouter経由（Gemini 2.5 Flash, Qwen3-8B, GPT-4o mini） |
 | 状態管理 | Zustand + TanStack React Query |
 | UI | Tailwind CSS + Lucide Icons |
 | テスト | Vitest |

@@ -119,7 +119,7 @@
 | DB | Cloudflare D1 + Drizzle ORM |
 | ストレージ | Cloudflare R2 |
 | 認証 | Google OAuth（マルチプロバイダー対応設計） |
-| AI | OpenRouter経由（GLM-4.7-flash, Vision OCR） |
+| AI | OpenRouter経由（Gemini 2.5 Flash, Qwen3-8B, GPT-4o mini） |
 | UI | Tailwind CSS |
 | 構成 | モノレポ（pnpm workspace） |
 
