@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import * as api from "./api"
-import type { CreateStudyPlanRequest, UpdateStudyPlanRequest, CreateStudyPlanItemRequest, UpdateStudyPlanItemRequest, CreateStudyPlanRevisionRequest } from "@cpa-study/shared/schemas"
+import type { CreateStudyPlanRequest, UpdateStudyPlanRequest, CreateStudyPlanItemRequest, UpdateStudyPlanItemRequest, CreateStudyPlanRevisionRequest, UpdateStudyPlanRevisionRequest } from "@cpa-study/shared/schemas"
 
 export const useStudyPlans = (filter?: { archived?: boolean }) => {
   const { data, isLoading, error } = useQuery({
@@ -114,6 +114,17 @@ export const useAddStudyPlanRevision = (planId: string) => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: CreateStudyPlanRevisionRequest) => api.addStudyPlanRevision(planId, input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["study-plans", planId] })
+    },
+  })
+}
+
+export const useUpdateStudyPlanRevision = (planId: string) => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ revisionId, input }: { revisionId: string; input: UpdateStudyPlanRevisionRequest }) =>
+      api.updateStudyPlanRevision(planId, revisionId, input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["study-plans", planId] })
     },

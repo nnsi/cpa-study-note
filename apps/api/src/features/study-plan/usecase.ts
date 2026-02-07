@@ -14,6 +14,8 @@ const toPlanResponse = (plan: StudyPlan): StudyPlanResponse => ({
   title: plan.title,
   intent: plan.intent,
   scope: plan.scope,
+  subjectId: plan.subjectId,
+  subjectName: plan.subjectName,
   createdAt: plan.createdAt.toISOString(),
   updatedAt: plan.updatedAt.toISOString(),
   archivedAt: plan.archivedAt?.toISOString() ?? null,
@@ -85,7 +87,7 @@ export const getPlanDetail = async (
 export const createPlan = async (
   deps: StudyPlanDeps,
   userId: string,
-  input: { title: string; intent?: string; scope: StudyPlanScope }
+  input: { title: string; intent?: string; scope: StudyPlanScope; subjectId?: string }
 ): Promise<Result<StudyPlanResponse, AppError>> => {
   const plan = await deps.repo.createPlan({
     id: crypto.randomUUID(),
@@ -93,6 +95,7 @@ export const createPlan = async (
     title: input.title,
     intent: input.intent,
     scope: input.scope,
+    subjectId: input.subjectId,
     now: new Date(),
   })
   return ok(toPlanResponse(plan))
@@ -103,7 +106,7 @@ export const updatePlan = async (
   deps: StudyPlanDeps,
   userId: string,
   planId: string,
-  input: { title?: string; intent?: string | null }
+  input: { title?: string; intent?: string | null; subjectId?: string | null }
 ): Promise<Result<StudyPlanResponse, AppError>> => {
   const ownershipCheck = await checkOwnership(deps, planId, userId)
   if (!ownershipCheck.ok) return ownershipCheck
@@ -193,7 +196,7 @@ export const updateItem = async (
   return ok(toItemResponse(item))
 }
 
-// 要素削除
+// 要素削除（自動で変遷を記録）
 export const removeItem = async (
   deps: StudyPlanDeps,
   userId: string,
@@ -203,8 +206,21 @@ export const removeItem = async (
   const ownershipCheck = await checkOwnership(deps, planId, userId)
   if (!ownershipCheck.ok) return ownershipCheck
 
+  // 削除前にアイテム情報を取得（変遷の summary 用）
+  const item = await deps.repo.findItemById(itemId)
+  if (!item) return err(notFound("計画要素が見つかりません"))
+
   const success = await deps.repo.deleteItem(itemId)
   if (!success) return err(notFound("計画要素が見つかりません"))
+
+  // 変遷を自動記録
+  await deps.repo.createRevision({
+    id: crypto.randomUUID(),
+    studyPlanId: planId,
+    summary: `「${item.description}」を削除`,
+    now: new Date(),
+  })
+
   return ok(undefined)
 }
 
@@ -227,7 +243,7 @@ export const addRevision = async (
   deps: StudyPlanDeps,
   userId: string,
   planId: string,
-  input: { summary: string; reason: string }
+  input: { summary: string; reason?: string }
 ): Promise<Result<StudyPlanRevisionResponse, AppError>> => {
   const ownershipCheck = await checkOwnership(deps, planId, userId)
   if (!ownershipCheck.ok) return ownershipCheck
@@ -239,5 +255,21 @@ export const addRevision = async (
     reason: input.reason,
     now: new Date(),
   })
+  return ok(toRevisionResponse(revision))
+}
+
+// 変遷更新（理由追記用）
+export const updateRevision = async (
+  deps: StudyPlanDeps,
+  userId: string,
+  planId: string,
+  revisionId: string,
+  input: { reason?: string | null }
+): Promise<Result<StudyPlanRevisionResponse, AppError>> => {
+  const ownershipCheck = await checkOwnership(deps, planId, userId)
+  if (!ownershipCheck.ok) return ownershipCheck
+
+  const revision = await deps.repo.updateRevision(revisionId, input)
+  if (!revision) return err(notFound("変遷記録が見つかりません"))
   return ok(toRevisionResponse(revision))
 }

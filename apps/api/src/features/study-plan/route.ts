@@ -8,8 +8,10 @@ import {
   updateStudyPlanItemRequestSchema,
   reorderStudyPlanItemsRequestSchema,
   createStudyPlanRevisionRequestSchema,
+  updateStudyPlanRevisionRequestSchema,
   studyPlanParamsSchema,
   studyPlanItemParamsSchema,
+  studyPlanRevisionParamsSchema,
 } from "@cpa-study/shared/schemas"
 import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
@@ -27,6 +29,7 @@ import {
   removeItem,
   reorderItems,
   addRevision,
+  updateRevision,
 } from "./usecase"
 import { handleResult, handleResultWith } from "@/shared/lib/route-helpers"
 
@@ -139,6 +142,15 @@ export const studyPlanRoutes = ({ db }: StudyPlanRouteDeps) => {
       const input = c.req.valid("json")
       const result = await addRevision(deps, user.id, planId, input)
       return handleResultWith(c, result, (revision) => ({ revision }), 201)
+    })
+
+    // 変遷更新（理由追記）
+    .patch("/:planId/revisions/:revisionId", authMiddleware, zValidator("param", studyPlanRevisionParamsSchema), zValidator("json", updateStudyPlanRevisionRequestSchema), async (c) => {
+      const user = c.get("user")
+      const { planId, revisionId } = c.req.valid("param")
+      const input = c.req.valid("json")
+      const result = await updateRevision(deps, user.id, planId, revisionId, input)
+      return handleResultWith(c, result, (revision) => ({ revision }))
     })
 
   return app

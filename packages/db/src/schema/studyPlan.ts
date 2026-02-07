@@ -1,6 +1,6 @@
 import { sqliteTable, text, integer, index } from "drizzle-orm/sqlite-core"
 import { users } from "./users"
-import { topics } from "./topics"
+import { subjects, topics } from "./topics"
 
 export type StudyPlanScope = "all" | "subject" | "topic_group"
 
@@ -14,6 +14,7 @@ export const studyPlans = sqliteTable(
     title: text("title").notNull(),
     intent: text("intent"),
     scope: text("scope").$type<StudyPlanScope>().notNull(),
+    subjectId: text("subject_id").references(() => subjects.id, { onDelete: "set null" }),
     createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
     updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
     archivedAt: integer("archived_at", { mode: "timestamp" }),
@@ -21,6 +22,7 @@ export const studyPlans = sqliteTable(
   (table) => [
     index("study_plans_user_id_idx").on(table.userId),
     index("study_plans_user_archived_idx").on(table.userId, table.archivedAt),
+    index("study_plans_subject_id_idx").on(table.subjectId),
   ]
 )
 
@@ -51,7 +53,7 @@ export const studyPlanRevisions = sqliteTable(
       .notNull()
       .references(() => studyPlans.id, { onDelete: "cascade" }),
     summary: text("summary").notNull(),
-    reason: text("reason").notNull(),
+    reason: text("reason"),
     createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
   },
   (table) => [

@@ -3,6 +3,8 @@ import { Link } from "@tanstack/react-router"
 import { useStudyPlans, useCreateStudyPlan, useArchiveStudyPlan, useUnarchiveStudyPlan, useDuplicateStudyPlan } from "../hooks"
 import type { StudyPlanWithItemCount } from "../api"
 import type { StudyPlanScope } from "@cpa-study/shared/schemas"
+import { useStudyDomains } from "@/features/study-domain"
+import { useSubjects } from "@/features/subject/hooks/useSubjects"
 
 const scopeLabels: Record<string, string> = {
   all: "全体",
@@ -35,6 +37,12 @@ const PlanCard = ({ plan, onArchive, onUnarchive, onDuplicate }: {
 
       {plan.intent && (
         <p className="text-sm text-ink-600 line-clamp-2">{plan.intent}</p>
+      )}
+
+      {plan.subjectName && (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-indigo-50 text-indigo-700 rounded-full">
+          {plan.subjectName}
+        </span>
       )}
 
       <div className="flex items-center justify-between text-xs text-ink-400">
@@ -78,6 +86,7 @@ export const StudyPlanList = () => {
   const [title, setTitle] = useState("")
   const [intent, setIntent] = useState("")
   const [scope, setScope] = useState<StudyPlanScope>("all")
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string>("")
 
   const { plans, isLoading, error } = useStudyPlans({ archived: tab === "archived" })
   const createMutation = useCreateStudyPlan()
@@ -85,15 +94,26 @@ export const StudyPlanList = () => {
   const unarchiveMutation = useUnarchiveStudyPlan()
   const duplicateMutation = useDuplicateStudyPlan()
 
+  // 科目選択用: ドメイン → 科目
+  const { studyDomains } = useStudyDomains()
+  const defaultDomainId = studyDomains[0]?.id
+  const { subjects } = useSubjects(defaultDomainId)
+
   const handleCreate = () => {
     if (!title.trim()) return
     createMutation.mutate(
-      { title: title.trim(), intent: intent.trim() || undefined, scope },
+      {
+        title: title.trim(),
+        intent: intent.trim() || undefined,
+        scope,
+        subjectId: selectedSubjectId || undefined,
+      },
       {
         onSuccess: () => {
           setTitle("")
           setIntent("")
           setScope("all")
+          setSelectedSubjectId("")
           setShowForm(false)
         },
       }
@@ -139,17 +159,32 @@ export const StudyPlanList = () => {
               maxLength={2000}
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-ink-700 mb-1">対象範囲</label>
-            <select
-              value={scope}
-              onChange={(e) => setScope(e.target.value as StudyPlanScope)}
-              className="px-3 py-2 border border-ink-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-            >
-              <option value="all">全体</option>
-              <option value="subject">科目</option>
-              <option value="topic_group">論点群</option>
-            </select>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-ink-700 mb-1">対象範囲</label>
+              <select
+                value={scope}
+                onChange={(e) => setScope(e.target.value as StudyPlanScope)}
+                className="w-full px-3 py-2 border border-ink-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option value="all">全体</option>
+                <option value="subject">科目</option>
+                <option value="topic_group">論点群</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-ink-700 mb-1">科目（任意）</label>
+              <select
+                value={selectedSubjectId}
+                onChange={(e) => setSelectedSubjectId(e.target.value)}
+                className="w-full px-3 py-2 border border-ink-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option value="">指定なし</option>
+                {subjects.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+            </div>
           </div>
           <div className="flex justify-end">
             <button

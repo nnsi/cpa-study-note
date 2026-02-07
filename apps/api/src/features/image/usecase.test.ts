@@ -50,6 +50,7 @@ const createMockAIConfig = () => ({
   ocr: { model: "openai/gpt-4o-mini", temperature: 0, maxTokens: 2000 },
   speechCorrection: { model: "test-model", temperature: 0, maxTokens: 500 },
   topicGenerator: { model: "test-model", temperature: 0.5, maxTokens: 3000 },
+  planAssistant: { model: "test-model", temperature: 0.5, maxTokens: 3000 },
 })
 
 // PNG マジックバイト

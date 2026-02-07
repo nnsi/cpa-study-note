@@ -15,6 +15,7 @@ import {
   type CreateStudyPlanItemRequest,
   type UpdateStudyPlanItemRequest,
   type CreateStudyPlanRevisionRequest,
+  type UpdateStudyPlanRevisionRequest,
 } from "@cpa-study/shared/schemas"
 
 const planWrapperSchema = z.object({ plan: studyPlanResponseSchema })
@@ -98,6 +99,13 @@ export const reorderStudyPlanItems = async (planId: string, itemIds: string[]): 
 export const addStudyPlanRevision = async (planId: string, input: CreateStudyPlanRevisionRequest): Promise<{ revision: StudyPlanRevisionResponse }> => {
   const res = await api.api["study-plans"][":planId"].revisions.$post({ param: { planId }, json: input })
   if (!res.ok) throw new Error("Failed to add study plan revision")
+  const data = await res.json()
+  return revisionWrapperSchema.parse(data)
+}
+
+export const updateStudyPlanRevision = async (planId: string, revisionId: string, input: UpdateStudyPlanRevisionRequest): Promise<{ revision: StudyPlanRevisionResponse }> => {
+  const res = await api.api["study-plans"][":planId"].revisions[":revisionId"].$patch({ param: { planId, revisionId }, json: input })
+  if (!res.ok) throw new Error("Failed to update study plan revision")
   const data = await res.json()
   return revisionWrapperSchema.parse(data)
 }

@@ -11,6 +11,8 @@ export const studyPlanResponseSchema = z.object({
   title: z.string(),
   intent: z.string().nullable(),
   scope: studyPlanScopeSchema,
+  subjectId: z.string().nullable(),
+  subjectName: z.string().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   archivedAt: z.string().datetime().nullable(),
@@ -35,7 +37,7 @@ export const studyPlanRevisionResponseSchema = z.object({
   id: z.string(),
   studyPlanId: z.string(),
   summary: z.string(),
-  reason: z.string(),
+  reason: z.string().nullable(),
   createdAt: z.string().datetime(),
 })
 export type StudyPlanRevisionResponse = z.infer<typeof studyPlanRevisionResponseSchema>
@@ -63,6 +65,7 @@ export const createStudyPlanRequestSchema = z.object({
   title: z.string().min(1).max(200),
   intent: z.string().max(2000).optional(),
   scope: studyPlanScopeSchema,
+  subjectId: z.string().optional(),
 })
 export type CreateStudyPlanRequest = z.infer<typeof createStudyPlanRequestSchema>
 
@@ -70,6 +73,7 @@ export type CreateStudyPlanRequest = z.infer<typeof createStudyPlanRequestSchema
 export const updateStudyPlanRequestSchema = z.object({
   title: z.string().min(1).max(200).optional(),
   intent: z.string().max(2000).nullable().optional(),
+  subjectId: z.string().nullable().optional(),
 })
 export type UpdateStudyPlanRequest = z.infer<typeof updateStudyPlanRequestSchema>
 
@@ -100,9 +104,21 @@ export type ReorderStudyPlanItemsRequest = z.infer<typeof reorderStudyPlanItemsR
 // リクエスト: 計画変遷記録
 export const createStudyPlanRevisionRequestSchema = z.object({
   summary: z.string().min(1).max(2000),
-  reason: z.string().min(1).max(2000),
+  reason: z.string().min(1).max(2000).optional(),
 })
 export type CreateStudyPlanRevisionRequest = z.infer<typeof createStudyPlanRevisionRequestSchema>
+
+// リクエスト: 計画変遷更新（理由追記用）
+export const updateStudyPlanRevisionRequestSchema = z.object({
+  reason: z.string().max(2000).nullable().optional(),
+})
+export type UpdateStudyPlanRevisionRequest = z.infer<typeof updateStudyPlanRevisionRequestSchema>
+
+// パラメータ: 計画ID + 変遷ID
+export const studyPlanRevisionParamsSchema = z.object({
+  planId: z.string(),
+  revisionId: z.string(),
+})
 
 // パラメータ: 計画ID
 export const studyPlanParamsSchema = z.object({
@@ -114,3 +130,31 @@ export const studyPlanItemParamsSchema = z.object({
   planId: z.string(),
   itemId: z.string(),
 })
+
+// --- AI学習計画支援 ---
+
+// リクエスト: AI計画要素提案
+export const suggestPlanItemsRequestSchema = z.object({
+  prompt: z.string().min(1).max(2000),
+})
+export type SuggestPlanItemsRequest = z.infer<typeof suggestPlanItemsRequestSchema>
+
+// AI提案結果
+export const planItemSuggestionSchema = z.object({
+  items: z.array(
+    z.object({
+      description: z.string(),
+      rationale: z.string().nullable().default(null),
+      topicName: z.string().nullable().default(null),
+    })
+  ),
+})
+export type PlanItemSuggestions = z.infer<typeof planItemSuggestionSchema>
+
+// SSEチャンク
+export const planAssistantChunkSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("text"), content: z.string() }),
+  z.object({ type: z.literal("error"), error: z.string() }),
+  z.object({ type: z.literal("done") }),
+])
+export type PlanAssistantChunk = z.infer<typeof planAssistantChunkSchema>
