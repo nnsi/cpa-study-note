@@ -15,6 +15,7 @@ import { createLearningFeature } from "./features/learning"
 import { createViewFeature } from "./features/view"
 import { createExerciseFeature } from "./features/exercise"
 import { createTopicGeneratorFeature } from "./features/topic-generator"
+import { createStudyPlanFeature } from "./features/study-plan"
 import {
   createRateLimitStore,
   createRateLimiterFactory,
@@ -123,6 +124,8 @@ const createApp = (env: Env) => {
     .route("/api/view", createViewFeature(env, db))
     .route("/api/exercises", createExerciseFeature(env, db))
     .route("/api/topic-generator", createTopicGeneratorFeature(env, db))
+    .use("/api/study-plans/*/suggest", limiter.moderate())
+    .route("/api/study-plans", createStudyPlanFeature(env, db))
     .get("/api/health", (c) => c.json({ status: "ok" }))
     .onError((error, c) => {
       // ローカル環境では詳細なエラー情報を出力

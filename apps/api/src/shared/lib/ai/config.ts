@@ -19,6 +19,7 @@ export type AIConfig = {
   ocr: AIModelConfig
   speechCorrection: AIModelConfig
   topicGenerator: AIModelConfig
+  planAssistant: AIModelConfig
 }
 
 /** ローカル開発用 */
@@ -53,6 +54,11 @@ const localAIConfig: AIConfig = {
     temperature: 0.5,
     maxTokens: 3000,
   },
+  planAssistant: {
+    model: "google/gemini-2.5-flash",
+    temperature: 0.5,
+    maxTokens: 3000,
+  },
 }
 
 /** staging/production用 */
@@ -83,6 +89,11 @@ const productionAIConfig: AIConfig = {
     maxTokens: 500,
   },
   topicGenerator: {
+    model: "google/gemini-2.5-flash",
+    temperature: 0.5,
+    maxTokens: 3000,
+  },
+  planAssistant: {
     model: "google/gemini-2.5-flash",
     temperature: 0.5,
     maxTokens: 3000,
