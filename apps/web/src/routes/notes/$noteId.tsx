@@ -1,9 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { useState, useEffect } from "react"
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { api } from "@/lib/api-client"
 import { requireAuth } from "@/lib/auth"
 import { PageWrapper } from "@/components/layout"
+import { useNoteDetail, useUpdateNoteDetail } from "@/features/note/hooks"
 
 export const Route = createFileRoute("/notes/$noteId")({
   beforeLoad: requireAuth,
@@ -12,7 +11,6 @@ export const Route = createFileRoute("/notes/$noteId")({
 
 function NoteDetailPage() {
   const { noteId } = Route.useParams()
-  const queryClient = useQueryClient()
   const [userMemo, setUserMemo] = useState("")
   const [keyPoints, setKeyPoints] = useState<string[]>([])
   const [stumbledPoints, setStumbledPoints] = useState<string[]>([])
@@ -20,16 +18,7 @@ function NoteDetailPage() {
   const [isEditingKeyPoints, setIsEditingKeyPoints] = useState(false)
   const [isEditingStumbledPoints, setIsEditingStumbledPoints] = useState(false)
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["notes", noteId],
-    queryFn: async () => {
-      const res = await api.api.notes[":noteId"].$get({
-        param: { noteId },
-      })
-      if (!res.ok) throw new Error(`ノートの取得に失敗しました (${res.status})`)
-      return res.json()
-    },
-  })
+  const { data, isLoading } = useNoteDetail(noteId)
 
   // データ取得時に状態を初期化
   useEffect(() => {
@@ -40,22 +29,17 @@ function NoteDetailPage() {
     }
   }, [data])
 
-  const { mutate: updateNote, isPending } = useMutation({
-    mutationFn: async (updates: { userMemo?: string; keyPoints?: string[]; stumbledPoints?: string[] }) => {
-      const res = await api.api.notes[":noteId"].$put({
-        param: { noteId },
-        json: updates,
-      })
-      if (!res.ok) throw new Error(`ノートの更新に失敗しました (${res.status})`)
-      return res.json()
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notes", noteId] })
-      setIsEditingMemo(false)
-      setIsEditingKeyPoints(false)
-      setIsEditingStumbledPoints(false)
-    },
-  })
+  const updateNoteMutation = useUpdateNoteDetail(noteId)
+  const updateNote = (updates: { userMemo?: string; keyPoints?: string[]; stumbledPoints?: string[] }) => {
+    updateNoteMutation.mutate(updates, {
+      onSuccess: () => {
+        setIsEditingMemo(false)
+        setIsEditingKeyPoints(false)
+        setIsEditingStumbledPoints(false)
+      },
+    })
+  }
+  const isPending = updateNoteMutation.isPending
 
   if (isLoading) {
     return (

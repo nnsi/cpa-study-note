@@ -4,7 +4,6 @@ import { secureHeaders } from "hono/secure-headers"
 import { logger } from "./shared/middleware/logger"
 import { createDb } from "@cpa-study/db"
 import { createAuthFeature } from "./features/auth"
-import { createTopicFeature } from "./features/topic"
 import { createChatFeature } from "./features/chat"
 import { createNoteFeature } from "./features/note"
 import { createImageFeature } from "./features/image"
@@ -12,6 +11,11 @@ import { createMetricsFeature } from "./features/metrics"
 import { createStudyDomainFeature } from "./features/study-domain"
 import { createSubjectFeature } from "./features/subject"
 import { createBookmarkFeature } from "./features/bookmark"
+import { createLearningFeature } from "./features/learning"
+import { createViewFeature } from "./features/view"
+import { createExerciseFeature } from "./features/exercise"
+import { createTopicGeneratorFeature } from "./features/topic-generator"
+import { createStudyPlanFeature } from "./features/study-plan"
 import {
   createRateLimitStore,
   createRateLimiterFactory,
@@ -102,19 +106,26 @@ const createApp = (env: Env) => {
     // AI系は中程度（20 req/min）
     .use("/api/chat/sessions/*/messages", limiter.moderate())
     .use("/api/images/*/ocr", limiter.moderate())
+    .use("/api/exercises/analyze", limiter.moderate())
     .use("/api/notes", limiter.moderate())
+    .use("/api/topic-generator/*", limiter.moderate())
     // その他は緩め（100 req/min）
     // rateLimitApplied フラグにより、上記で適用済みの場合はスキップされる
     .use("/api/*", limiter.lenient())
     .route("/api/auth", createAuthFeature(env, db))
-    .route("/api/subjects", createTopicFeature(env, db))
     .route("/api/chat", createChatFeature(env, db))
     .route("/api/notes", createNoteFeature(env, db))
     .route("/api/images", createImageFeature(env, db))
     .route("/api/metrics", createMetricsFeature(env, db))
     .route("/api/study-domains", createStudyDomainFeature(env, db))
-    .route("/api", createSubjectFeature(env, db))
+    .route("/api/subjects", createSubjectFeature(env, db))
     .route("/api/bookmarks", createBookmarkFeature(env, db))
+    .route("/api/learning", createLearningFeature(env, db))
+    .route("/api/view", createViewFeature(env, db))
+    .route("/api/exercises", createExerciseFeature(env, db))
+    .route("/api/topic-generator", createTopicGeneratorFeature(env, db))
+    .use("/api/study-plans/*/suggest", limiter.moderate())
+    .route("/api/study-plans", createStudyPlanFeature(env, db))
     .get("/api/health", (c) => c.json({ status: "ok" }))
     .onError((error, c) => {
       // ローカル環境では詳細なエラー情報を出力
@@ -138,7 +149,19 @@ const createApp = (env: Env) => {
           console.error(`  Error:`, error)
         }
       }
-      return c.json({ error: "Internal Server Error" }, 500)
+      return c.json(
+        {
+          error: {
+            code: "INTERNAL_ERROR",
+            message: "Internal Server Error",
+            ...(env.ENVIRONMENT === "local" &&
+              error instanceof Error && {
+                details: { name: error.name, path: c.req.path },
+              }),
+          },
+        },
+        500
+      )
     })
 
   return app

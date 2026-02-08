@@ -66,7 +66,7 @@ export const TopicFilter = ({
               )
             }
             placeholder="0"
-            className="w-20 px-3 py-2 border border-ink-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            className="input-field w-20 text-sm"
           />
           <span className="text-sm text-ink-600">件以上</span>
         </div>
@@ -89,36 +89,9 @@ export const TopicFilter = ({
               )
             }
             placeholder="0"
-            className="w-20 px-3 py-2 border border-ink-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            className="input-field w-20 text-sm"
           />
           <span className="text-sm text-ink-600">日以上</span>
-        </div>
-      </div>
-
-      {/* チェック後のチャット */}
-      <div>
-        <label className="block text-sm font-medium text-ink-700 mb-2">
-          チェック後のチャット
-        </label>
-        <div className="flex flex-wrap gap-2">
-          <FilterButton
-            active={filters.hasPostCheckChat === undefined}
-            onClick={() => onUpdateFilter("hasPostCheckChat", undefined)}
-          >
-            すべて
-          </FilterButton>
-          <FilterButton
-            active={filters.hasPostCheckChat === true}
-            onClick={() => onUpdateFilter("hasPostCheckChat", true)}
-          >
-            あり
-          </FilterButton>
-          <FilterButton
-            active={filters.hasPostCheckChat === false}
-            onClick={() => onUpdateFilter("hasPostCheckChat", false)}
-          >
-            なし
-          </FilterButton>
         </div>
       </div>
 
@@ -139,7 +112,7 @@ export const TopicFilter = ({
               )
             }
             placeholder="0"
-            className="w-20 px-3 py-2 border border-ink-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            className="input-field w-20 text-sm"
           />
           <span className="text-sm text-ink-600">件以上</span>
         </div>
@@ -156,7 +129,7 @@ export const TopicFilter = ({
         </button>
         <button
           onClick={onReset}
-          className="px-4 py-2.5 text-sm font-medium text-ink-600 hover:text-ink-800 hover:bg-ink-100 rounded-xl transition-colors"
+          className="btn-ghost py-2.5"
         >
           リセット
         </button>

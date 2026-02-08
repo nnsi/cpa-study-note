@@ -8,6 +8,7 @@ import {
   subjects,
   studyDomains,
 } from "@cpa-study/db/schema"
+import type { MessageRole, QuestionQuality } from "@cpa-study/shared/schemas"
 
 export type ChatSession = {
   id: string
@@ -20,11 +21,11 @@ export type ChatSession = {
 export type ChatMessage = {
   id: string
   sessionId: string
-  role: string
+  role: MessageRole
   content: string
   imageId: string | null
   ocrResult: string | null
-  questionQuality: string | null
+  questionQuality: QuestionQuality
   createdAt: Date
 }
 
@@ -65,6 +66,19 @@ export type SessionWithStats = {
   firstMessagePreview: string | null
 }
 
+export type GoodQuestion = {
+  id: string
+  sessionId: string
+  content: string
+  createdAt: Date
+}
+
+export type ContextMessage = {
+  role: string
+  content: string
+  ocrResult: string | null
+}
+
 export type ChatRepository = {
   createSession: (data: { userId: string; topicId: string }) => Promise<ChatSession>
   findSessionById: (id: string) => Promise<ChatSession | null>
@@ -76,7 +90,9 @@ export type ChatRepository = {
   createMessage: (data: Omit<ChatMessage, "id" | "createdAt">) => Promise<ChatMessage>
   findMessageById: (id: string) => Promise<ChatMessage | null>
   findMessagesBySession: (sessionId: string) => Promise<ChatMessage[]>
+  findRecentMessagesForContext: (sessionId: string, limit?: number) => Promise<ContextMessage[]>
   updateMessageQuality: (id: string, quality: string, reason?: string) => Promise<void>
+  findGoodQuestionsByTopic: (userId: string, topicId: string) => Promise<GoodQuestion[]>
 }
 
 export const createChatRepository = (db: Db): ChatRepository => ({
@@ -288,15 +304,56 @@ export const createChatRepository = (db: Db): ChatRepository => ({
       .from(chatMessages)
       .where(eq(chatMessages.id, id))
       .limit(1)
-    return result[0] ?? null
+    const row = result[0]
+    if (!row) return null
+    return {
+      id: row.id,
+      sessionId: row.sessionId,
+      role: row.role as MessageRole,
+      content: row.content,
+      imageId: row.imageId,
+      ocrResult: row.ocrResult,
+      questionQuality: row.questionQuality as QuestionQuality,
+      createdAt: row.createdAt,
+    }
   },
 
   findMessagesBySession: async (sessionId) => {
-    return db
+    const rows = await db
       .select()
       .from(chatMessages)
       .where(eq(chatMessages.sessionId, sessionId))
       .orderBy(chatMessages.createdAt)
+    return rows.map((row) => ({
+      id: row.id,
+      sessionId: row.sessionId,
+      role: row.role as MessageRole,
+      content: row.content,
+      imageId: row.imageId,
+      ocrResult: row.ocrResult,
+      questionQuality: row.questionQuality as QuestionQuality,
+      createdAt: row.createdAt,
+    }))
+  },
+
+  // AI context構築用: 必要カラムのみ取得・最新N件に制限
+  findRecentMessagesForContext: async (sessionId, limit = 20) => {
+    const rows = await db
+      .select({
+        role: chatMessages.role,
+        content: chatMessages.content,
+        ocrResult: chatMessages.ocrResult,
+      })
+      .from(chatMessages)
+      .where(eq(chatMessages.sessionId, sessionId))
+      .orderBy(desc(chatMessages.createdAt))
+      .limit(limit)
+    // 降順で取得したので昇順に戻す
+    return rows.reverse().map((row) => ({
+      role: row.role,
+      content: row.content,
+      ocrResult: row.ocrResult,
+    }))
   },
 
   updateMessageQuality: async (id, quality, reason) => {
@@ -307,5 +364,27 @@ export const createChatRepository = (db: Db): ChatRepository => ({
         questionQualityReason: reason ?? null,
       })
       .where(eq(chatMessages.id, id))
+  },
+
+  // トピックに紐づくgood質問を一括取得
+  findGoodQuestionsByTopic: async (userId: string, topicId: string) => {
+    return db
+      .select({
+        id: chatMessages.id,
+        sessionId: chatMessages.sessionId,
+        content: chatMessages.content,
+        createdAt: chatMessages.createdAt,
+      })
+      .from(chatMessages)
+      .innerJoin(chatSessions, eq(chatMessages.sessionId, chatSessions.id))
+      .where(
+        and(
+          eq(chatSessions.userId, userId),
+          eq(chatSessions.topicId, topicId),
+          eq(chatMessages.role, "user"),
+          eq(chatMessages.questionQuality, "good")
+        )
+      )
+      .orderBy(desc(chatMessages.createdAt))
   },
 })

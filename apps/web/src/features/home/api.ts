@@ -1,28 +1,23 @@
 import { api } from "@/lib/api-client"
+import {
+  type TodayMetrics,
+  type RecentTopic,
+  todayMetricsResponseSchema,
+  recentTopicsResponseSchema,
+} from "@cpa-study/shared"
 
-export type TodayMetrics = {
-  sessionCount: number
-  messageCount: number
-  checkedTopicCount: number
-}
+export type { TodayMetrics, RecentTopic }
 
-export type RecentTopic = {
-  topicId: string
-  topicName: string
-  subjectId: string
-  subjectName: string
-  categoryId: string
-  lastAccessedAt: string
-}
-
-export const getTodayMetrics = async (): Promise<{ metrics: TodayMetrics }> => {
+export const getTodayMetrics = async () => {
   const res = await api.api.metrics.today.$get()
-  if (!res.ok) throw new Error("Failed to fetch today metrics")
-  return res.json()
+  if (!res.ok) throw new Error("今日の学習指標の取得に失敗しました")
+  const data = await res.json()
+  return todayMetricsResponseSchema.parse(data)
 }
 
-export const getRecentTopics = async (): Promise<{ topics: RecentTopic[] }> => {
-  const res = await api.api.subjects.progress.recent.$get()
-  if (!res.ok) throw new Error("Failed to fetch recent topics")
-  return res.json()
+export const getRecentTopics = async () => {
+  const res = await api.api.learning.topics.recent.$get({ query: {} })
+  if (!res.ok) throw new Error("最近の論点の取得に失敗しました")
+  const data = await res.json()
+  return recentTopicsResponseSchema.parse(data)
 }

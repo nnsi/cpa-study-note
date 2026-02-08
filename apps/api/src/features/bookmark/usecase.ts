@@ -1,8 +1,10 @@
 import type { BookmarkTargetType } from "@cpa-study/db/schema"
 import type { BookmarkRepository } from "./repository"
 import type { BookmarkWithDetails } from "@cpa-study/shared/schemas"
+import { ok, err, type Result } from "@/shared/lib/result"
+import { notFound, type AppError } from "@/shared/lib/errors"
 
-type BookmarkDeps = {
+export type BookmarkDeps = {
   repo: BookmarkRepository
 }
 
@@ -10,15 +12,15 @@ type BookmarkDeps = {
 export const getBookmarks = async (
   deps: BookmarkDeps,
   userId: string
-): Promise<BookmarkWithDetails[]> => {
+): Promise<Result<BookmarkWithDetails[], AppError>> => {
   const { repo } = deps
   const bookmarks = await repo.findBookmarksByUser(userId)
 
-  // ブックマークの詳細情報を取得
+  // ブックマークの詳細情報を取得（ユーザー境界と削除フラグを考慮）
   const bookmarksWithDetails: BookmarkWithDetails[] = []
 
   for (const bookmark of bookmarks) {
-    const details = await repo.getBookmarkDetails(bookmark.targetType, bookmark.targetId)
+    const details = await repo.getBookmarkDetails(bookmark.targetType, bookmark.targetId, userId)
 
     if (details) {
       bookmarksWithDetails.push({
@@ -35,7 +37,7 @@ export const getBookmarks = async (
     }
   }
 
-  return bookmarksWithDetails
+  return ok(bookmarksWithDetails)
 }
 
 // ブックマーク追加
@@ -44,23 +46,36 @@ export const addBookmark = async (
   userId: string,
   targetType: BookmarkTargetType,
   targetId: string
-): Promise<{ success: boolean; alreadyExists?: boolean }> => {
+): Promise<Result<{ bookmark: BookmarkWithDetails | null; alreadyExists: boolean }, AppError>> => {
   const { repo } = deps
 
-  // 対象が存在するか確認
-  const exists = await repo.targetExists(targetType, targetId)
+  // 対象が存在するか確認（ユーザー境界と削除フラグを考慮）
+  const exists = await repo.targetExists(targetType, targetId, userId)
   if (!exists) {
-    return { success: false }
+    return err(notFound("ブックマーク対象が見つかりません"))
   }
 
   // ブックマーク追加（冪等、重複は無視）
   const result = await repo.addBookmark(userId, targetType, targetId)
 
-  if (result.alreadyExists) {
-    return { success: true, alreadyExists: true }
-  }
+  // 追加されたブックマークの詳細を取得
+  const details = await repo.getBookmarkDetails(targetType, targetId, userId)
+  const bookmark: BookmarkWithDetails | null =
+    details && result.bookmark
+      ? {
+          id: result.bookmark.id,
+          targetType,
+          targetId,
+          name: details.name,
+          path: details.path,
+          domainId: details.domainId,
+          subjectId: details.subjectId,
+          categoryId: details.categoryId,
+          createdAt: result.bookmark.createdAt.toISOString(),
+        }
+      : null
 
-  return { success: true }
+  return ok({ bookmark, alreadyExists: result.alreadyExists })
 }
 
 // ブックマーク削除
@@ -69,7 +84,13 @@ export const removeBookmark = async (
   userId: string,
   targetType: BookmarkTargetType,
   targetId: string
-): Promise<boolean> => {
+): Promise<Result<void, AppError>> => {
   const { repo } = deps
-  return repo.removeBookmark(userId, targetType, targetId)
+  const removed = await repo.removeBookmark(userId, targetType, targetId)
+
+  if (!removed) {
+    return err(notFound("ブックマークが見つかりません"))
+  }
+
+  return ok(undefined)
 }

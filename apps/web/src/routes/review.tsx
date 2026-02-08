@@ -8,7 +8,6 @@ type ReviewSearch = {
   minSessionCount?: string
   daysSinceLastChat?: string
   understood?: string
-  hasPostCheckChat?: string
   minGoodQuestionCount?: string
 }
 
@@ -26,10 +25,6 @@ export const Route = createFileRoute("/review")({
           : undefined,
       understood:
         typeof search.understood === "string" ? search.understood : undefined,
-      hasPostCheckChat:
-        typeof search.hasPostCheckChat === "string"
-          ? search.hasPostCheckChat
-          : undefined,
       minGoodQuestionCount:
         typeof search.minGoodQuestionCount === "string"
           ? search.minGoodQuestionCount

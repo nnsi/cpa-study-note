@@ -164,7 +164,7 @@ describe("Auth UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (result.ok) return
-      expect(result.error).toBe("PROVIDER_NOT_FOUND")
+      expect(result.error.code).toBe("NOT_FOUND")
     })
 
     it("should return error when token exchange fails", async () => {
@@ -179,7 +179,7 @@ describe("Auth UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (result.ok) return
-      expect(result.error).toBe("TOKEN_EXCHANGE_FAILED")
+      expect(result.error.code).toBe("UNAUTHORIZED")
     })
 
     it("should return error when access token is missing", async () => {
@@ -196,7 +196,7 @@ describe("Auth UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (result.ok) return
-      expect(result.error).toBe("TOKEN_EXCHANGE_FAILED")
+      expect(result.error.code).toBe("UNAUTHORIZED")
     })
 
     it("should return error when getUserInfo fails", async () => {
@@ -211,7 +211,7 @@ describe("Auth UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (result.ok) return
-      expect(result.error).toBe("USER_INFO_FAILED")
+      expect(result.error.code).toBe("UNAUTHORIZED")
     })
   })
 
@@ -269,7 +269,7 @@ describe("Auth UseCase", () => {
       const tokenHash = await hashToken(rawToken)
       const expiresAt = new Date(Date.now() - 1000) // Expired 1 second ago
 
-      const savedToken = await repo.saveRefreshToken({
+      await repo.saveRefreshToken({
         userId: testData.userId,
         tokenHash,
         expiresAt,
@@ -284,7 +284,7 @@ describe("Auth UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (result.ok) return
-      expect(result.error).toBe("REFRESH_TOKEN_EXPIRED")
+      expect(result.error.code).toBe("UNAUTHORIZED")
 
       // Verify token was deleted
       const found = await repo.findRefreshTokenByHash(tokenHash)
@@ -303,7 +303,7 @@ describe("Auth UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (result.ok) return
-      expect(result.error).toBe("INVALID_REFRESH_TOKEN")
+      expect(result.error.code).toBe("UNAUTHORIZED")
       expect(mockGenerateAccessToken).not.toHaveBeenCalled()
     })
 
@@ -327,8 +327,6 @@ describe("Auth UseCase", () => {
 
       // Now manually delete the user's association by finding with wrong ID
       // Since we can't really delete user from repo, we test with non-existent user
-      const rawToken2 = "token-for-nonexistent-user"
-      const tokenHash2 = await hashToken(rawToken2)
 
       // Manually insert token with non-existent user ID using the TestDatabase
       // But since repo only works with real users, this scenario would need

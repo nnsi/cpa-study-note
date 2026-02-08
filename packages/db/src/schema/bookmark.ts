@@ -1,8 +1,5 @@
 import { sqliteTable, text, integer, unique, index } from "drizzle-orm/sqlite-core"
 import { users } from "./users"
-import { subjects } from "./topics"
-import { categories } from "./topics"
-import { topics } from "./topics"
 
 /**
  * ブックマーク対象の種類

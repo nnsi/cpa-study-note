@@ -75,6 +75,10 @@ const mockCreatedNote = {
     createdAt: "2024-01-17T10:30:00.000Z",
     updatedAt: "2024-01-17T10:30:00.000Z",
     source: "chat" as const,
+    subjectId: "subject-1",
+    categoryId: "category-1",
+    subjectName: "テスト科目",
+    topicName: "テスト論点",
   },
 }
 

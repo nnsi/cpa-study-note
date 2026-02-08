@@ -13,7 +13,7 @@ import {
   type CategoryNode,
 } from "@/features/subject/api"
 import { filterTopics, type FilteredTopic } from "@/features/review/api"
-import { api } from "@/lib/api-client"
+import { getMyProgress } from "@/features/progress/api"
 import { useDebounce } from "@/lib/hooks/useDebounce"
 import { BulkCSVImporter } from "@/features/subject/components/BulkCSVImporter"
 
@@ -64,7 +64,7 @@ function SubjectsPage() {
 
   // Fetch tree for expanded subject
   const { data: treeData, isLoading: isTreeLoading } = useQuery({
-    queryKey: ["subject-tree", expandedSubjectId],
+    queryKey: ["subjects", expandedSubjectId, "tree"],
     queryFn: () => getSubjectTree(expandedSubjectId!),
     enabled: !!expandedSubjectId,
   })
@@ -72,11 +72,7 @@ function SubjectsPage() {
   // Fetch user progress
   const { data: progressData } = useQuery({
     queryKey: ["progress", "me"],
-    queryFn: async () => {
-      const res = await api.api.subjects.progress.me.$get()
-      if (!res.ok) throw new Error("進捗の取得に失敗しました")
-      return res.json()
-    },
+    queryFn: getMyProgress,
   })
 
   // Fetch topic stats
@@ -182,15 +178,26 @@ function SubjectsPage() {
           </div>
           <div className="flex items-center justify-between">
             <h1 className="heading-serif text-2xl lg:text-3xl">科目一覧</h1>
-            <button
-              onClick={() => setShowImporter(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors text-sm font-medium"
-            >
-              <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
-              </svg>
-              CSVインポート
-            </button>
+            <div className="flex items-center gap-2">
+              <Link
+                to="/exercises"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors text-sm font-medium"
+              >
+                <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                </svg>
+                問題チェック
+              </Link>
+              <button
+                onClick={() => setShowImporter(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors text-sm font-medium"
+              >
+                <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                </svg>
+                CSVインポート
+              </button>
+            </div>
           </div>
         </div>
 

@@ -4,7 +4,7 @@ import type { Db } from "@cpa-study/db"
 import { uploadImageRequestSchema } from "@cpa-study/shared/schemas"
 import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
-import { createAIAdapter } from "@/shared/lib/ai"
+import { createAIAdapter, resolveAIConfig } from "@/shared/lib/ai"
 import { createImageRepository } from "./repository"
 import {
   createUploadUrl,
@@ -13,6 +13,9 @@ import {
   getImage,
   getImageFile,
 } from "./usecase"
+import { handleResult, handleResultWith } from "@/shared/lib/route-helpers"
+import { payloadTooLarge } from "@/shared/lib/errors"
+import { err } from "@/shared/lib/result"
 
 // 10MB制限
 const MAX_UPLOAD_SIZE = 10 * 1024 * 1024
@@ -24,6 +27,7 @@ type ImageDeps = {
 
 export const imageRoutes = ({ env, db }: ImageDeps) => {
   const imageRepo = createImageRepository(db)
+  const aiConfig = resolveAIConfig(env.ENVIRONMENT)
 
   const app = new Hono<{ Bindings: Env; Variables: Variables }>()
     // アップロードURL取得
@@ -52,7 +56,7 @@ export const imageRoutes = ({ env, db }: ImageDeps) => {
 
       // サイズ制限チェック
       if (body.byteLength > MAX_UPLOAD_SIZE) {
-        return c.json({ error: "File too large (max 10MB)" }, 413)
+        return handleResult(c, err(payloadTooLarge("ファイルサイズが大きすぎます（最大10MB）")))
       }
 
       const result = await uploadImage(
@@ -63,7 +67,7 @@ export const imageRoutes = ({ env, db }: ImageDeps) => {
       )
 
       if (!result.ok) {
-        return c.json({ error: result.error }, result.status as 404 | 403)
+        return handleResult(c, result)
       }
 
       return c.json({ success: true })
@@ -80,16 +84,12 @@ export const imageRoutes = ({ env, db }: ImageDeps) => {
       })
 
       const result = await performOCR(
-        { imageRepo, aiAdapter, r2: env.R2, apiBaseUrl: env.API_BASE_URL },
+        { imageRepo, aiAdapter, aiConfig, r2: env.R2 },
         user.id,
         imageId
       )
 
-      if (!result.ok) {
-        return c.json({ error: result.error }, result.status as 404 | 403)
-      }
-
-      return c.json({ imageId: result.imageId, ocrText: result.ocrText })
+      return handleResult(c, result)
     })
 
     // 画像取得
@@ -98,12 +98,7 @@ export const imageRoutes = ({ env, db }: ImageDeps) => {
       const imageId = c.req.param("imageId")
 
       const result = await getImage({ imageRepo }, user.id, imageId)
-
-      if (!result.ok) {
-        return c.json({ error: result.error }, result.status as 404 | 403)
-      }
-
-      return c.json({ image: result.image })
+      return handleResultWith(c, result, (image) => ({ image }))
     })
 
     // 画像ファイル取得（バイナリ）
@@ -118,12 +113,12 @@ export const imageRoutes = ({ env, db }: ImageDeps) => {
       )
 
       if (!result.ok) {
-        return c.json({ error: result.error }, result.status as 404 | 403)
+        return handleResult(c, result)
       }
 
-      return new Response(result.body, {
+      return new Response(result.value.body, {
         headers: {
-          "Content-Type": result.mimeType,
+          "Content-Type": result.value.mimeType,
           "Cache-Control": "private, max-age=3600",
         },
       })

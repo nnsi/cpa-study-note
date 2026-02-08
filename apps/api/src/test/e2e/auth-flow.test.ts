@@ -17,7 +17,10 @@ const providersResponseSchema = z.object({
 })
 
 const errorResponseSchema = z.object({
-  error: z.string(),
+  error: z.object({
+    code: z.string(),
+    message: z.string(),
+  }),
 })
 
 const authUserSchema = z.object({
@@ -78,7 +81,7 @@ describe("E2E: Auth Flow", () => {
 
       expect(res.status).toBe(400)
       const data = errorResponseSchema.parse(await res.json())
-      expect(data.error).toBe("Missing code")
+      expect(data.error.message).toBe("Missing code")
     })
 
     it("should fail callback with invalid state", async () => {
@@ -88,7 +91,7 @@ describe("E2E: Auth Flow", () => {
 
       expect(res.status).toBe(400)
       const data = errorResponseSchema.parse(await res.json())
-      expect(data.error).toBe("Invalid state")
+      expect(data.error.message).toBe("Invalid state")
     })
 
     // Note: Full OAuth callback success flow is tested at the route level
@@ -158,14 +161,6 @@ describe("E2E: Auth Flow", () => {
       expect(setCookie).toContain("refresh_token=")
     })
 
-    // Note: This test requires a separate app instance with production env.
-    // Since the app is initialized with env at creation time, changing env
-    // at request time doesn't work. We'll skip this test as it's an
-    // integration concern rather than an E2E flow test.
-    it.skip("should reject dev login in non-local environment", async () => {
-      // Would need to create a new app instance with ENVIRONMENT: "production"
-      expect(true).toBe(true)
-    })
   })
 
   describe("Token Refresh Flow", () => {
@@ -211,7 +206,7 @@ describe("E2E: Auth Flow", () => {
 
       expect(res.status).toBe(401)
       const data = errorResponseSchema.parse(await res.json())
-      expect(data.error).toBe("No refresh token")
+      expect(data.error.message).toBe("No refresh token")
     })
 
     it("should fail refresh with invalid refresh token", async () => {

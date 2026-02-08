@@ -105,3 +105,10 @@ export const csvImportResponseSchema = z.object({
 })
 
 export type CSVImportResponse = z.infer<typeof csvImportResponseSchema>
+
+// ツリー詳細レスポンス（APIラッパー）
+export const treeDetailResponseSchema = z.object({
+  tree: treeResponseSchema,
+})
+
+export type TreeDetailResponse = z.infer<typeof treeDetailResponseSchema>

@@ -39,3 +39,33 @@ export const studyDomainResponseSchema = studyDomainSchema.omit({ deletedAt: tru
 export type StudyDomainResponse = z.infer<typeof studyDomainResponseSchema>
 
 export const studyDomainsResponseSchema = z.array(studyDomainResponseSchema)
+
+// API response wrapper schemas
+export const studyDomainListResponseSchema = z.object({
+  studyDomains: studyDomainsResponseSchema,
+})
+
+export type StudyDomainListResponse = z.infer<typeof studyDomainListResponseSchema>
+
+export const studyDomainSingleResponseSchema = z.object({
+  studyDomain: studyDomainResponseSchema,
+})
+
+export type StudyDomainSingleResponse = z.infer<typeof studyDomainSingleResponseSchema>
+
+// Bulk CSV import response
+export const bulkCSVImportResponseSchema = z.object({
+  success: z.boolean(),
+  imported: z.object({
+    subjects: z.number(),
+    categories: z.number(),
+    subcategories: z.number(),
+    topics: z.number(),
+  }),
+  errors: z.array(z.object({
+    line: z.number(),
+    message: z.string(),
+  })),
+})
+
+export type BulkCSVImportResponse = z.infer<typeof bulkCSVImportResponseSchema>

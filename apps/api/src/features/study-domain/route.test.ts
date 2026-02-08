@@ -45,7 +45,7 @@ describe("Study Domain Routes", () => {
     ctx = setupTestContext()
 
     // Create routes
-    const routes = studyDomainRoutes({ env: ctx.env, db: ctx.db as any })
+    const routes = studyDomainRoutes({ db: ctx.db as any })
 
     // Mount on main app with environment setup
     app = new Hono<{ Bindings: Env; Variables: Variables }>()
@@ -149,7 +149,7 @@ describe("Study Domain Routes", () => {
     it("should require authentication", async () => {
       const prodEnv = { ...ctx.env, ENVIRONMENT: "production" as const }
       const prodApp = new Hono<{ Bindings: Env; Variables: Variables }>()
-      prodApp.route("/study-domains", studyDomainRoutes({ env: prodEnv, db: ctx.db as any }))
+      prodApp.route("/study-domains", studyDomainRoutes({ db: ctx.db as any }))
 
       const res = await prodApp.request("/study-domains", {}, prodEnv)
 
@@ -189,7 +189,7 @@ describe("Study Domain Routes", () => {
 
       expect(res.status).toBe(404)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("学習領域が見つかりません")
+      expect(body.error.message).toBe("学習領域が見つかりません")
     })
 
     it("should return 404 when domain belongs to other user", async () => {
@@ -226,7 +226,7 @@ describe("Study Domain Routes", () => {
     it("should require authentication", async () => {
       const prodEnv = { ...ctx.env, ENVIRONMENT: "production" as const }
       const prodApp = new Hono<{ Bindings: Env; Variables: Variables }>()
-      prodApp.route("/study-domains", studyDomainRoutes({ env: prodEnv, db: ctx.db as any }))
+      prodApp.route("/study-domains", studyDomainRoutes({ db: ctx.db as any }))
 
       const res = await prodApp.request("/study-domains/any", {}, prodEnv)
 
@@ -281,7 +281,7 @@ describe("Study Domain Routes", () => {
     it("should require authentication", async () => {
       const prodEnv = { ...ctx.env, ENVIRONMENT: "production" as const }
       const prodApp = new Hono<{ Bindings: Env; Variables: Variables }>()
-      prodApp.route("/study-domains", studyDomainRoutes({ env: prodEnv, db: ctx.db as any }))
+      prodApp.route("/study-domains", studyDomainRoutes({ db: ctx.db as any }))
 
       const res = await prodApp.request(
         "/study-domains",
@@ -367,7 +367,7 @@ describe("Study Domain Routes", () => {
 
       expect(res.status).toBe(404)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("学習領域が見つかりません")
+      expect(body.error.message).toBe("学習領域が見つかりません")
     })
 
     it("should return 404 when domain belongs to other user", async () => {
@@ -408,7 +408,7 @@ describe("Study Domain Routes", () => {
     it("should require authentication", async () => {
       const prodEnv = { ...ctx.env, ENVIRONMENT: "production" as const }
       const prodApp = new Hono<{ Bindings: Env; Variables: Variables }>()
-      prodApp.route("/study-domains", studyDomainRoutes({ env: prodEnv, db: ctx.db as any }))
+      prodApp.route("/study-domains", studyDomainRoutes({ db: ctx.db as any }))
 
       const res = await prodApp.request(
         "/study-domains/any",
@@ -462,10 +462,10 @@ describe("Study Domain Routes", () => {
 
       expect(res.status).toBe(404)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("学習領域が見つかりません")
+      expect(body.error.message).toBe("学習領域が見つかりません")
     })
 
-    it("should return 409 when subjects are attached", async () => {
+    it("should cascade soft-delete subjects when domain is deleted", async () => {
       const now = new Date()
       ctx.db
         .insert(schema.studyDomains)
@@ -496,9 +496,15 @@ describe("Study Domain Routes", () => {
         headers: createAuthHeaders(ctx.testData.userId),
       })
 
-      expect(res.status).toBe(409)
-      const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toContain("件の科目が紐づいています")
+      expect(res.status).toBe(200)
+      const body = await parseJson(res, successResponseSchema)
+      expect(body.success).toBe(true)
+
+      // Subject should also be soft-deleted
+      const subjectRes = await app.request("/study-domains/has-subjects", {
+        headers: createAuthHeaders(ctx.testData.userId),
+      })
+      expect(subjectRes.status).toBe(404)
     })
 
     it("should return 404 when domain belongs to other user", async () => {
@@ -536,7 +542,7 @@ describe("Study Domain Routes", () => {
     it("should require authentication", async () => {
       const prodEnv = { ...ctx.env, ENVIRONMENT: "production" as const }
       const prodApp = new Hono<{ Bindings: Env; Variables: Variables }>()
-      prodApp.route("/study-domains", studyDomainRoutes({ env: prodEnv, db: ctx.db as any }))
+      prodApp.route("/study-domains", studyDomainRoutes({ db: ctx.db as any }))
 
       const res = await prodApp.request(
         "/study-domains/any",

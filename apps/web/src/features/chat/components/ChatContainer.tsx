@@ -1,4 +1,5 @@
 import { useRef, useEffect, useCallback, useState } from "react"
+import { Link } from "@tanstack/react-router"
 import { useChat, useSpeechRecognition } from "../hooks"
 import { ChatMessageView } from "./ChatMessage"
 import { ChatInputView } from "./ChatInput"
@@ -8,10 +9,9 @@ type Props = {
   sessionId: string | null
   topicId: string
   onSessionCreated?: (sessionId: string) => void
-  onNavigateToNotes?: () => void
 }
 
-export const ChatContainer = ({ sessionId, topicId, onSessionCreated, onNavigateToNotes }: Props) => {
+export const ChatContainer = ({ sessionId, topicId, onSessionCreated }: Props) => {
   const { messages, input } = useChat({ sessionId, topicId, onSessionCreated })
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { mutate: createNote, isPending: isCreatingNote } = useCreateNote(topicId)
@@ -35,9 +35,12 @@ export const ChatContainer = ({ sessionId, topicId, onSessionCreated, onNavigate
   })
 
   // 新しいメッセージが追加されたら自動スクロール
+  // ストリーミング中はinstantスクロール（smooth だとアニメーションが毎回再起動してカクつく）
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages.displayMessages, input.pendingUserMessage, input.streamingText])
+    messagesEndRef.current?.scrollIntoView({
+      behavior: input.isStreaming ? "instant" : "smooth",
+    })
+  }, [messages.displayMessages, input.pendingUserMessage, input.streamingText, input.isStreaming])
 
   return (
     <div className="flex flex-col flex-1 min-h-0 min-w-0">
@@ -113,15 +116,16 @@ export const ChatContainer = ({ sessionId, topicId, onSessionCreated, onNavigate
         {messages.displayMessages.length > 0 && sessionId && (
           <div className="lg:hidden pt-3 pb-0">
             {existingNote?.note ? (
-              <button
-                onClick={onNavigateToNotes}
-                className="flex items-center justify-center gap-2 text-sm text-jade-600"
+              <Link
+                to="/notes/$noteId"
+                params={{ noteId: existingNote.note.id }}
+                className="flex items-center justify-center gap-2 text-sm text-jade-600 hover:text-jade-700"
               >
                 <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                 </svg>
-                ノートに記録済み
-              </button>
+                ノートを確認する
+              </Link>
             ) : (
               <button
                 onClick={() => {
@@ -167,12 +171,13 @@ export const ChatContainer = ({ sessionId, topicId, onSessionCreated, onNavigate
                 </svg>
                 <span className="text-sm font-medium">ノートに記録済み</span>
               </div>
-              <button
-                onClick={onNavigateToNotes}
+              <Link
+                to="/notes/$noteId"
+                params={{ noteId: existingNote.note.id }}
                 className="text-sm text-indigo-500 hover:text-indigo-600 hover:underline"
               >
                 確認する
-              </button>
+              </Link>
             </div>
           ) : (
             <button
@@ -205,6 +210,19 @@ export const ChatContainer = ({ sessionId, topicId, onSessionCreated, onNavigate
         </div>
       )}
 
+      {/* チャットエラー表示 */}
+      {input.error && (
+        <div className="mx-4 mb-2 px-4 py-2.5 bg-crimson-50 border border-crimson-200 text-crimson-700 text-sm rounded-xl animate-fade-in flex items-start gap-2">
+          <svg className="size-5 flex-shrink-0 mt-0.5 text-crimson-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+          </svg>
+          <div>
+            <p className="font-medium">応答を取得できませんでした</p>
+            <p className="text-xs text-crimson-600 mt-0.5">もう一度お試しください</p>
+          </div>
+        </div>
+      )}
+
       {/* 音声認識エラー表示 */}
       {speechError && (
         <div className="mx-4 mb-2 px-4 py-2 bg-crimson-50 border border-crimson-200 text-crimson-700 text-sm rounded-xl animate-fade-in">
@@ -219,11 +237,13 @@ export const ChatContainer = ({ sessionId, topicId, onSessionCreated, onNavigate
         ocrText={input.ocrText}
         isListening={isListening}
         isSpeechSupported={isSupported}
+        isCorrectingSpeech={input.isCorrectingSpeech}
         onContentChange={input.handleContentChange}
         onImageSelect={input.handleImageSelect}
         onImageClear={input.handleImageClear}
         onSubmit={input.handleSubmit}
         onToggleListening={toggleListening}
+        onCorrectSpeech={input.handleCorrectSpeech}
       />
     </div>
   )

@@ -1,5 +1,8 @@
 import type { ImageRepository } from "./repository"
-import type { AIAdapter } from "@/shared/lib/ai"
+import type { AIAdapter, AIConfig } from "@/shared/lib/ai"
+import type { Image as ImageResponse } from "@cpa-study/shared/schemas"
+import { ok, err, type Result } from "@/shared/lib/result"
+import { notFound, forbidden, badRequest, type AppError } from "@/shared/lib/errors"
 
 // ファイル名サニタイズ: パストラバーサル防止
 export const sanitizeFilename = (filename: string): string => {
@@ -40,19 +43,9 @@ const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
 type ImageDeps = {
   imageRepo: ImageRepository
   aiAdapter: AIAdapter
+  aiConfig: AIConfig
   r2: R2Bucket
   apiBaseUrl: string
-}
-
-type ImageResponse = {
-  id: string
-  userId: string
-  filename: string
-  mimeType: string
-  size: number
-  r2Key: string
-  ocrText: string | null
-  createdAt: string
 }
 
 type CreateUploadInput = {
@@ -112,23 +105,21 @@ export const uploadImage = async (
   userId: string,
   imageId: string,
   body: ArrayBuffer
-): Promise<
-  { ok: true } | { ok: false; error: string; status: number }
-> => {
+): Promise<Result<void, AppError>> => {
   const { imageRepo, r2 } = deps
 
   const image = await imageRepo.findById(imageId)
   if (!image) {
-    return { ok: false, error: "Image not found", status: 404 }
+    return err(notFound("画像が見つかりません"))
   }
 
   if (image.userId !== userId) {
-    return { ok: false, error: "Unauthorized", status: 403 }
+    return err(forbidden("この画像へのアクセス権限がありません"))
   }
 
   // マジックバイト検証: 宣言されたMIMEタイプと実際のファイル形式が一致するか確認
   if (!validateMagicBytes(body, image.mimeType)) {
-    return { ok: false, error: "Invalid file format", status: 400 }
+    return err(badRequest("ファイル形式が不正です"))
   }
 
   // R2にアップロード
@@ -138,32 +129,30 @@ export const uploadImage = async (
     },
   })
 
-  return { ok: true }
+  return ok(undefined)
 }
 
 // OCR実行
 export const performOCR = async (
-  deps: ImageDeps,
+  deps: Pick<ImageDeps, "imageRepo" | "aiAdapter" | "aiConfig" | "r2">,
   userId: string,
   imageId: string
-): Promise<
-  { ok: true; imageId: string; ocrText: string } | { ok: false; error: string; status: number }
-> => {
-  const { imageRepo, aiAdapter, r2 } = deps
+): Promise<Result<{ imageId: string; ocrText: string }, AppError>> => {
+  const { imageRepo, aiAdapter, aiConfig, r2 } = deps
 
   const image = await imageRepo.findById(imageId)
   if (!image) {
-    return { ok: false, error: "Image not found", status: 404 }
+    return err(notFound("画像が見つかりません"))
   }
 
   if (image.userId !== userId) {
-    return { ok: false, error: "Unauthorized", status: 403 }
+    return err(forbidden("この画像へのアクセス権限がありません"))
   }
 
   // R2から画像を取得
   const object = await r2.get(image.r2Key)
   if (!object) {
-    return { ok: false, error: "Image file not found", status: 404 }
+    return err(notFound("画像ファイルが見つかりません"))
   }
 
   const arrayBuffer = await object.arrayBuffer()
@@ -176,7 +165,7 @@ export const performOCR = async (
 数値や計算式は正確に抽出してください。`
 
   const result = await aiAdapter.generateText({
-    model: "openai/gpt-4o-mini",
+    model: aiConfig.ocr.model,
     messages: [
       {
         role: "user",
@@ -184,13 +173,13 @@ export const performOCR = async (
         imageUrl,
       },
     ],
-    temperature: 0,
-    maxTokens: 2000,
+    temperature: aiConfig.ocr.temperature,
+    maxTokens: aiConfig.ocr.maxTokens,
   })
 
   await imageRepo.updateOcrText(imageId, result.content)
 
-  return { ok: true, imageId, ocrText: result.content }
+  return ok({ imageId, ocrText: result.content })
 }
 
 // 画像取得
@@ -198,20 +187,18 @@ export const getImage = async (
   deps: Pick<ImageDeps, "imageRepo">,
   userId: string,
   imageId: string
-): Promise<
-  { ok: true; image: ImageResponse } | { ok: false; error: string; status: number }
-> => {
+): Promise<Result<ImageResponse, AppError>> => {
   const image = await deps.imageRepo.findById(imageId)
 
   if (!image) {
-    return { ok: false, error: "Image not found", status: 404 }
+    return err(notFound("画像が見つかりません"))
   }
 
   if (image.userId !== userId) {
-    return { ok: false, error: "Unauthorized", status: 403 }
+    return err(forbidden("この画像へのアクセス権限がありません"))
   }
 
-  return { ok: true, image: toImageResponse(image) }
+  return ok(toImageResponse(image))
 }
 
 // 画像ファイル取得（バイナリ）
@@ -219,26 +206,23 @@ export const getImageFile = async (
   deps: Pick<ImageDeps, "imageRepo" | "r2">,
   userId: string,
   imageId: string
-): Promise<
-  | { ok: true; body: ArrayBuffer; mimeType: string }
-  | { ok: false; error: string; status: number }
-> => {
+): Promise<Result<{ body: ArrayBuffer; mimeType: string }, AppError>> => {
   const { imageRepo, r2 } = deps
 
   const image = await imageRepo.findById(imageId)
   if (!image) {
-    return { ok: false, error: "Image not found", status: 404 }
+    return err(notFound("画像が見つかりません"))
   }
 
   if (image.userId !== userId) {
-    return { ok: false, error: "Unauthorized", status: 403 }
+    return err(forbidden("この画像へのアクセス権限がありません"))
   }
 
   const object = await r2.get(image.r2Key)
   if (!object) {
-    return { ok: false, error: "Image file not found", status: 404 }
+    return err(notFound("画像ファイルが見つかりません"))
   }
 
   const body = await object.arrayBuffer()
-  return { ok: true, body, mimeType: image.mimeType }
+  return ok({ body, mimeType: image.mimeType })
 }

@@ -1,8 +1,8 @@
 /// <reference types="@cloudflare/workers-types" />
-import { describe, it, expect, beforeEach, vi } from "vitest"
+import { describe, it, expect, beforeEach } from "vitest"
 import { createTestDatabase, seedTestData, type TestDatabase } from "../../test/mocks/db"
 import { createChatRepository, type ChatRepository } from "./repository"
-import { createTopicRepository, type TopicRepository } from "../topic/repository"
+import { createLearningRepository, type LearningRepository } from "../learning/repository"
 import { createMockAIAdapter } from "../../test/mocks/ai"
 import type { AIAdapter, StreamChunk } from "../../shared/lib/ai"
 import { defaultAIConfig } from "../../shared/lib/ai"
@@ -19,7 +19,7 @@ import {
 describe("Chat UseCase", () => {
   let db: TestDatabase
   let chatRepo: ChatRepository
-  let topicRepo: TopicRepository
+  let learningRepo: LearningRepository
   let testData: ReturnType<typeof seedTestData>
 
   beforeEach(() => {
@@ -29,13 +29,13 @@ describe("Chat UseCase", () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     chatRepo = createChatRepository(db as any)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    topicRepo = createTopicRepository(db as any)
+    learningRepo = createLearningRepository(db as any)
   })
 
   describe("createSession", () => {
     it("should create a new chat session", async () => {
       const result = await createSession(
-        { chatRepo, topicRepo },
+        { chatRepo, learningRepo },
         testData.userId,
         testData.topicId
       )
@@ -43,16 +43,16 @@ describe("Chat UseCase", () => {
       expect(result.ok).toBe(true)
       if (!result.ok) return
 
-      expect(result.session.id).toBeDefined()
-      expect(result.session.userId).toBe(testData.userId)
-      expect(result.session.topicId).toBe(testData.topicId)
-      expect(result.session.createdAt).toBeDefined()
-      expect(result.session.updatedAt).toBeDefined()
+      expect(result.value.id).toBeDefined()
+      expect(result.value.userId).toBe(testData.userId)
+      expect(result.value.topicId).toBe(testData.topicId)
+      expect(result.value.createdAt).toBeDefined()
+      expect(result.value.updatedAt).toBeDefined()
     })
 
     it("should reject session creation for non-existent topic", async () => {
       const result = await createSession(
-        { chatRepo, topicRepo },
+        { chatRepo, learningRepo },
         testData.userId,
         "non-existent-topic-id"
       )
@@ -60,8 +60,7 @@ describe("Chat UseCase", () => {
       expect(result.ok).toBe(false)
       if (result.ok) return
 
-      expect(result.error).toBe("Topic not found")
-      expect(result.status).toBe(404)
+      expect(result.error.code).toBe("NOT_FOUND")
     })
   })
 
@@ -107,21 +106,24 @@ describe("Chat UseCase", () => {
         questionQuality: null,
       })
 
-      const sessions = await listSessionsByTopic(
+      const result = await listSessionsByTopic(
         { chatRepo },
         testData.userId,
         testData.topicId
       )
 
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+
       // session2 has no messages, should be filtered out
-      expect(sessions).toHaveLength(2)
-      expect(sessions.find((s) => s.id === session1.id)).toBeDefined()
-      expect(sessions.find((s) => s.id === session3.id)).toBeDefined()
-      expect(sessions.find((s) => s.id === session2.id)).toBeUndefined()
+      expect(result.value).toHaveLength(2)
+      expect(result.value.find((s) => s.id === session1.id)).toBeDefined()
+      expect(result.value.find((s) => s.id === session3.id)).toBeDefined()
+      expect(result.value.find((s) => s.id === session2.id)).toBeUndefined()
 
       // Verify message counts
-      const s1 = sessions.find((s) => s.id === session1.id)
-      const s3 = sessions.find((s) => s.id === session3.id)
+      const s1 = result.value.find((s) => s.id === session1.id)
+      const s3 = result.value.find((s) => s.id === session3.id)
       expect(s1?.messageCount).toBe(2)
       expect(s3?.messageCount).toBe(1)
     })
@@ -133,13 +135,15 @@ describe("Chat UseCase", () => {
         topicId: testData.topicId,
       })
 
-      const sessions = await listSessionsByTopic(
+      const result = await listSessionsByTopic(
         { chatRepo },
         testData.userId,
         testData.topicId
       )
 
-      expect(sessions).toHaveLength(0)
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      expect(result.value).toHaveLength(0)
     })
   })
 
@@ -155,8 +159,8 @@ describe("Chat UseCase", () => {
       expect(result.ok).toBe(true)
       if (!result.ok) return
 
-      expect(result.session.id).toBe(session.id)
-      expect(result.session.userId).toBe(testData.userId)
+      expect(result.value.id).toBe(session.id)
+      expect(result.value.userId).toBe(testData.userId)
     })
 
     it("should reject access from other user", async () => {
@@ -170,8 +174,7 @@ describe("Chat UseCase", () => {
       expect(result.ok).toBe(false)
       if (result.ok) return
 
-      expect(result.error).toBe("Unauthorized")
-      expect(result.status).toBe(403)
+      expect(result.error.code).toBe("FORBIDDEN")
     })
 
     it("should return 404 for non-existent session", async () => {
@@ -184,8 +187,7 @@ describe("Chat UseCase", () => {
       expect(result.ok).toBe(false)
       if (result.ok) return
 
-      expect(result.error).toBe("Session not found")
-      expect(result.status).toBe(404)
+      expect(result.error.code).toBe("NOT_FOUND")
     })
   })
 
@@ -222,11 +224,11 @@ describe("Chat UseCase", () => {
       expect(result.ok).toBe(true)
       if (!result.ok) return
 
-      expect(result.messages).toHaveLength(2)
-      expect(result.messages[0].content).toBe("First message")
-      expect(result.messages[0].role).toBe("user")
-      expect(result.messages[1].content).toBe("Response")
-      expect(result.messages[1].role).toBe("assistant")
+      expect(result.value).toHaveLength(2)
+      expect(result.value[0].content).toBe("First message")
+      expect(result.value[0].role).toBe("user")
+      expect(result.value[1].content).toBe("Response")
+      expect(result.value[1].role).toBe("assistant")
     })
 
     it("should reject access from other user", async () => {
@@ -244,8 +246,7 @@ describe("Chat UseCase", () => {
       expect(result.ok).toBe(false)
       if (result.ok) return
 
-      expect(result.error).toBe("Unauthorized")
-      expect(result.status).toBe(403)
+      expect(result.error.code).toBe("FORBIDDEN")
     })
 
     it("should return 404 for non-existent session", async () => {
@@ -258,8 +259,7 @@ describe("Chat UseCase", () => {
       expect(result.ok).toBe(false)
       if (result.ok) return
 
-      expect(result.error).toBe("Session not found")
-      expect(result.status).toBe(404)
+      expect(result.error.code).toBe("NOT_FOUND")
     })
   })
 
@@ -280,7 +280,7 @@ describe("Chat UseCase", () => {
 
       const chunks: StreamChunk[] = []
       for await (const chunk of sendMessage(
-        { chatRepo, topicRepo, aiAdapter, aiConfig: defaultAIConfig },
+        { chatRepo, learningRepo, aiAdapter, aiConfig: defaultAIConfig },
         {
           sessionId: session.id,
           userId: testData.userId,
@@ -324,7 +324,7 @@ describe("Chat UseCase", () => {
 
       const chunks: StreamChunk[] = []
       for await (const chunk of sendMessage(
-        { chatRepo, topicRepo, aiAdapter: errorAdapter, aiConfig: defaultAIConfig },
+        { chatRepo, learningRepo, aiAdapter: errorAdapter, aiConfig: defaultAIConfig },
         {
           sessionId: session.id,
           userId: testData.userId,
@@ -349,7 +349,7 @@ describe("Chat UseCase", () => {
 
       const chunks: StreamChunk[] = []
       for await (const chunk of sendMessage(
-        { chatRepo, topicRepo, aiAdapter, aiConfig: defaultAIConfig },
+        { chatRepo, learningRepo, aiAdapter, aiConfig: defaultAIConfig },
         {
           sessionId: session.id,
           userId: "other-user-id",
@@ -372,7 +372,7 @@ describe("Chat UseCase", () => {
 
       const chunks: StreamChunk[] = []
       for await (const chunk of sendMessage(
-        { chatRepo, topicRepo, aiAdapter, aiConfig: defaultAIConfig },
+        { chatRepo, learningRepo, aiAdapter, aiConfig: defaultAIConfig },
         {
           sessionId: session.id,
           userId: testData.userId,
@@ -383,7 +383,7 @@ describe("Chat UseCase", () => {
       }
 
       // Verify progress was updated
-      const progress = await topicRepo.findProgress(
+      const progress = await learningRepo.findProgress(
         testData.userId,
         testData.topicId
       )
@@ -408,7 +408,7 @@ describe("Chat UseCase", () => {
       })
 
       for await (const _ of sendMessage(
-        { chatRepo, topicRepo, aiAdapter: trackingAdapter, aiConfig: defaultAIConfig },
+        { chatRepo, learningRepo, aiAdapter: trackingAdapter, aiConfig: defaultAIConfig },
         {
           sessionId: session.id,
           userId: testData.userId,
@@ -439,7 +439,7 @@ describe("Chat UseCase", () => {
     it("should create session and send message simultaneously", async () => {
       const chunks: (StreamChunk & { sessionId?: string })[] = []
       for await (const chunk of sendMessageWithNewSession(
-        { chatRepo, topicRepo, aiAdapter, aiConfig: defaultAIConfig },
+        { chatRepo, learningRepo, aiAdapter, aiConfig: defaultAIConfig },
         {
           topicId: testData.topicId,
           userId: testData.userId,
@@ -478,7 +478,7 @@ describe("Chat UseCase", () => {
     it("should reject for non-existent topic", async () => {
       const chunks: StreamChunk[] = []
       for await (const chunk of sendMessageWithNewSession(
-        { chatRepo, topicRepo, aiAdapter, aiConfig: defaultAIConfig },
+        { chatRepo, learningRepo, aiAdapter, aiConfig: defaultAIConfig },
         {
           topicId: "non-existent-topic",
           userId: testData.userId,
@@ -495,7 +495,7 @@ describe("Chat UseCase", () => {
 
     it("should update progress after message sent", async () => {
       for await (const _ of sendMessageWithNewSession(
-        { chatRepo, topicRepo, aiAdapter, aiConfig: defaultAIConfig },
+        { chatRepo, learningRepo, aiAdapter, aiConfig: defaultAIConfig },
         {
           topicId: testData.topicId,
           userId: testData.userId,
@@ -505,7 +505,7 @@ describe("Chat UseCase", () => {
         // consume
       }
 
-      const progress = await topicRepo.findProgress(
+      const progress = await learningRepo.findProgress(
         testData.userId,
         testData.topicId
       )
@@ -516,7 +516,7 @@ describe("Chat UseCase", () => {
   describe("evaluateQuestion", () => {
     it("should evaluate question as good", async () => {
       const goodAdapter = createMockAIAdapter({
-        textResponse: "good",
+        textResponse: '{"quality": "good", "reason": "理解の深さを問う質問"}',
       })
 
       const session = await chatRepo.createSession({
@@ -534,12 +534,14 @@ describe("Chat UseCase", () => {
       })
 
       const result = await evaluateQuestion(
-        { chatRepo, topicRepo, aiAdapter: goodAdapter, aiConfig: defaultAIConfig },
+        { chatRepo, learningRepo, aiAdapter: goodAdapter, aiConfig: defaultAIConfig },
         message.id,
         message.content
       )
 
-      expect(result.quality).toBe("good")
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      expect(result.value.quality).toBe("good")
 
       // Verify message was updated
       const updated = await chatRepo.findMessageById(message.id)
@@ -548,7 +550,7 @@ describe("Chat UseCase", () => {
 
     it("should evaluate question as surface", async () => {
       const surfaceAdapter = createMockAIAdapter({
-        textResponse: "surface",
+        textResponse: '{"quality": "surface", "reason": "単純な定義の質問"}',
       })
 
       const session = await chatRepo.createSession({
@@ -566,12 +568,14 @@ describe("Chat UseCase", () => {
       })
 
       const result = await evaluateQuestion(
-        { chatRepo, topicRepo, aiAdapter: surfaceAdapter, aiConfig: defaultAIConfig },
+        { chatRepo, learningRepo, aiAdapter: surfaceAdapter, aiConfig: defaultAIConfig },
         message.id,
         message.content
       )
 
-      expect(result.quality).toBe("surface")
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      expect(result.value.quality).toBe("surface")
 
       // Verify message was updated
       const updated = await chatRepo.findMessageById(message.id)
@@ -598,12 +602,14 @@ describe("Chat UseCase", () => {
       })
 
       const result = await evaluateQuestion(
-        { chatRepo, topicRepo, aiAdapter: ambiguousAdapter, aiConfig: defaultAIConfig },
+        { chatRepo, learningRepo, aiAdapter: ambiguousAdapter, aiConfig: defaultAIConfig },
         message.id,
         message.content
       )
 
-      expect(result.quality).toBe("surface")
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      expect(result.value.quality).toBe("surface")
     })
   })
 })

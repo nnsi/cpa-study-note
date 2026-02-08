@@ -6,7 +6,7 @@ import type { NoteRepository } from "./repository"
 import type { ChatRepository } from "../chat/repository"
 import type { AIAdapter } from "@/shared/lib/ai"
 import { defaultAIConfig } from "@/shared/lib/ai"
-import type { TopicRepository } from "../topic/repository"
+import type { SubjectRepository } from "../subject/repository"
 import {
   createNoteFromSession,
   createManualNote,
@@ -63,23 +63,28 @@ const createMockNoteRepo = (overrides: Partial<NoteRepository> = {}): NoteReposi
   findByTopic: vi.fn().mockResolvedValue([]),
   findByUser: vi.fn().mockResolvedValue([]),
   update: vi.fn().mockResolvedValue(null),
+  softDelete: vi.fn().mockResolvedValue(true),
   ...overrides,
 })
 
-const createMockChatRepo = (overrides: Partial<ChatRepository> = {}): ChatRepository => ({
-  createSession: vi.fn().mockResolvedValue(createMockSession()),
-  findSessionById: vi.fn().mockResolvedValue(null),
-  findSessionsByTopic: vi.fn().mockResolvedValue([]),
-  findSessionsWithStatsByTopic: vi.fn().mockResolvedValue([]),
-  getSessionMessageCount: vi.fn().mockResolvedValue(0),
-  getSessionQualityStats: vi.fn().mockResolvedValue({ goodCount: 0, surfaceCount: 0 }),
-  getTopicWithHierarchy: vi.fn().mockResolvedValue(null),
-  createMessage: vi.fn().mockResolvedValue(createMockMessage()),
-  findMessageById: vi.fn().mockResolvedValue(null),
-  findMessagesBySession: vi.fn().mockResolvedValue([]),
-  updateMessageQuality: vi.fn().mockResolvedValue(undefined),
-  ...overrides,
-})
+const createMockChatRepo = (overrides: Partial<ChatRepository> = {}): ChatRepository => {
+  const defaults: ChatRepository = {
+    createSession: vi.fn().mockResolvedValue(createMockSession()),
+    findSessionById: vi.fn().mockResolvedValue(null),
+    findSessionsByTopic: vi.fn().mockResolvedValue([]),
+    findSessionsWithStatsByTopic: vi.fn().mockResolvedValue([]),
+    getSessionMessageCount: vi.fn().mockResolvedValue(0),
+    getSessionQualityStats: vi.fn().mockResolvedValue({ goodCount: 0, surfaceCount: 0 }),
+    getTopicWithHierarchy: vi.fn().mockResolvedValue(null),
+    createMessage: vi.fn().mockResolvedValue(createMockMessage()),
+    findMessageById: vi.fn().mockResolvedValue(null),
+    findMessagesBySession: vi.fn().mockResolvedValue([]),
+    findRecentMessagesForContext: vi.fn().mockResolvedValue([]),
+    updateMessageQuality: vi.fn().mockResolvedValue(undefined),
+    findGoodQuestionsByTopic: vi.fn().mockResolvedValue([]),
+  }
+  return { ...defaults, ...overrides }
+}
 
 const createMockAIAdapter = (overrides: Partial<AIAdapter> = {}): AIAdapter => ({
   generateText: vi.fn().mockResolvedValue({
@@ -95,6 +100,7 @@ const createMockAIAdapter = (overrides: Partial<AIAdapter> = {}): AIAdapter => (
 
 const createMockTopic = (overrides = {}) => ({
   id: "topic-1",
+  userId: "user-1",
   categoryId: "category-1",
   name: "有価証券",
   description: null,
@@ -104,29 +110,42 @@ const createMockTopic = (overrides = {}) => ({
   displayOrder: 1,
   createdAt: createMockDate(),
   updatedAt: createMockDate(),
+  deletedAt: null,
   ...overrides,
 })
 
-const createMockTopicRepo = (overrides: Partial<TopicRepository> = {}): TopicRepository => ({
-  findAllSubjects: vi.fn().mockResolvedValue([]),
-  findSubjectById: vi.fn().mockResolvedValue(null),
-  getSubjectStats: vi.fn().mockResolvedValue({ categoryCount: 0, topicCount: 0 }),
+const createMockSubjectRepo = (overrides: Partial<SubjectRepository> = {}): SubjectRepository => ({
+  findByStudyDomainId: vi.fn().mockResolvedValue([]),
+  findById: vi.fn().mockResolvedValue(null),
+  create: vi.fn().mockResolvedValue({ id: "new-subject-1" }),
+  update: vi.fn().mockResolvedValue(null),
+  softDelete: vi.fn().mockResolvedValue(false),
+  verifyStudyDomainOwnership: vi.fn().mockResolvedValue(false),
+  verifyCategoryBelongsToSubject: vi.fn().mockResolvedValue(false),
+  verifyTopicBelongsToSubject: vi.fn().mockResolvedValue(false),
+  findSubjectByIdAndUserId: vi.fn().mockResolvedValue(null),
   findCategoriesBySubjectId: vi.fn().mockResolvedValue([]),
-  findCategoryById: vi.fn().mockResolvedValue(null),
-  getCategoryTopicCounts: vi.fn().mockResolvedValue([]),
-  findTopicsByCategoryId: vi.fn().mockResolvedValue([]),
-  findTopicById: vi.fn().mockResolvedValue(null),
-  findTopicWithHierarchy: vi.fn().mockResolvedValue(null),
-  findProgress: vi.fn().mockResolvedValue(null),
-  upsertProgress: vi.fn().mockResolvedValue({} as ReturnType<TopicRepository["upsertProgress"]> extends Promise<infer T> ? T : never),
-  findProgressByUser: vi.fn().mockResolvedValue([]),
+  findTopicsByCategoryIds: vi.fn().mockResolvedValue([]),
+  findCategoryIdsBySubjectIdWithSoftDeleted: vi.fn().mockResolvedValue([]),
+  findTopicIdsBySubjectWithSoftDeleted: vi.fn().mockResolvedValue([]),
+  findExistingCategoryIds: vi.fn().mockResolvedValue([]),
+  findExistingTopicIds: vi.fn().mockResolvedValue([]),
+  softDeleteCategories: vi.fn().mockResolvedValue(undefined),
+  softDeleteTopics: vi.fn().mockResolvedValue(undefined),
+  upsertCategory: vi.fn().mockResolvedValue(undefined),
+  upsertTopic: vi.fn().mockResolvedValue(undefined),
   getProgressCountsByCategory: vi.fn().mockResolvedValue([]),
   getProgressCountsBySubject: vi.fn().mockResolvedValue([]),
   findRecentTopics: vi.fn().mockResolvedValue([]),
-  createCheckHistory: vi.fn().mockResolvedValue({} as ReturnType<TopicRepository["createCheckHistory"]> extends Promise<infer T> ? T : never),
-  findCheckHistoryByTopic: vi.fn().mockResolvedValue([]),
-  findFilteredTopics: vi.fn().mockResolvedValue([]),
-  searchTopics: vi.fn().mockResolvedValue([]),
+  findAllSubjectsForUser: vi.fn().mockResolvedValue([]),
+  findSubjectByIdForUser: vi.fn().mockResolvedValue(null),
+  getSubjectStats: vi.fn().mockResolvedValue({ categoryCount: 0, topicCount: 0 }),
+  getBatchSubjectStats: vi.fn().mockResolvedValue([]),
+  findCategoriesHierarchy: vi.fn().mockResolvedValue([]),
+  getCategoryTopicCounts: vi.fn().mockResolvedValue([]),
+  findTopicsByCategoryIdForUser: vi.fn().mockResolvedValue([]),
+  findTopicById: vi.fn().mockResolvedValue(null),
+  findTopicWithHierarchy: vi.fn().mockResolvedValue(null),
   ...overrides,
 })
 
@@ -160,8 +179,8 @@ describe("Note UseCase", () => {
 
       expect(result.ok).toBe(true)
       if (result.ok) {
-        expect(result.note.aiSummary).toBe("テスト要約")
-        expect(result.note.keyPoints).toEqual(["ポイント1"])
+        expect(result.value.aiSummary).toBe("テスト要約")
+        expect(result.value.keyPoints).toEqual(["ポイント1"])
       }
       expect(aiAdapter.generateText).toHaveBeenCalled()
       expect(noteRepo.create).toHaveBeenCalled()
@@ -181,8 +200,7 @@ describe("Note UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("Session not found")
-        expect(result.status).toBe(404)
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
 
@@ -201,8 +219,7 @@ describe("Note UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("Unauthorized")
-        expect(result.status).toBe(403)
+        expect(result.error.code).toBe("FORBIDDEN")
       }
     })
 
@@ -291,10 +308,12 @@ describe("Note UseCase", () => {
 
       const result = await listNotes({ noteRepo }, "user-1")
 
-      expect(result).toHaveLength(2)
-      expect(result[0].topicName).toBe("有価証券")
-      expect(result[0].subjectName).toBe("財務会計論")
-      expect(result[0].createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T/)
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      expect(result.value).toHaveLength(2)
+      expect(result.value[0].topicName).toBe("有価証券")
+      expect(result.value[0].subjectName).toBe("財務会計論")
+      expect(result.value[0].createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T/)
     })
 
     it("ノートがない場合は空配列を返す", async () => {
@@ -304,7 +323,9 @@ describe("Note UseCase", () => {
 
       const result = await listNotes({ noteRepo }, "user-1")
 
-      expect(result).toEqual([])
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      expect(result.value).toEqual([])
     })
   })
 
@@ -320,7 +341,9 @@ describe("Note UseCase", () => {
 
       const result = await listNotesByTopic({ noteRepo }, "user-1", "topic-1")
 
-      expect(result).toHaveLength(2)
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      expect(result.value).toHaveLength(2)
       expect(noteRepo.findByTopic).toHaveBeenCalledWith("user-1", "topic-1")
     })
   })
@@ -342,9 +365,9 @@ describe("Note UseCase", () => {
 
       expect(result.ok).toBe(true)
       if (result.ok) {
-        expect(result.note.id).toBe("note-1")
-        expect(result.note.topicName).toBe("有価証券")
-        expect(result.note.subjectName).toBe("財務会計論")
+        expect(result.value.id).toBe("note-1")
+        expect(result.value.topicName).toBe("有価証券")
+        expect(result.value.subjectName).toBe("財務会計論")
       }
     })
 
@@ -357,8 +380,7 @@ describe("Note UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("Note not found")
-        expect(result.status).toBe(404)
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
 
@@ -378,8 +400,7 @@ describe("Note UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("Unauthorized")
-        expect(result.status).toBe(403)
+        expect(result.error.code).toBe("FORBIDDEN")
       }
     })
   })
@@ -402,7 +423,7 @@ describe("Note UseCase", () => {
 
       expect(result.ok).toBe(true)
       if (result.ok) {
-        expect(result.note.userMemo).toBe("新しいメモ")
+        expect(result.value.userMemo).toBe("新しいメモ")
       }
       expect(noteRepo.update).toHaveBeenCalledWith("note-1", { userMemo: "新しいメモ" })
     })
@@ -424,7 +445,7 @@ describe("Note UseCase", () => {
 
       expect(result.ok).toBe(true)
       if (result.ok) {
-        expect(result.note.keyPoints).toEqual(["新ポイント1", "新ポイント2"])
+        expect(result.value.keyPoints).toEqual(["新ポイント1", "新ポイント2"])
       }
     })
 
@@ -445,7 +466,7 @@ describe("Note UseCase", () => {
 
       expect(result.ok).toBe(true)
       if (result.ok) {
-        expect(result.note.stumbledPoints).toEqual(["新つまずき1"])
+        expect(result.value.stumbledPoints).toEqual(["新つまずき1"])
       }
     })
 
@@ -463,8 +484,7 @@ describe("Note UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("Note not found")
-        expect(result.status).toBe(404)
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
 
@@ -483,8 +503,7 @@ describe("Note UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("Unauthorized")
-        expect(result.status).toBe(403)
+        expect(result.error.code).toBe("FORBIDDEN")
       }
     })
   })
@@ -503,12 +522,12 @@ describe("Note UseCase", () => {
       const noteRepo = createMockNoteRepo({
         create: vi.fn().mockResolvedValue(createdNote),
       })
-      const topicRepo = createMockTopicRepo({
+      const subjectRepo = createMockSubjectRepo({
         findTopicById: vi.fn().mockResolvedValue(topic),
       })
 
       const result = await createManualNote(
-        { noteRepo, topicRepo },
+        { noteRepo, subjectRepo },
         {
           userId: "user-1",
           topicId: "topic-1",
@@ -520,12 +539,12 @@ describe("Note UseCase", () => {
 
       expect(result.ok).toBe(true)
       if (result.ok) {
-        expect(result.note.sessionId).toBeNull()
-        expect(result.note.aiSummary).toBeNull()
-        expect(result.note.userMemo).toBe("手動で作成したノート")
-        expect(result.note.keyPoints).toEqual(["ポイント1", "ポイント2"])
-        expect(result.note.stumbledPoints).toEqual(["つまずき1"])
-        expect(result.note.source).toBe("manual")
+        expect(result.value.sessionId).toBeNull()
+        expect(result.value.aiSummary).toBeNull()
+        expect(result.value.userMemo).toBe("手動で作成したノート")
+        expect(result.value.keyPoints).toEqual(["ポイント1", "ポイント2"])
+        expect(result.value.stumbledPoints).toEqual(["つまずき1"])
+        expect(result.value.source).toBe("manual")
       }
       expect(noteRepo.create).toHaveBeenCalledWith({
         userId: "user-1",
@@ -551,12 +570,12 @@ describe("Note UseCase", () => {
       const noteRepo = createMockNoteRepo({
         create: vi.fn().mockResolvedValue(createdNote),
       })
-      const topicRepo = createMockTopicRepo({
+      const subjectRepo = createMockSubjectRepo({
         findTopicById: vi.fn().mockResolvedValue(topic),
       })
 
       const result = await createManualNote(
-        { noteRepo, topicRepo },
+        { noteRepo, subjectRepo },
         {
           userId: "user-1",
           topicId: "topic-1",
@@ -566,19 +585,19 @@ describe("Note UseCase", () => {
 
       expect(result.ok).toBe(true)
       if (result.ok) {
-        expect(result.note.keyPoints).toEqual([])
-        expect(result.note.stumbledPoints).toEqual([])
+        expect(result.value.keyPoints).toEqual([])
+        expect(result.value.stumbledPoints).toEqual([])
       }
     })
 
     it("存在しないトピックでエラーを返す", async () => {
       const noteRepo = createMockNoteRepo()
-      const topicRepo = createMockTopicRepo({
+      const subjectRepo = createMockSubjectRepo({
         findTopicById: vi.fn().mockResolvedValue(null),
       })
 
       const result = await createManualNote(
-        { noteRepo, topicRepo },
+        { noteRepo, subjectRepo },
         {
           userId: "user-1",
           topicId: "non-existent",
@@ -588,8 +607,7 @@ describe("Note UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("Topic not found")
-        expect(result.status).toBe(404)
+        expect(result.error.code).toBe("NOT_FOUND")
       }
       expect(noteRepo.create).not.toHaveBeenCalled()
     })
@@ -618,7 +636,7 @@ describe("Note UseCase", () => {
 
       expect(result.ok).toBe(true)
       if (result.ok) {
-        expect(result.note.source).toBe("chat")
+        expect(result.value.source).toBe("chat")
       }
     })
   })

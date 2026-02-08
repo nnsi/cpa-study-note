@@ -1,17 +1,13 @@
 import { api } from "@/lib/api-client"
+import {
+  dailyMetricsWrapperResponseSchema,
+  type DailyMetric,
+  type DailyMetricsWrapperResponse,
+} from "@cpa-study/shared/schemas"
 
-// オンザフライ集計の日次メトリクス
-export type DailyMetric = {
-  date: string
-  checkedTopicCount: number
-  sessionCount: number
-  messageCount: number
-  goodQuestionCount: number
-}
+export type { DailyMetric }
 
-export type DailyMetricsResponse = {
-  metrics: DailyMetric[]
-}
+export type DailyMetricsResponse = DailyMetricsWrapperResponse
 
 export const getDailyMetrics = async (
   from: string,
@@ -20,6 +16,7 @@ export const getDailyMetrics = async (
   const res = await api.api.metrics.daily.$get({
     query: { from, to },
   })
-  if (!res.ok) throw new Error("Failed to fetch daily metrics")
-  return res.json()
+  if (!res.ok) throw new Error("学習指標の取得に失敗しました")
+  const data = await res.json()
+  return dailyMetricsWrapperResponseSchema.parse(data)
 }

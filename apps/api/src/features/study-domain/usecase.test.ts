@@ -3,7 +3,6 @@ import { describe, it, expect, vi } from "vitest"
 import type {
   StudyDomainRepository,
   StudyDomain,
-  CanDeleteResult,
 } from "./repository"
 import {
   listStudyDomains,
@@ -33,7 +32,6 @@ const createMockRepository = (overrides: Partial<StudyDomainRepository> = {}): S
   create: vi.fn().mockResolvedValue({ id: mockStudyDomain.id }),
   update: vi.fn().mockResolvedValue(mockStudyDomain),
   softDelete: vi.fn().mockResolvedValue(true),
-  canDeleteStudyDomain: vi.fn().mockResolvedValue({ canDelete: true }),
   ...overrides,
 })
 
@@ -46,9 +44,11 @@ describe("Study Domain UseCase", () => {
       const result = await listStudyDomains(deps, "user-1")
 
       expect(repo.findByUserId).toHaveBeenCalledWith("user-1")
-      expect(result).toHaveLength(1)
-      expect(result[0].id).toBe("domain-1")
-      expect(result[0].name).toBe("公認会計士試験")
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      expect(result.value).toHaveLength(1)
+      expect(result.value[0].id).toBe("domain-1")
+      expect(result.value[0].name).toBe("公認会計士試験")
     })
 
     it("should convert dates to ISO strings", async () => {
@@ -57,8 +57,10 @@ describe("Study Domain UseCase", () => {
 
       const result = await listStudyDomains(deps, "user-1")
 
-      expect(result[0].createdAt).toBe("2024-01-01T00:00:00.000Z")
-      expect(result[0].updatedAt).toBe("2024-01-01T00:00:00.000Z")
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      expect(result.value[0].createdAt).toBe("2024-01-01T00:00:00.000Z")
+      expect(result.value[0].updatedAt).toBe("2024-01-01T00:00:00.000Z")
     })
 
     it("should return empty array when no domains exist", async () => {
@@ -69,7 +71,9 @@ describe("Study Domain UseCase", () => {
 
       const result = await listStudyDomains(deps, "user-1")
 
-      expect(result).toHaveLength(0)
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      expect(result.value).toHaveLength(0)
     })
   })
 
@@ -112,8 +116,7 @@ describe("Study Domain UseCase", () => {
       expect(result.ok).toBe(false)
       if (result.ok) return
 
-      expect(result.error.type).toBe("not_found")
-      expect(result.error.message).toBe("学習領域が見つかりません")
+      expect(result.error.code).toBe("NOT_FOUND")
     })
   })
 
@@ -134,7 +137,9 @@ describe("Study Domain UseCase", () => {
         name: "New Domain",
       })
 
-      expect(result.id).toBe("new-domain")
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      expect(result.value.id).toBe("new-domain")
       expect(repo.create).toHaveBeenCalledWith({
         userId: "user-1",
         name: "New Domain",
@@ -196,8 +201,7 @@ describe("Study Domain UseCase", () => {
       expect(result.ok).toBe(false)
       if (result.ok) return
 
-      expect(result.error.type).toBe("not_found")
-      expect(result.error.message).toBe("学習領域が見つかりません")
+      expect(result.error.code).toBe("NOT_FOUND")
     })
 
     it("should convert dates to ISO strings", async () => {
@@ -220,10 +224,9 @@ describe("Study Domain UseCase", () => {
   })
 
   describe("deleteStudyDomain", () => {
-    it("should delete study domain successfully when can delete", async () => {
+    it("should delete study domain successfully with cascade", async () => {
       const repo = createMockRepository({
         findById: vi.fn().mockResolvedValue(mockStudyDomain),
-        canDeleteStudyDomain: vi.fn().mockResolvedValue({ canDelete: true }),
         softDelete: vi.fn().mockResolvedValue(true),
       })
       const deps = { repo }
@@ -245,49 +248,8 @@ describe("Study Domain UseCase", () => {
       expect(result.ok).toBe(false)
       if (result.ok) return
 
-      expect(result.error.type).toBe("not_found")
-      expect(result.error.message).toBe("学習領域が見つかりません")
-      expect(repo.canDeleteStudyDomain).not.toHaveBeenCalled()
+      expect(result.error.code).toBe("NOT_FOUND")
       expect(repo.softDelete).not.toHaveBeenCalled()
-    })
-
-    it("should return cannot_delete error when subjects exist", async () => {
-      const canDeleteResult: CanDeleteResult = {
-        canDelete: false,
-        reason: "1件の科目が紐づいています",
-      }
-      const repo = createMockRepository({
-        findById: vi.fn().mockResolvedValue(mockStudyDomain),
-        canDeleteStudyDomain: vi.fn().mockResolvedValue(canDeleteResult),
-      })
-      const deps = { repo }
-
-      const result = await deleteStudyDomain(deps, "domain-1", "user-1")
-
-      expect(result.ok).toBe(false)
-      if (result.ok) return
-
-      expect(result.error.type).toBe("cannot_delete")
-      expect(result.error.message).toBe("1件の科目が紐づいています")
-      expect(repo.softDelete).not.toHaveBeenCalled()
-    })
-
-    it("should use default message when reason is not provided", async () => {
-      const canDeleteResult: CanDeleteResult = {
-        canDelete: false,
-      }
-      const repo = createMockRepository({
-        findById: vi.fn().mockResolvedValue(mockStudyDomain),
-        canDeleteStudyDomain: vi.fn().mockResolvedValue(canDeleteResult),
-      })
-      const deps = { repo }
-
-      const result = await deleteStudyDomain(deps, "domain-1", "user-1")
-
-      expect(result.ok).toBe(false)
-      if (result.ok) return
-
-      expect(result.error.message).toBe("この学習領域は削除できません")
     })
   })
 })

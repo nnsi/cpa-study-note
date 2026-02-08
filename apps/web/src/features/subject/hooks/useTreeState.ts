@@ -1,10 +1,7 @@
 import { useState, useCallback } from "react"
 import type {
   CategoryNode,
-  SubcategoryNode,
-  TopicNode,
   CategoryNodeInput,
-  SubcategoryNodeInput,
   TopicNodeInput,
   UpdateTreeInput,
 } from "../api"
@@ -12,9 +9,6 @@ import type {
 export type TreeState = {
   categories: CategoryNodeInput[]
 }
-
-// Generate temporary ID for new nodes
-const generateTempId = () => `temp_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
 
 // Convert API response to editable state
 function toEditableTree(categories: CategoryNode[]): CategoryNodeInput[] {

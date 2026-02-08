@@ -16,7 +16,7 @@ import {
   errorResponseSchema,
   type TestContext,
 } from "../../test/helpers"
-import { createMockAIAdapter, mockAIPresets } from "../../test/mocks/ai"
+import { mockAIPresets } from "../../test/mocks/ai"
 
 // レスポンススキーマ定義
 const noteSchema = z.object({
@@ -60,6 +60,10 @@ vi.mock("../../shared/lib/ai", () => ({
     chat: { model: "test-model", temperature: 0.7, maxTokens: 2000 },
     evaluation: { model: "test-model", temperature: 0, maxTokens: 100 },
     noteSummary: { model: "test-model", temperature: 0.3, maxTokens: 1000 },
+    ocr: { model: "openai/gpt-4o-mini", temperature: 0, maxTokens: 2000 },
+    speechCorrection: { model: "test-model", temperature: 0, maxTokens: 500 },
+    topicGenerator: { model: "test-model", temperature: 0.5, maxTokens: 3000 },
+    planAssistant: { model: "test-model", temperature: 0.5, maxTokens: 3000 },
   }),
 }))
 
@@ -112,7 +116,7 @@ describe("Note Routes", () => {
 
       expect(res.status).toBe(404)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("Session not found")
+      expect(body.error.message).toBe("セッションが見つかりません")
     })
 
     it("他ユーザーのセッションからノートを作成しようとすると403を返す", async () => {
@@ -124,7 +128,7 @@ describe("Note Routes", () => {
 
       expect(res.status).toBe(403)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("Unauthorized")
+      expect(body.error.message).toBe("このセッションへのアクセス権限がありません")
     })
 
     it("sessionIdが必須", async () => {
@@ -239,7 +243,7 @@ describe("Note Routes", () => {
 
       expect(res.status).toBe(404)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("Note not found")
+      expect(body.error.message).toBe("ノートが見つかりません")
     })
 
     it("他ユーザーのノートにアクセスすると403を返す", async () => {
@@ -251,7 +255,7 @@ describe("Note Routes", () => {
 
       expect(res.status).toBe(403)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("Unauthorized")
+      expect(body.error.message).toBe("このノートへのアクセス権限がありません")
     })
   })
 
@@ -300,7 +304,7 @@ describe("Note Routes", () => {
 
       expect(res.status).toBe(404)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("Note not found")
+      expect(body.error.message).toBe("ノートが見つかりません")
     })
 
     it("他ユーザーのノートを更新しようとすると403を返す", async () => {
@@ -314,7 +318,7 @@ describe("Note Routes", () => {
 
       expect(res.status).toBe(403)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("Unauthorized")
+      expect(body.error.message).toBe("このノートへのアクセス権限がありません")
     })
 
     it("空のボディでも更新可能", async () => {
@@ -358,7 +362,7 @@ describe("Note Routes", () => {
 
       expect(res.status).toBe(401)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("Unauthorized")
+      expect(body.error.message).toBe("認証が必要です")
     })
 
     it("本番環境で認証なしの場合は401を返す（POST /notes）", async () => {
@@ -383,7 +387,7 @@ describe("Note Routes", () => {
 
       expect(res.status).toBe(401)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("Unauthorized")
+      expect(body.error.message).toBe("認証が必要です")
     })
 
     it("本番環境で認証なしの場合は401を返す（PUT /notes/:noteId）", async () => {
@@ -408,7 +412,7 @@ describe("Note Routes", () => {
 
       expect(res.status).toBe(401)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("Unauthorized")
+      expect(body.error.message).toBe("認証が必要です")
     })
   })
 })

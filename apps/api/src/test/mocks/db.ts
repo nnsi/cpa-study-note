@@ -155,7 +155,8 @@ export const createTestDatabase = (): {
       key_points TEXT DEFAULT '[]',
       stumbled_points TEXT DEFAULT '[]',
       created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL
+      updated_at INTEGER NOT NULL,
+      deleted_at INTEGER
     );
 
     CREATE TABLE IF NOT EXISTS images (
@@ -188,6 +189,31 @@ export const createTestDatabase = (): {
       created_at INTEGER NOT NULL,
       UNIQUE(date, user_id)
     );
+
+    CREATE TABLE IF NOT EXISTS user_bookmarks (
+      id TEXT PRIMARY KEY NOT NULL,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      target_type TEXT NOT NULL,
+      target_id TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      UNIQUE(user_id, target_type, target_id)
+    );
+    CREATE INDEX IF NOT EXISTS user_bookmarks_user_id_idx ON user_bookmarks(user_id);
+    CREATE INDEX IF NOT EXISTS user_bookmarks_user_type_idx ON user_bookmarks(user_id, target_type);
+
+    CREATE TABLE IF NOT EXISTS exercises (
+      id TEXT PRIMARY KEY NOT NULL,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      image_id TEXT NOT NULL REFERENCES images(id) ON DELETE CASCADE,
+      topic_id TEXT REFERENCES topics(id) ON DELETE SET NULL,
+      suggested_topic_ids TEXT,
+      marked_as_understood INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      confirmed_at INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS exercises_user_id_idx ON exercises(user_id);
+    CREATE INDEX IF NOT EXISTS exercises_topic_id_idx ON exercises(topic_id);
+    CREATE INDEX IF NOT EXISTS exercises_image_id_idx ON exercises(image_id);
   `)
 
   const db = drizzle(sqlite, { schema })

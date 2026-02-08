@@ -2,49 +2,40 @@ import { Hono } from "hono"
 import { zValidator } from "@hono/zod-validator"
 import { z } from "zod"
 import type { Db } from "@cpa-study/db"
+import { getDailyMetricsRequestSchema, dateStringSchema } from "@cpa-study/shared/schemas"
 import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
 import { createMetricsRepository } from "./repository"
 import { getDailyMetrics, createSnapshot, getTodayMetrics } from "./usecase"
+import { handleResultWith } from "@/shared/lib/route-helpers"
 
 type MetricsDeps = {
-  env: Env
   db: Db
 }
 
-export const metricsRoutes = ({ env, db }: MetricsDeps) => {
+export const metricsRoutes = ({ db }: MetricsDeps) => {
   const metricsRepo = createMetricsRepository(db)
+  const deps = { metricsRepo }
 
   const app = new Hono<{ Bindings: Env; Variables: Variables }>()
     // 今日の活動メトリクス取得（リアルタイム、タイムゾーン考慮）
     .get("/today", authMiddleware, async (c) => {
       const user = c.get("user")
-      const metrics = await getTodayMetrics({ metricsRepo }, user.id, user.timezone)
-      return c.json({ metrics })
+      const result = await getTodayMetrics(deps, user.id, user.timezone)
+      return handleResultWith(c, result, (value) => ({ metrics: value }))
     })
 
     // 日次メトリクス取得（タイムゾーン考慮）
     .get(
       "/daily",
       authMiddleware,
-      zValidator(
-        "query",
-        z.object({
-          from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-          to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-        })
-      ),
+      zValidator("query", getDailyMetricsRequestSchema),
       async (c) => {
         const user = c.get("user")
         const { from, to } = c.req.valid("query")
 
-        const result = await getDailyMetrics({ metricsRepo }, user.id, from, to, user.timezone)
-
-        if (!result.ok) {
-          return c.json({ error: result.error }, result.status as 400)
-        }
-
-        return c.json({ metrics: result.metrics })
+        const result = await getDailyMetrics(deps, user.id, from, to, user.timezone)
+        return handleResultWith(c, result, (value) => ({ metrics: value }))
       }
     )
 
@@ -52,36 +43,21 @@ export const metricsRoutes = ({ env, db }: MetricsDeps) => {
     .post("/snapshot", authMiddleware, async (c) => {
       const user = c.get("user")
 
-      const result = await createSnapshot({ metricsRepo }, user.id)
-
-      if (!result.ok) {
-        return c.json({ error: result.error }, result.status as 400)
-      }
-
-      return c.json({ snapshot: result.snapshot }, 201)
+      const result = await createSnapshot(deps, user.id)
+      return handleResultWith(c, result, (value) => ({ snapshot: value }), 201)
     })
 
     // スナップショット作成（指定日）
     .post(
       "/snapshot/:date",
       authMiddleware,
-      zValidator(
-        "param",
-        z.object({
-          date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-        })
-      ),
+      zValidator("param", z.object({ date: dateStringSchema })),
       async (c) => {
         const user = c.get("user")
         const { date } = c.req.valid("param")
 
-        const result = await createSnapshot({ metricsRepo }, user.id, date)
-
-        if (!result.ok) {
-          return c.json({ error: result.error }, result.status as 400)
-        }
-
-        return c.json({ snapshot: result.snapshot }, 201)
+        const result = await createSnapshot(deps, user.id, date)
+        return handleResultWith(c, result, (value) => ({ snapshot: value }), 201)
       }
     )
 

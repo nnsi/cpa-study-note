@@ -16,43 +16,87 @@ export type AIConfig = {
   chat: AIModelConfig
   evaluation: AIModelConfig
   noteSummary: AIModelConfig
+  ocr: AIModelConfig
+  speechCorrection: AIModelConfig
+  topicGenerator: AIModelConfig
+  planAssistant: AIModelConfig
 }
 
-/** ローカル開発用（安価なモデル） */
+/** ローカル開発用 */
 const localAIConfig: AIConfig = {
   chat: {
-    model: "z-ai/glm-4.7-flash",
+    model: "google/gemini-2.5-flash",
     temperature: 0.7,
     maxTokens: 2000,
   },
   evaluation: {
-    model: "z-ai/glm-4.7-flash",
+    model: "qwen/qwen3-8b",
     temperature: 0,
     maxTokens: 100,
   },
   noteSummary: {
-    model: "z-ai/glm-4.7-flash",
+    model: "google/gemini-2.5-flash",
     temperature: 0.3,
     maxTokens: 1000,
+  },
+  ocr: {
+    model: "openai/gpt-4o-mini",
+    temperature: 0,
+    maxTokens: 2000,
+  },
+  speechCorrection: {
+    model: "qwen/qwen3-8b",
+    temperature: 0,
+    maxTokens: 500,
+  },
+  topicGenerator: {
+    model: "google/gemini-2.5-flash",
+    temperature: 0.5,
+    maxTokens: 3000,
+  },
+  planAssistant: {
+    model: "google/gemini-2.5-flash",
+    temperature: 0.5,
+    maxTokens: 3000,
   },
 }
 
 /** staging/production用 */
 const productionAIConfig: AIConfig = {
   chat: {
-    model: "z-ai/glm-4.7-flash",
+    model: "google/gemini-2.5-flash",
     temperature: 0.7,
     maxTokens: 2000,
   },
   evaluation: {
-    model: "z-ai/glm-4.7-flash",
+    model: "qwen/qwen3-8b",
     temperature: 0,
     maxTokens: 100,
   },
   noteSummary: {
-    model: "z-ai/glm-4.7-flash",
+    model: "google/gemini-2.5-flash",
     temperature: 0.3,
     maxTokens: 1000,
+  },
+  ocr: {
+    model: "openai/gpt-4o-mini",
+    temperature: 0,
+    maxTokens: 2000,
+  },
+  speechCorrection: {
+    model: "qwen/qwen3-8b",
+    temperature: 0,
+    maxTokens: 500,
+  },
+  topicGenerator: {
+    model: "google/gemini-2.5-flash",
+    temperature: 0.5,
+    maxTokens: 3000,
+  },
+  planAssistant: {
+    model: "google/gemini-2.5-flash",
+    temperature: 0.5,
+    maxTokens: 3000,
   },
 }
 

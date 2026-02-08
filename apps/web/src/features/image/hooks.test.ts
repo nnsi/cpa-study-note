@@ -43,7 +43,7 @@ const createWrapper = () => {
 const createMockFile = (
   name: string,
   type: string,
-  size: number = 1024
+  _size: number = 1024
 ): File => {
   const blob = new Blob(["test"], { type })
   return new File([blob], name, { type })
@@ -251,7 +251,7 @@ describe("MIME型チェック", () => {
         expect(result.current.status).toBe("error")
       })
 
-      expect(result.current.error).toBe(`Unsupported file type: ${mimeType}`)
+      expect(result.current.error).toBe(`サポートされていないファイル形式です: ${mimeType}`)
       // APIが呼ばれていないことを確認
       expect(api.getUploadUrl).not.toHaveBeenCalled()
     })

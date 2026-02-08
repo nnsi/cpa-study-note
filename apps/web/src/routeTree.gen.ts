@@ -15,9 +15,12 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SubjectsIndexRouteImport } from './routes/subjects/index'
+import { Route as PlansIndexRouteImport } from './routes/plans/index'
 import { Route as NotesIndexRouteImport } from './routes/notes/index'
+import { Route as ExercisesIndexRouteImport } from './routes/exercises/index'
 import { Route as EditIndexRouteImport } from './routes/edit/index'
 import { Route as DomainsIndexRouteImport } from './routes/domains/index'
+import { Route as PlansPlanIdRouteImport } from './routes/plans/$planId'
 import { Route as NotesNoteIdRouteImport } from './routes/notes/$noteId'
 import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
 import { Route as SubjectsSubjectIdIndexRouteImport } from './routes/subjects/$subjectId/index'
@@ -59,9 +62,19 @@ const SubjectsIndexRoute = SubjectsIndexRouteImport.update({
   path: '/subjects/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PlansIndexRoute = PlansIndexRouteImport.update({
+  id: '/plans/',
+  path: '/plans/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const NotesIndexRoute = NotesIndexRouteImport.update({
   id: '/notes/',
   path: '/notes/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExercisesIndexRoute = ExercisesIndexRouteImport.update({
+  id: '/exercises/',
+  path: '/exercises/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EditIndexRoute = EditIndexRouteImport.update({
@@ -72,6 +85,11 @@ const EditIndexRoute = EditIndexRouteImport.update({
 const DomainsIndexRoute = DomainsIndexRouteImport.update({
   id: '/domains/',
   path: '/domains/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlansPlanIdRoute = PlansPlanIdRouteImport.update({
+  id: '/plans/$planId',
+  path: '/plans/$planId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NotesNoteIdRoute = NotesNoteIdRouteImport.update({
@@ -140,9 +158,12 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/notes/$noteId': typeof NotesNoteIdRoute
+  '/plans/$planId': typeof PlansPlanIdRoute
   '/domains/': typeof DomainsIndexRoute
   '/edit/': typeof EditIndexRoute
+  '/exercises/': typeof ExercisesIndexRoute
   '/notes/': typeof NotesIndexRoute
+  '/plans/': typeof PlansIndexRoute
   '/subjects/': typeof SubjectsIndexRoute
   '/subjects/$subjectId/': typeof SubjectsSubjectIdIndexRoute
   '/subjects/$subjectId/$categoryId/$topicId': typeof SubjectsSubjectIdCategoryIdTopicIdRoute
@@ -161,9 +182,12 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/notes/$noteId': typeof NotesNoteIdRoute
+  '/plans/$planId': typeof PlansPlanIdRoute
   '/domains': typeof DomainsIndexRoute
   '/edit': typeof EditIndexRoute
+  '/exercises': typeof ExercisesIndexRoute
   '/notes': typeof NotesIndexRoute
+  '/plans': typeof PlansIndexRoute
   '/subjects': typeof SubjectsIndexRoute
   '/subjects/$subjectId': typeof SubjectsSubjectIdIndexRoute
   '/subjects/$subjectId/$categoryId/$topicId': typeof SubjectsSubjectIdCategoryIdTopicIdRoute
@@ -183,9 +207,12 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/notes/$noteId': typeof NotesNoteIdRoute
+  '/plans/$planId': typeof PlansPlanIdRoute
   '/domains/': typeof DomainsIndexRoute
   '/edit/': typeof EditIndexRoute
+  '/exercises/': typeof ExercisesIndexRoute
   '/notes/': typeof NotesIndexRoute
+  '/plans/': typeof PlansIndexRoute
   '/subjects/': typeof SubjectsIndexRoute
   '/subjects/$subjectId/': typeof SubjectsSubjectIdIndexRoute
   '/subjects/$subjectId/$categoryId/$topicId': typeof SubjectsSubjectIdCategoryIdTopicIdRoute
@@ -206,9 +233,12 @@ export interface FileRouteTypes {
     | '/terms'
     | '/auth/callback'
     | '/notes/$noteId'
+    | '/plans/$planId'
     | '/domains/'
     | '/edit/'
+    | '/exercises/'
     | '/notes/'
+    | '/plans/'
     | '/subjects/'
     | '/subjects/$subjectId/'
     | '/subjects/$subjectId/$categoryId/$topicId'
@@ -227,9 +257,12 @@ export interface FileRouteTypes {
     | '/terms'
     | '/auth/callback'
     | '/notes/$noteId'
+    | '/plans/$planId'
     | '/domains'
     | '/edit'
+    | '/exercises'
     | '/notes'
+    | '/plans'
     | '/subjects'
     | '/subjects/$subjectId'
     | '/subjects/$subjectId/$categoryId/$topicId'
@@ -248,9 +281,12 @@ export interface FileRouteTypes {
     | '/terms'
     | '/auth/callback'
     | '/notes/$noteId'
+    | '/plans/$planId'
     | '/domains/'
     | '/edit/'
+    | '/exercises/'
     | '/notes/'
+    | '/plans/'
     | '/subjects/'
     | '/subjects/$subjectId/'
     | '/subjects/$subjectId/$categoryId/$topicId'
@@ -270,9 +306,12 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
   NotesNoteIdRoute: typeof NotesNoteIdRoute
+  PlansPlanIdRoute: typeof PlansPlanIdRoute
   DomainsIndexRoute: typeof DomainsIndexRoute
   EditIndexRoute: typeof EditIndexRoute
+  ExercisesIndexRoute: typeof ExercisesIndexRoute
   NotesIndexRoute: typeof NotesIndexRoute
+  PlansIndexRoute: typeof PlansIndexRoute
   SubjectsIndexRoute: typeof SubjectsIndexRoute
   SubjectsSubjectIdIndexRoute: typeof SubjectsSubjectIdIndexRoute
   SubjectsSubjectIdCategoryIdTopicIdRoute: typeof SubjectsSubjectIdCategoryIdTopicIdRoute
@@ -328,11 +367,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SubjectsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/plans/': {
+      id: '/plans/'
+      path: '/plans'
+      fullPath: '/plans/'
+      preLoaderRoute: typeof PlansIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/notes/': {
       id: '/notes/'
       path: '/notes'
       fullPath: '/notes/'
       preLoaderRoute: typeof NotesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/exercises/': {
+      id: '/exercises/'
+      path: '/exercises'
+      fullPath: '/exercises/'
+      preLoaderRoute: typeof ExercisesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/edit/': {
@@ -347,6 +400,13 @@ declare module '@tanstack/react-router' {
       path: '/domains'
       fullPath: '/domains/'
       preLoaderRoute: typeof DomainsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/plans/$planId': {
+      id: '/plans/$planId'
+      path: '/plans/$planId'
+      fullPath: '/plans/$planId'
+      preLoaderRoute: typeof PlansPlanIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/notes/$noteId': {
@@ -430,9 +490,12 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   AuthCallbackRoute: AuthCallbackRoute,
   NotesNoteIdRoute: NotesNoteIdRoute,
+  PlansPlanIdRoute: PlansPlanIdRoute,
   DomainsIndexRoute: DomainsIndexRoute,
   EditIndexRoute: EditIndexRoute,
+  ExercisesIndexRoute: ExercisesIndexRoute,
   NotesIndexRoute: NotesIndexRoute,
+  PlansIndexRoute: PlansIndexRoute,
   SubjectsIndexRoute: SubjectsIndexRoute,
   SubjectsSubjectIdIndexRoute: SubjectsSubjectIdIndexRoute,
   SubjectsSubjectIdCategoryIdTopicIdRoute:

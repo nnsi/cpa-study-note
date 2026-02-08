@@ -1,6 +1,17 @@
 import { hc } from "hono/client"
 import type { AppType } from "@cpa-study/api"
+import { apiErrorSchema } from "@cpa-study/shared/schemas"
 import { useAuthStore, refreshTokenOnUnauthorized } from "./auth"
+
+export const extractErrorMessage = async (res: Response, fallback: string): Promise<string> => {
+  try {
+    const json = await res.json()
+    const parsed = apiErrorSchema.safeParse(json)
+    return parsed.success ? parsed.data.error.message : fallback
+  } catch {
+    return fallback
+  }
+}
 
 const getHeaders = (): Record<string, string> => {
   const { token } = useAuthStore.getState()
@@ -9,7 +20,7 @@ const getHeaders = (): Record<string, string> => {
 }
 
 // Custom fetch with 401 retry
-const fetchWithRetry: typeof fetch = async (input, init) => {
+export const fetchWithRetry: typeof fetch = async (input, init) => {
   // Headers オブジェクトを正しく展開するために Object.fromEntries を使用
   const initHeaders = init?.headers
     ? Object.fromEntries(new Headers(init.headers as HeadersInit).entries())

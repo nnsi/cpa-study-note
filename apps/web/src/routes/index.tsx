@@ -1,8 +1,9 @@
+import { useState } from "react"
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { useAuthStore } from "@/lib/auth"
 import { ProgressStats } from "@/features/progress"
 import { MiniMetricsChart } from "@/features/metrics"
-import { TodayActivityCard, RecentTopicsList, ContinueLearningSection } from "@/features/home"
+import { TodayActivityCard, ContinueLearningSection } from "@/features/home"
 import { BookmarksList } from "@/features/bookmark"
 import { PageWrapper } from "@/components/layout"
 
@@ -155,14 +156,23 @@ function DashboardPage({ user }: { user: User | null }) {
       {/* ブックマーク */}
       <BookmarksList />
 
-      {/* 今日の活動 + 最近の論点 */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <TodayActivityCard />
-        <RecentTopicsList />
-      </div>
+      {/* 今日の活動 */}
+      <TodayActivityCard />
 
       {/* クイックアクセス */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2">
+        <QuickAccessCard
+          to="/plans"
+          icon={
+            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z" />
+            </svg>
+          }
+          title="学習計画"
+          description="学習の方針を考え、記録する"
+          accentColor="amber"
+        />
+
         <QuickAccessCard
           to="/subjects"
           icon={
@@ -188,48 +198,72 @@ function DashboardPage({ user }: { user: User | null }) {
         />
 
         <QuickAccessCard
-          to="/notes"
+          to="/exercises"
           icon={
             <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
             </svg>
           }
-          title="ノート"
-          description="学習の記録を確認"
-          accentColor="amber"
-        />
-
-        <QuickAccessCard
-          to="/edit"
-          icon={
-            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 0 0-1.883 2.542l.857 6a2.25 2.25 0 0 0 2.227 1.932H19.05a2.25 2.25 0 0 0 2.227-1.932l.857-6a2.25 2.25 0 0 0-1.883-2.542m-16.5 0V6A2.25 2.25 0 0 1 6 3.75h3.879a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 0 1.06.44H18A2.25 2.25 0 0 1 20.25 9v.776" />
-            </svg>
-          }
-          title="科目の構造を編集"
-          description="学習領域・科目・単元を管理"
+          title="問題チェック"
+          description="問題画像から論点を特定"
           accentColor="crimson"
         />
       </div>
 
-      {/* 学習進捗 */}
-      <section>
-        <div className="flex items-center gap-3 mb-4">
-          <h2 className="heading-serif text-xl">学習進捗</h2>
-          <div className="flex-1 divider" />
-        </div>
-        <ProgressStats />
-      </section>
-
-      {/* 日次推移グラフ（簡易版） */}
-      <section>
-        <div className="flex items-center gap-3 mb-4">
-          <h2 className="heading-serif text-xl">学習推移</h2>
-          <div className="flex-1 divider" />
-        </div>
-        <MiniMetricsChart />
-      </section>
+      {/* 学習統計（折りたたみ） */}
+      <StatsCollapsible />
     </div>
+  )
+}
+
+// 学習統計（折りたたみ）
+function StatsCollapsible() {
+  const [showStats, setShowStats] = useState(false)
+
+  return (
+    <section>
+      <button
+        type="button"
+        onClick={() => setShowStats((prev) => !prev)}
+        className="flex items-center gap-3 w-full text-left btn-ghost px-0 py-2 hover:bg-transparent"
+      >
+        <h2 className="heading-serif text-xl">学習統計</h2>
+        <div className="flex-1 divider" />
+        <svg
+          className={`w-5 h-5 text-ink-400 transition-transform duration-300 ${showStats ? "rotate-180" : ""}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+        </svg>
+      </button>
+
+      <div
+        className={`grid transition-[grid-template-rows] duration-300 ease-out ${showStats ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+      >
+        <div className="overflow-hidden">
+          <div className="space-y-8 pt-4">
+            {/* 学習進捗 */}
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <h3 className="heading-serif text-lg text-ink-700">学習進捗</h3>
+              </div>
+              <ProgressStats />
+            </div>
+
+            {/* 学習推移 */}
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <h3 className="heading-serif text-lg text-ink-700">学習推移</h3>
+              </div>
+              <MiniMetricsChart />
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   )
 }
 

@@ -3,23 +3,7 @@ import { useQuery } from "@tanstack/react-query"
 import { useParams } from "@tanstack/react-router"
 import * as api from "./api"
 import { useStudyDomains } from "@/features/study-domain/hooks/useStudyDomains"
-
-// デバウンス処理
-const useDebounce = <T,>(value: T, delay: number): T => {
-  const [debouncedValue, setDebouncedValue] = useState<T>(value)
-
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedValue(value)
-    }, delay)
-
-    return () => {
-      clearTimeout(handler)
-    }
-  }, [value, delay])
-
-  return debouncedValue
-}
+import { useDebounce } from "@/lib/hooks/useDebounce"
 
 export const useGlobalSearch = (query: string) => {
   const debouncedQuery = useDebounce(query, 300)
@@ -33,7 +17,7 @@ export const useGlobalSearch = (query: string) => {
   const studyDomainId = urlDomainId ?? studyDomains[0]?.id
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["search", debouncedQuery, studyDomainId],
+    queryKey: ["topics", "search", debouncedQuery, studyDomainId],
     queryFn: () => api.searchTopics(debouncedQuery, studyDomainId, 20),
     enabled: debouncedQuery.length >= 1 && !!studyDomainId,
   })

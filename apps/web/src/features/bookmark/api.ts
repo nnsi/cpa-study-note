@@ -1,23 +1,35 @@
 import { api } from "@/lib/api-client"
-import type { BookmarkTargetType, BookmarkWithDetails } from "@cpa-study/shared/schemas"
+import {
+  bookmarkListResponseSchema,
+  bookmarkWithDetailsSchema,
+  type BookmarkTargetType,
+  type BookmarkWithDetails,
+} from "@cpa-study/shared/schemas"
+import { z } from "zod"
+
+const addBookmarkResponseSchema = z.object({
+  bookmark: bookmarkWithDetailsSchema,
+})
 
 export type { BookmarkTargetType, BookmarkWithDetails }
 
 export const getBookmarks = async (): Promise<{ bookmarks: BookmarkWithDetails[] }> => {
   const res = await api.api.bookmarks.$get()
-  if (!res.ok) throw new Error("Failed to fetch bookmarks")
-  return res.json()
+  if (!res.ok) throw new Error("ブックマークの取得に失敗しました")
+  const data = await res.json()
+  return bookmarkListResponseSchema.parse(data)
 }
 
 export const addBookmark = async (
   targetType: BookmarkTargetType,
   targetId: string
-): Promise<{ message: string }> => {
+): Promise<{ bookmark: BookmarkWithDetails }> => {
   const res = await api.api.bookmarks.$post({
     json: { targetType, targetId },
   })
-  if (!res.ok) throw new Error("Failed to add bookmark")
-  return res.json()
+  if (!res.ok) throw new Error("ブックマークの追加に失敗しました")
+  const data = await res.json()
+  return addBookmarkResponseSchema.parse(data)
 }
 
 export const removeBookmark = async (
@@ -27,7 +39,7 @@ export const removeBookmark = async (
   const res = await api.api.bookmarks[":targetType"][":targetId"].$delete({
     param: { targetType, targetId },
   })
-  if (!res.ok) throw new Error("Failed to remove bookmark")
+  if (!res.ok) throw new Error("ブックマークの削除に失敗しました")
 }
 
 export const isBookmarked = (

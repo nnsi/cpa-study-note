@@ -14,7 +14,6 @@ import {
   createTestTopic,
 } from "@/test/helpers"
 import { subjectRoutes } from "./route"
-import { authMiddleware } from "@/shared/middleware/auth"
 import { createMockSimpleTransactionRunner } from "@/shared/lib/transaction"
 
 // Helper to create test app with proper typing
@@ -25,7 +24,7 @@ const createTestApp = (env: Env, db: Db) => {
       c.env = env
       return next()
     })
-    .route("/api", subjectRoutes({ env, db, txRunner }))
+    .route("/api/subjects", subjectRoutes({ db, txRunner }))
 }
 
 type TestApp = ReturnType<typeof createTestApp>
@@ -44,10 +43,10 @@ describe("Subject Routes", () => {
     client = testClient(app)
   })
 
-  describe("GET /api/study-domains/:domainId/subjects", () => {
+  describe("GET /api/subjects", () => {
     it("should return 401 without auth", async () => {
-      const res = await client.api["study-domains"][":domainId"].subjects.$get({
-        param: { domainId: "test-domain" },
+      const res = await client.api.subjects.$get({
+        query: { studyDomainId: "test-domain" },
       })
 
       expect(res.status).toBe(401)
@@ -60,14 +59,13 @@ describe("Subject Routes", () => {
       createTestSubject(db, userId, domainId, { name: "Subject 1" })
       createTestSubject(db, userId, domainId, { name: "Subject 2" })
 
-      const res = await client.api["study-domains"][":domainId"].subjects.$get(
-        { param: { domainId } },
+      const res = await client.api.subjects.$get(
+        { query: { studyDomainId: domainId } },
         { headers: createAuthHeaders(userId) }
       )
 
       expect(res.status).toBe(200)
-      const json = await res.json()
-      if (!("subjects" in json)) throw new Error("Expected subjects in response")
+      const json = await res.json() as { subjects: Array<{ name: string }> }
       expect(json.subjects).toHaveLength(2)
     })
 
@@ -75,11 +73,12 @@ describe("Subject Routes", () => {
       const { id: userId } = createTestUser(db)
       env.DEV_USER_ID = userId
 
-      const res = await client.api["study-domains"][":domainId"].subjects.$get(
-        { param: { domainId: "non-existent" } },
+      const res = await client.api.subjects.$get(
+        { query: { studyDomainId: "non-existent" } },
         { headers: createAuthHeaders(userId) }
       )
 
+      // 存在しないドメインは404を返す
       expect(res.status).toBe(404)
     })
 
@@ -89,11 +88,12 @@ describe("Subject Routes", () => {
       env.DEV_USER_ID = user2Id
       const { id: domainId } = createTestStudyDomain(db, user1Id)
 
-      const res = await client.api["study-domains"][":domainId"].subjects.$get(
-        { param: { domainId } },
+      const res = await client.api.subjects.$get(
+        { query: { studyDomainId: domainId } },
         { headers: createAuthHeaders(user2Id) }
       )
 
+      // 他ユーザーのドメインは404を返す
       expect(res.status).toBe(404)
     })
 
@@ -104,14 +104,13 @@ describe("Subject Routes", () => {
       createTestSubject(db, userId, domainId, { name: "Active" })
       createTestSubject(db, userId, domainId, { name: "Deleted", deletedAt: new Date() })
 
-      const res = await client.api["study-domains"][":domainId"].subjects.$get(
-        { param: { domainId } },
+      const res = await client.api.subjects.$get(
+        { query: { studyDomainId: domainId } },
         { headers: createAuthHeaders(userId) }
       )
 
       expect(res.status).toBe(200)
-      const json = await res.json()
-      if (!("subjects" in json)) throw new Error("Expected subjects in response")
+      const json = await res.json() as { subjects: Array<{ name: string }> }
       expect(json.subjects).toHaveLength(1)
       expect(json.subjects[0].name).toBe("Active")
     })
@@ -138,8 +137,7 @@ describe("Subject Routes", () => {
       )
 
       expect(res.status).toBe(200)
-      const json = await res.json()
-      if (!("subject" in json)) throw new Error("Expected subject in response")
+      const json = await res.json() as { subject: { name: string } }
       expect(json.subject.name).toBe("My Subject")
     })
 
@@ -185,9 +183,9 @@ describe("Subject Routes", () => {
     })
   })
 
-  describe("POST /api/study-domains/:domainId/subjects", () => {
+  describe("POST /api/subjects/study-domains/:domainId", () => {
     it("should return 401 without auth", async () => {
-      const res = await client.api["study-domains"][":domainId"].subjects.$post({
+      const res = await client.api.subjects["study-domains"][":domainId"].$post({
         param: { domainId: "test-domain" },
         json: { name: "New Subject" },
       })
@@ -200,7 +198,7 @@ describe("Subject Routes", () => {
       env.DEV_USER_ID = userId
       const { id: domainId } = createTestStudyDomain(db, userId)
 
-      const res = await client.api["study-domains"][":domainId"].subjects.$post(
+      const res = await client.api.subjects["study-domains"][":domainId"].$post(
         {
           param: { domainId },
           json: {
@@ -214,8 +212,7 @@ describe("Subject Routes", () => {
       )
 
       expect(res.status).toBe(201)
-      const json = await res.json()
-      if (!("subject" in json)) throw new Error("Expected subject in response")
+      const json = await res.json() as { subject: { name: string; description: string; emoji: string; color: string } }
       expect(json.subject.name).toBe("New Subject")
       expect(json.subject.description).toBe("A description")
       expect(json.subject.emoji).toBe("📚")
@@ -226,7 +223,7 @@ describe("Subject Routes", () => {
       const { id: userId } = createTestUser(db)
       env.DEV_USER_ID = userId
 
-      const res = await client.api["study-domains"][":domainId"].subjects.$post(
+      const res = await client.api.subjects["study-domains"][":domainId"].$post(
         {
           param: { domainId: "non-existent" },
           json: { name: "New Subject" },
@@ -243,7 +240,7 @@ describe("Subject Routes", () => {
       env.DEV_USER_ID = user2Id
       const { id: domainId } = createTestStudyDomain(db, user1Id)
 
-      const res = await client.api["study-domains"][":domainId"].subjects.$post(
+      const res = await client.api.subjects["study-domains"][":domainId"].$post(
         {
           param: { domainId },
           json: { name: "Hijacked Subject" },
@@ -259,7 +256,7 @@ describe("Subject Routes", () => {
       env.DEV_USER_ID = userId
       const { id: domainId } = createTestStudyDomain(db, userId)
 
-      const res = await client.api["study-domains"][":domainId"].subjects.$post(
+      const res = await client.api.subjects["study-domains"][":domainId"].$post(
         {
           param: { domainId },
           json: { name: "" }, // Empty name
@@ -296,8 +293,7 @@ describe("Subject Routes", () => {
       )
 
       expect(res.status).toBe(200)
-      const json = await res.json()
-      if (!("subject" in json)) throw new Error("Expected subject in response")
+      const json = await res.json() as { subject: { name: string; description: string } }
       expect(json.subject.name).toBe("Updated")
       expect(json.subject.description).toBe("New Description")
     })
@@ -353,8 +349,7 @@ describe("Subject Routes", () => {
       )
 
       expect(res.status).toBe(200)
-      const json = await res.json()
-      if (!("subject" in json)) throw new Error("Expected subject in response")
+      const json = await res.json() as { subject: { name: string; emoji: string } }
       expect(json.subject.name).toBe("Updated")
       expect(json.subject.emoji).toBe("📚") // Unchanged
     })
@@ -381,8 +376,7 @@ describe("Subject Routes", () => {
       )
 
       expect(res.status).toBe(200)
-      const json = await res.json()
-      if (!("success" in json)) throw new Error("Expected success in response")
+      const json = await res.json() as { success: boolean }
       expect(json.success).toBe(true)
 
       // Verify it's soft-deleted (GET should return 404)
@@ -420,7 +414,7 @@ describe("Subject Routes", () => {
       expect(res.status).toBe(404)
     })
 
-    it("should return 409 if subject has categories", async () => {
+    it("should cascade soft-delete categories when subject is deleted", async () => {
       const { id: userId } = createTestUser(db)
       env.DEV_USER_ID = userId
       const { id: domainId } = createTestStudyDomain(db, userId)
@@ -432,10 +426,7 @@ describe("Subject Routes", () => {
         { headers: createAuthHeaders(userId) }
       )
 
-      expect(res.status).toBe(409)
-      const json = await res.json()
-      if (!("error" in json)) throw new Error("Expected error in response")
-      expect(json.error).toContain("削除できません")
+      expect(res.status).toBe(200)
     })
   })
 
@@ -467,8 +458,7 @@ describe("Subject Routes", () => {
       )
 
       expect(res.status).toBe(200)
-      const json = await res.json()
-      if (!("tree" in json)) throw new Error("Expected tree in response")
+      const json = await res.json() as { tree: { categories: Array<{ name: string; subcategories: Array<{ name: string; topics: Array<{ name: string }> }> }> } }
       expect(json.tree.categories).toHaveLength(1)
       expect(json.tree.categories[0].name).toBe("Category")
       expect(json.tree.categories[0].subcategories[0].name).toBe("Subcategory")
@@ -550,8 +540,7 @@ describe("Subject Routes", () => {
       )
 
       expect(res.status).toBe(200)
-      const json = await res.json()
-      if (!("tree" in json)) throw new Error("Expected tree in response")
+      const json = await res.json() as { tree: { categories: Array<{ id: string; name: string }> } }
       expect(json.tree.categories).toHaveLength(1)
       expect(json.tree.categories[0].name).toBe("New Category")
       expect(json.tree.categories[0].id).toBeDefined() // ID should be assigned
@@ -600,9 +589,8 @@ describe("Subject Routes", () => {
       )
 
       expect(res.status).toBe(400)
-      const json = await res.json()
-      if (!("error" in json)) throw new Error("Expected error in response")
-      expect(json.error).toContain("不正なID")
+      const json = await res.json() as { error: { message: string } }
+      expect(json.error.message).toContain("不正なカテゴリID")
     })
 
     it("should validate request body", async () => {

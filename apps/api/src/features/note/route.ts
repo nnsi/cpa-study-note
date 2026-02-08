@@ -1,16 +1,16 @@
 import { Hono } from "hono"
 import { zValidator } from "@hono/zod-validator"
-import { z } from "zod"
 import type { Db } from "@cpa-study/db"
 import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
 import { createAIAdapter, resolveAIConfig } from "@/shared/lib/ai"
 import { createNoteRepository } from "./repository"
 import { createChatRepository } from "../chat/repository"
-import { createTopicRepository } from "../topic/repository"
+import { createSubjectRepository } from "../subject/repository"
 import {
   createNoteFromSessionRequestSchema,
   createManualNoteRequestSchema,
+  updateNoteRequestSchema,
 } from "@cpa-study/shared/schemas"
 import {
   createNoteFromSession,
@@ -21,7 +21,9 @@ import {
   getNoteBySession,
   updateNote,
   refreshNoteFromSession,
+  deleteNote,
 } from "./usecase"
+import { handleResult, handleResultWith } from "@/shared/lib/route-helpers"
 
 type NoteDeps = {
   env: Env
@@ -31,7 +33,7 @@ type NoteDeps = {
 export const noteRoutes = ({ env, db }: NoteDeps) => {
   const noteRepo = createNoteRepository(db)
   const chatRepo = createChatRepository(db)
-  const topicRepo = createTopicRepository(db)
+  const subjectRepo = createSubjectRepository(db)
   const aiConfig = resolveAIConfig(env.ENVIRONMENT)
 
   const app = new Hono<{ Bindings: Env; Variables: Variables }>()
@@ -54,11 +56,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
           { userId: user.id, sessionId }
         )
 
-        if (!result.ok) {
-          return c.json({ error: result.error }, result.status as 404 | 403)
-        }
-
-        return c.json({ note: result.note }, 201)
+        return handleResultWith(c, result, (note) => ({ note }), 201)
       }
     )
 
@@ -72,7 +70,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
         const body = c.req.valid("json")
 
         const result = await createManualNote(
-          { noteRepo, topicRepo },
+          { noteRepo, subjectRepo },
           {
             userId: user.id,
             topicId: body.topicId,
@@ -82,35 +80,31 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
           }
         )
 
-        if (!result.ok) {
-          return c.json({ error: result.error }, result.status as 404)
-        }
-
-        return c.json({ note: result.note }, 201)
+        return handleResultWith(c, result, (note) => ({ note }), 201)
       }
     )
 
     // ノート一覧
     .get("/", authMiddleware, async (c) => {
       const user = c.get("user")
-      const notes = await listNotes({ noteRepo }, user.id)
-      return c.json({ notes })
+      const result = await listNotes({ noteRepo }, user.id)
+      return handleResultWith(c, result, (value) => ({ notes: value }))
     })
 
     // 論点別ノート一覧
     .get("/topic/:topicId", authMiddleware, async (c) => {
       const user = c.get("user")
       const topicId = c.req.param("topicId")
-      const notes = await listNotesByTopic({ noteRepo }, user.id, topicId)
-      return c.json({ notes })
+      const result = await listNotesByTopic({ noteRepo }, user.id, topicId)
+      return handleResultWith(c, result, (value) => ({ notes: value }))
     })
 
     // セッション別ノート取得
     .get("/session/:sessionId", authMiddleware, async (c) => {
       const user = c.get("user")
       const sessionId = c.req.param("sessionId")
-      const note = await getNoteBySession({ noteRepo }, user.id, sessionId)
-      return c.json({ note })
+      const result = await getNoteBySession({ noteRepo }, user.id, sessionId)
+      return handleResultWith(c, result, (value) => ({ note: value }))
     })
 
     // ノート詳細
@@ -119,38 +113,21 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
       const noteId = c.req.param("noteId")
 
       const result = await getNote({ noteRepo }, user.id, noteId)
-
-      if (!result.ok) {
-        return c.json({ error: result.error }, result.status as 404 | 403)
-      }
-
-      return c.json({ note: result.note })
+      return handleResultWith(c, result, (note) => ({ note }))
     })
 
     // ノート更新
     .put(
       "/:noteId",
       authMiddleware,
-      zValidator(
-        "json",
-        z.object({
-          userMemo: z.string().optional(),
-          keyPoints: z.array(z.string()).optional(),
-          stumbledPoints: z.array(z.string()).optional(),
-        })
-      ),
+      zValidator("json", updateNoteRequestSchema),
       async (c) => {
         const user = c.get("user")
         const noteId = c.req.param("noteId")
         const body = c.req.valid("json")
 
         const result = await updateNote({ noteRepo }, user.id, noteId, body)
-
-        if (!result.ok) {
-          return c.json({ error: result.error }, result.status as 404 | 403)
-        }
-
-        return c.json({ note: result.note })
+        return handleResultWith(c, result, (note) => ({ note }))
       }
     )
 
@@ -170,14 +147,20 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
         noteId
       )
 
+      return handleResultWith(c, result, (note) => ({ note }))
+    })
+
+    // ノート削除
+    .delete("/:noteId", authMiddleware, async (c) => {
+      const user = c.get("user")
+      const noteId = c.req.param("noteId")
+
+      const result = await deleteNote({ noteRepo }, user.id, noteId)
       if (!result.ok) {
-        return c.json(
-          { error: result.error },
-          result.status as 400 | 403 | 404
-        )
+        return handleResult(c, result)
       }
 
-      return c.json({ note: result.note })
+      return c.json({ success: true })
     })
 
   return app

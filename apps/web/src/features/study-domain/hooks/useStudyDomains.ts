@@ -4,7 +4,7 @@ import * as api from "../api"
 /**
  * ユーザーの学習領域一覧を取得するフック
  */
-export function useStudyDomains() {
+export const useStudyDomains = () => {
   const {
     data,
     isLoading,
@@ -24,7 +24,7 @@ export function useStudyDomains() {
 /**
  * 学習領域を作成するミューテーション
  */
-export function useCreateStudyDomain() {
+export const useCreateStudyDomain = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -38,7 +38,7 @@ export function useCreateStudyDomain() {
 /**
  * 学習領域を更新するミューテーション
  */
-export function useUpdateStudyDomain() {
+export const useUpdateStudyDomain = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -53,7 +53,7 @@ export function useUpdateStudyDomain() {
 /**
  * 学習領域を削除するミューテーション
  */
-export function useDeleteStudyDomain() {
+export const useDeleteStudyDomain = () => {
   const queryClient = useQueryClient()
 
   return useMutation({

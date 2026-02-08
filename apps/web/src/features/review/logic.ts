@@ -15,9 +15,6 @@ export const buildFilterQueryString = (params: TopicFilterParams): string => {
   if (params.understood !== undefined) {
     searchParams.set("understood", String(params.understood))
   }
-  if (params.hasPostCheckChat !== undefined) {
-    searchParams.set("hasPostCheckChat", String(params.hasPostCheckChat))
-  }
   if (
     params.minGoodQuestionCount !== undefined &&
     params.minGoodQuestionCount > 0
@@ -54,13 +51,6 @@ export const parseFilterFromQueryString = (
     params.understood = false
   }
 
-  const hasPostCheckChat = searchParams.get("hasPostCheckChat")
-  if (hasPostCheckChat === "true") {
-    params.hasPostCheckChat = true
-  } else if (hasPostCheckChat === "false") {
-    params.hasPostCheckChat = false
-  }
-
   const minGoodQuestionCount = searchParams.get("minGoodQuestionCount")
   if (minGoodQuestionCount) {
     params.minGoodQuestionCount = parseInt(minGoodQuestionCount, 10)
@@ -77,7 +67,6 @@ export const isFilterEmpty = (params: TopicFilterParams): boolean => {
     params.minSessionCount === undefined &&
     params.daysSinceLastChat === undefined &&
     params.understood === undefined &&
-    params.hasPostCheckChat === undefined &&
     params.minGoodQuestionCount === undefined
   )
 }
@@ -157,12 +146,6 @@ export const summarizeFilters = (params: TopicFilterParams): string[] => {
 
   if (params.daysSinceLastChat !== undefined && params.daysSinceLastChat > 0) {
     summaries.push(`${params.daysSinceLastChat}日以上経過`)
-  }
-
-  if (params.hasPostCheckChat === true) {
-    summaries.push("チェック後にチャットあり")
-  } else if (params.hasPostCheckChat === false) {
-    summaries.push("チェック後にチャットなし")
   }
 
   if (

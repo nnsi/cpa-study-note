@@ -4,10 +4,12 @@
 import { Hono } from "hono"
 import { cors } from "hono/cors"
 import { createAuthFeature } from "@/features/auth"
-import { createTopicFeature } from "@/features/topic"
+import { createSubjectFeature } from "@/features/subject"
 import { createChatFeature } from "@/features/chat"
 import { createNoteFeature } from "@/features/note"
 import { createImageFeature } from "@/features/image"
+import { createBookmarkFeature } from "@/features/bookmark"
+import { createLearningFeature } from "@/features/learning"
 import { createTestDatabase, seedTestData, type TestDatabase } from "../mocks/db"
 import { createMockR2Bucket } from "../mocks/r2"
 import type { Env, Variables } from "@/shared/types/env"
@@ -49,10 +51,12 @@ export const setupTestEnv = (): TestContext => {
   const app = new Hono<{ Bindings: Env; Variables: Variables }>()
     .use("*", cors())
     .route("/api/auth", createAuthFeature(env, db as unknown as Parameters<typeof createAuthFeature>[1]))
-    .route("/api/subjects", createTopicFeature(env, db as unknown as Parameters<typeof createTopicFeature>[1]))
+    .route("/api/subjects", createSubjectFeature(env, db as unknown as Parameters<typeof createSubjectFeature>[1]))
     .route("/api/chat", createChatFeature(env, db as unknown as Parameters<typeof createChatFeature>[1]))
     .route("/api/notes", createNoteFeature(env, db as unknown as Parameters<typeof createNoteFeature>[1]))
     .route("/api/images", createImageFeature(env, db as unknown as Parameters<typeof createImageFeature>[1]))
+    .route("/api/bookmarks", createBookmarkFeature(env, db as unknown as Parameters<typeof createBookmarkFeature>[1]))
+    .route("/api/learning", createLearningFeature(env, db as unknown as Parameters<typeof createLearningFeature>[1]))
     .get("/api/health", (c) => c.json({ status: "ok" }))
 
   return { app, db, sqlite, r2, testData, env }

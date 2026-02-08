@@ -1,48 +1,37 @@
 import { api } from "@/lib/api-client"
+import type { FilteredTopic, TopicFilterParams } from "@cpa-study/shared"
+import { reviewListResponseSchema } from "@cpa-study/shared/schemas"
 
-export type TopicFilterParams = {
-  minSessionCount?: number
-  daysSinceLastChat?: number
-  understood?: boolean
-  hasPostCheckChat?: boolean
-  minGoodQuestionCount?: number
-}
-
-export type FilteredTopic = {
-  id: string
-  name: string
-  categoryId: string
-  subjectId: string
-  subjectName: string
-  sessionCount: number
-  lastChatAt: string | null
-  understood: boolean
-  goodQuestionCount: number
-}
+export type { FilteredTopic, TopicFilterParams }
 
 export const filterTopics = async (
   params: TopicFilterParams
 ): Promise<FilteredTopic[]> => {
   const query: Record<string, string> = {}
 
-  if (params.minSessionCount !== undefined) {
-    query.minSessionCount = String(params.minSessionCount)
-  }
-  if (params.daysSinceLastChat !== undefined) {
-    query.daysSinceLastChat = String(params.daysSinceLastChat)
-  }
+  // View API uses different parameter names
   if (params.understood !== undefined) {
     query.understood = String(params.understood)
   }
-  if (params.hasPostCheckChat !== undefined) {
-    query.hasPostCheckChat = String(params.hasPostCheckChat)
-  }
-  if (params.minGoodQuestionCount !== undefined) {
-    query.minGoodQuestionCount = String(params.minGoodQuestionCount)
+  if (params.daysSinceLastChat !== undefined) {
+    query.daysSince = String(params.daysSinceLastChat)
   }
 
-  const res = await api.api.subjects.filter.$get({ query })
-  if (!res.ok) throw new Error("Failed to filter topics")
-  const data = await res.json()
-  return data.topics
+  const res = await api.api.view.topics.$get({ query })
+  if (!res.ok) throw new Error("論点のフィルタに失敗しました")
+  const json = await res.json()
+  const data = reviewListResponseSchema.parse(json)
+  // Transform view API response to FilteredTopic format
+  return data.topics.map((t) => ({
+    id: t.id,
+    name: t.name,
+    subjectId: t.subjectId,
+    subjectName: t.subjectName,
+    categoryId: t.categoryId,
+    understood: t.understood,
+    lastChatAt: t.lastAccessedAt, // Map lastAccessedAt to lastChatAt for compatibility
+    sessionCount: t.sessionCount,
+    // View API doesn't return this field, default to 0
+    goodQuestionCount: 0,
+  }))
 }

@@ -1,12 +1,12 @@
 import { Hono } from "hono"
 import { zValidator } from "@hono/zod-validator"
-import { z } from "zod"
 import type { Db } from "@cpa-study/db"
+import { createSessionRequestSchema, sendMessageRequestSchema, correctSpeechRequestSchema } from "@cpa-study/shared/schemas"
 import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
 import { createAIAdapter, streamToSSE, resolveAIConfig } from "@/shared/lib/ai"
 import { createChatRepository } from "./repository"
-import { createTopicRepository } from "../topic/repository"
+import { createLearningRepository } from "../learning/repository"
 import {
   createSession,
   getSession,
@@ -16,7 +16,10 @@ import {
   sendMessage,
   sendMessageWithNewSession,
   evaluateQuestion,
+  listGoodQuestionsByTopic,
+  correctSpeechText,
 } from "./usecase"
+import { handleResultWith, errorResponse } from "@/shared/lib/route-helpers"
 
 type ChatDeps = {
   env: Env
@@ -25,30 +28,30 @@ type ChatDeps = {
 
 export const chatRoutes = ({ env, db }: ChatDeps) => {
   const chatRepo = createChatRepository(db)
-  const topicRepo = createTopicRepository(db)
+  const learningRepo = createLearningRepository(db)
   const aiConfig = resolveAIConfig(env.ENVIRONMENT)
+  const aiAdapter = createAIAdapter({
+    provider: env.AI_PROVIDER,
+    apiKey: env.OPENROUTER_API_KEY,
+  })
 
   const app = new Hono<{ Bindings: Env; Variables: Variables }>()
     // セッション作成
     .post(
       "/sessions",
       authMiddleware,
-      zValidator("json", z.object({ topicId: z.string() })),
+      zValidator("json", createSessionRequestSchema),
       async (c) => {
         const user = c.get("user")
         const { topicId } = c.req.valid("json")
 
         const result = await createSession(
-          { chatRepo, topicRepo },
+          { chatRepo, learningRepo },
           user.id,
           topicId
         )
 
-        if (!result.ok) {
-          return c.json({ error: result.error }, result.status as 404)
-        }
-
-        return c.json({ session: result.session }, 201)
+        return handleResultWith(c, result, (value) => ({ session: value }), 201)
       }
     )
 
@@ -60,9 +63,21 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         const topicId = c.req.param("topicId")
         const user = c.get("user")
 
-        const sessions = await listSessionsByTopic({ chatRepo }, user.id, topicId)
+        const result = await listSessionsByTopic({ chatRepo }, user.id, topicId)
+        return handleResultWith(c, result, (value) => ({ sessions: value }))
+      }
+    )
 
-        return c.json({ sessions })
+    // 論点ごとのgood質問一覧（N+1解消用バッチ取得）
+    .get(
+      "/topics/:topicId/good-questions",
+      authMiddleware,
+      async (c) => {
+        const topicId = c.req.param("topicId")
+        const user = c.get("user")
+
+        const result = await listGoodQuestionsByTopic({ chatRepo }, user.id, topicId)
+        return handleResultWith(c, result, (value) => ({ questions: value }))
       }
     )
 
@@ -72,12 +87,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
       const user = c.get("user")
 
       const result = await getSession({ chatRepo }, user.id, sessionId)
-
-      if (!result.ok) {
-        return c.json({ error: result.error }, result.status as 404 | 403)
-      }
-
-      return c.json({ session: result.session })
+      return handleResultWith(c, result, (value) => ({ session: value }))
     })
 
     // メッセージ一覧
@@ -86,38 +96,21 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
       const user = c.get("user")
 
       const result = await listMessages({ chatRepo }, user.id, sessionId)
-
-      if (!result.ok) {
-        return c.json({ error: result.error }, result.status as 404 | 403)
-      }
-
-      return c.json({ messages: result.messages })
+      return handleResultWith(c, result, (value) => ({ messages: value }))
     })
 
     // メッセージ送信（ストリーミング）
     .post(
       "/sessions/:sessionId/messages/stream",
       authMiddleware,
-      zValidator(
-        "json",
-        z.object({
-          content: z.string().min(1).max(10000),
-          imageId: z.string().optional(),
-          ocrResult: z.string().max(50000).optional(),
-        })
-      ),
+      zValidator("json", sendMessageRequestSchema),
       async (c) => {
         const sessionId = c.req.param("sessionId")
         const user = c.get("user")
         const { content, imageId, ocrResult } = c.req.valid("json")
 
-        const aiAdapter = createAIAdapter({
-          provider: env.AI_PROVIDER,
-          apiKey: env.OPENROUTER_API_KEY,
-        })
-
         const stream = sendMessage(
-          { chatRepo, topicRepo, aiAdapter, aiConfig },
+          { chatRepo, learningRepo, aiAdapter, aiConfig },
           {
             sessionId,
             userId: user.id,
@@ -135,26 +128,14 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
     .post(
       "/topics/:topicId/messages/stream",
       authMiddleware,
-      zValidator(
-        "json",
-        z.object({
-          content: z.string().min(1).max(10000),
-          imageId: z.string().optional(),
-          ocrResult: z.string().max(50000).optional(),
-        })
-      ),
+      zValidator("json", sendMessageRequestSchema),
       async (c) => {
         const topicId = c.req.param("topicId")
         const user = c.get("user")
         const { content, imageId, ocrResult } = c.req.valid("json")
 
-        const aiAdapter = createAIAdapter({
-          provider: env.AI_PROVIDER,
-          apiKey: env.OPENROUTER_API_KEY,
-        })
-
         const stream = sendMessageWithNewSession(
-          { chatRepo, topicRepo, aiAdapter, aiConfig },
+          { chatRepo, learningRepo, aiAdapter, aiConfig },
           {
             topicId,
             userId: user.id,
@@ -168,6 +149,23 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
       }
     )
 
+    // 音声認識テキスト補正
+    .post(
+      "/correct-speech",
+      authMiddleware,
+      zValidator("json", correctSpeechRequestSchema),
+      async (c) => {
+        const { text } = c.req.valid("json")
+
+        const result = await correctSpeechText(
+          { aiAdapter, aiConfig },
+          text
+        )
+
+        return handleResultWith(c, result, (correctedText) => ({ correctedText }))
+      }
+    )
+
     // 質問評価
     .post("/messages/:messageId/evaluate", authMiddleware, async (c) => {
       const messageId = c.req.param("messageId")
@@ -176,21 +174,16 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
       const result = await getMessageForEvaluation({ chatRepo }, user.id, messageId)
 
       if (!result.ok) {
-        return c.json({ error: result.error }, result.status as 404 | 403)
+        return errorResponse(c, result.error)
       }
 
-      const aiAdapter = createAIAdapter({
-        provider: env.AI_PROVIDER,
-        apiKey: env.OPENROUTER_API_KEY,
-      })
-
-      const quality = await evaluateQuestion(
-        { chatRepo, topicRepo, aiAdapter, aiConfig },
+      const evalResult = await evaluateQuestion(
+        { chatRepo, learningRepo, aiAdapter, aiConfig },
         messageId,
-        result.content
+        result.value
       )
 
-      return c.json({ quality })
+      return handleResultWith(c, evalResult, (value) => ({ quality: value }))
     })
 
   return app

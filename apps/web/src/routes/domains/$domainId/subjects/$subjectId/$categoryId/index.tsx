@@ -3,8 +3,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { api } from "@/lib/api-client"
 import { requireAuth } from "@/lib/auth"
 import { filterTopics, type FilteredTopic } from "@/features/review/api"
+import { getMyProgress } from "@/features/progress/api"
 import { PageWrapper } from "@/components/layout"
 import { BookmarkButton } from "@/features/bookmark"
+import { categoryTopicsResponseSchema } from "@cpa-study/shared/schemas"
 
 export const Route = createFileRoute("/domains/$domainId/subjects/$subjectId/$categoryId/")({
   beforeLoad: requireAuth,
@@ -15,27 +17,22 @@ function CategoryPage() {
   const { domainId, subjectId, categoryId } = Route.useParams()
   const queryClient = useQueryClient()
 
-  const { data: topics, isLoading } = useQuery({
+  const { data: topicsData, isLoading } = useQuery({
     queryKey: ["subjects", subjectId, "categories", categoryId, "topics"],
     queryFn: async () => {
-      const res = await api.api.subjects[":subjectId"].categories[
-        ":categoryId"
-      ].topics.$get({
-        param: { subjectId, categoryId },
+      const res = await api.api.view.categories[":categoryId"].topics.$get({
+        param: { categoryId },
       })
       if (!res.ok) throw new Error(`論点の取得に失敗しました (${res.status})`)
-      return res.json()
+      const data = await res.json()
+      return categoryTopicsResponseSchema.parse(data)
     },
   })
 
   // ユーザーの進捗情報を取得
   const { data: progressData } = useQuery({
     queryKey: ["progress", "me"],
-    queryFn: async () => {
-      const res = await api.api.subjects.progress.me.$get()
-      if (!res.ok) throw new Error(`進捗の取得に失敗しました (${res.status})`)
-      return res.json()
-    },
+    queryFn: getMyProgress,
   })
 
   // 論点の統計情報を取得（セッション数、深掘り質問数など）
@@ -67,10 +64,8 @@ function CategoryPage() {
       topicId: string
       understood: boolean
     }) => {
-      const res = await api.api.subjects[":subjectId"].topics[
-        ":topicId"
-      ].progress.$put({
-        param: { subjectId, topicId },
+      const res = await api.api.learning.topics[":topicId"].progress.$put({
+        param: { topicId },
         json: { understood },
       })
       if (!res.ok) throw new Error(`進捗の更新に失敗しました (${res.status})`)
@@ -124,7 +119,7 @@ function CategoryPage() {
       </div>
 
       <div className="space-y-3">
-        {topics?.topics.map((topic: { id: string; name: string; description: string | null }) => {
+        {topicsData?.topics.map((topic: { id: string; name: string; description: string | null }) => {
           const progress = progressMap.get(topic.id)
           const isUnderstood = progress?.understood ?? false
           const stats = statsMap.get(topic.id)
@@ -212,7 +207,7 @@ function CategoryPage() {
           )
         })}
 
-        {topics?.topics.length === 0 && (
+        {topicsData?.topics.length === 0 && (
           <p className="text-ink-500 text-center py-8">
             この単元には論点がありません
           </p>

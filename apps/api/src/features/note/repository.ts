@@ -1,4 +1,4 @@
-import { eq, and, desc } from "drizzle-orm"
+import { eq, and, desc, isNull } from "drizzle-orm"
 import type { Db } from "@cpa-study/db"
 import { notes, topics, categories, subjects } from "@cpa-study/db/schema"
 
@@ -38,6 +38,7 @@ export type NoteRepository = {
     id: string,
     data: Partial<Pick<Note, "aiSummary" | "userMemo" | "keyPoints" | "stumbledPoints">>
   ) => Promise<Note | null>
+  softDelete: (id: string) => Promise<boolean>
 }
 
 export const createNoteRepository = (db: Db): NoteRepository => ({
@@ -62,7 +63,7 @@ export const createNoteRepository = (db: Db): NoteRepository => ({
   },
 
   findById: async (id) => {
-    const result = await db.select().from(notes).where(eq(notes.id, id)).limit(1)
+    const result = await db.select().from(notes).where(and(eq(notes.id, id), isNull(notes.deletedAt))).limit(1)
     if (!result[0]) return null
 
     return {
@@ -76,7 +77,7 @@ export const createNoteRepository = (db: Db): NoteRepository => ({
     const result = await db
       .select()
       .from(notes)
-      .where(eq(notes.sessionId, sessionId))
+      .where(and(eq(notes.sessionId, sessionId), isNull(notes.deletedAt)))
       .limit(1)
 
     if (!result[0]) return null
@@ -110,7 +111,7 @@ export const createNoteRepository = (db: Db): NoteRepository => ({
       .innerJoin(topics, eq(notes.topicId, topics.id))
       .innerJoin(categories, eq(topics.categoryId, categories.id))
       .innerJoin(subjects, eq(categories.subjectId, subjects.id))
-      .where(eq(notes.id, id))
+      .where(and(eq(notes.id, id), isNull(notes.deletedAt)))
       .limit(1)
 
     if (!result[0]) return null
@@ -126,7 +127,7 @@ export const createNoteRepository = (db: Db): NoteRepository => ({
     const result = await db
       .select()
       .from(notes)
-      .where(and(eq(notes.userId, userId), eq(notes.topicId, topicId)))
+      .where(and(eq(notes.userId, userId), eq(notes.topicId, topicId), isNull(notes.deletedAt)))
       .orderBy(desc(notes.createdAt))
 
     return result.map((n) => ({
@@ -156,7 +157,7 @@ export const createNoteRepository = (db: Db): NoteRepository => ({
       .innerJoin(topics, eq(notes.topicId, topics.id))
       .innerJoin(categories, eq(topics.categoryId, categories.id))
       .innerJoin(subjects, eq(categories.subjectId, subjects.id))
-      .where(eq(notes.userId, userId))
+      .where(and(eq(notes.userId, userId), isNull(notes.deletedAt)))
       .orderBy(desc(notes.createdAt))
 
     return result.map((n) => ({
@@ -170,7 +171,7 @@ export const createNoteRepository = (db: Db): NoteRepository => ({
     const existing = await db
       .select()
       .from(notes)
-      .where(eq(notes.id, id))
+      .where(and(eq(notes.id, id), isNull(notes.deletedAt)))
       .limit(1)
 
     if (!existing[0]) return null
@@ -192,5 +193,15 @@ export const createNoteRepository = (db: Db): NoteRepository => ({
         data.stumbledPoints ?? (existing[0].stumbledPoints as string[]) ?? [],
       updatedAt: now,
     }
+  },
+
+  softDelete: async (id) => {
+    const now = new Date()
+    const result = await db
+      .update(notes)
+      .set({ deletedAt: now })
+      .where(and(eq(notes.id, id), isNull(notes.deletedAt)))
+      .returning()
+    return result.length > 0
   },
 })

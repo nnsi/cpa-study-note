@@ -180,10 +180,27 @@ export const useSendMessage = ({ sessionId, topicId, onSessionCreated }: UseSend
       // ユーザーメッセージを即時表示
       setPendingUserMessage({ content, imageId })
 
+      // バッファリング用の変数（再レンダリング抑制）
+      let textBuffer = ""
+      let rafId: number | null = null
+
+      const flushBuffer = () => {
+        // textBuffer の値をローカル変数にキャプチャしてからクリアする
+        // React 18 の自動バッチングにより updater 関数の実行が遅延するため、
+        // ミュータブルな textBuffer を直接参照すると、実行時には既に "" になっている
+        const text = textBuffer
+        textBuffer = ""
+        rafId = null
+        if (text) {
+          setStreamingText((prev) => prev + text)
+        }
+      }
+
       try {
         let userMessageId: string | undefined
         let currentSessionId = sessionId
         let newSessionId: string | undefined
+        let receivedAnyChunk = false
 
         // セッションがない場合は新規セッション作成APIを使用
         const streamSource = sessionId
@@ -191,12 +208,17 @@ export const useSendMessage = ({ sessionId, topicId, onSessionCreated }: UseSend
           : api.streamMessageWithNewSession(topicId, content, imageId, ocrResult)
 
         for await (const chunk of streamSource) {
+          receivedAnyChunk = true
           if (chunk.type === "session_created") {
             // 新規セッションが作成された（ストリーミング完了後に通知）
             currentSessionId = chunk.sessionId
             newSessionId = chunk.sessionId
           } else if (chunk.type === "text") {
-            setStreamingText((prev) => prev + chunk.content)
+            // バッファに蓄積し、次のフレームで一括更新
+            textBuffer += chunk.content
+            if (!rafId) {
+              rafId = requestAnimationFrame(flushBuffer)
+            }
           } else if (chunk.type === "done") {
             userMessageId = chunk.messageId
             // メッセージ一覧を再取得
@@ -217,6 +239,17 @@ export const useSendMessage = ({ sessionId, topicId, onSessionCreated }: UseSend
           } else if (chunk.type === "error") {
             setError(new Error(chunk.error))
           }
+        }
+
+        // ループ終了後、残りのバッファをフラッシュ
+        if (rafId) {
+          cancelAnimationFrame(rafId)
+        }
+        flushBuffer()
+
+        // ストリームが何もチャンクを返さずに終了した場合
+        if (!receivedAnyChunk) {
+          setError(new Error("サーバーから応答がありませんでした"))
         }
 
         // ユーザーメッセージの質問評価を実行（バックグラウンド）
@@ -257,6 +290,7 @@ export const useChatInput = ({ sessionId, topicId, onSessionCreated }: UseChatIn
   const [content, setContent] = useState("")
   const [imageId, setImageId] = useState<string | null>(null)
   const [ocrText, setOcrText] = useState<string | null>(null)
+  const [isCorrectingSpeech, setIsCorrectingSpeech] = useState(false)
   const { sendMessage, isStreaming, pendingUserMessage, error, streamingText } =
     useSendMessage({ sessionId, topicId, onSessionCreated })
 
@@ -273,6 +307,21 @@ export const useChatInput = ({ sessionId, topicId, onSessionCreated }: UseChatIn
     setImageId(null)
     setOcrText(null)
   }, [])
+
+  const handleCorrectSpeech = useCallback(async () => {
+    if (!content.trim() || isCorrectingSpeech) return
+    setIsCorrectingSpeech(true)
+    try {
+      const { correctedText } = await api.correctSpeech(content)
+      setContent(correctedText)
+    } catch (e) {
+      if (import.meta.env.DEV) {
+        console.warn("Speech correction failed:", e)
+      }
+    } finally {
+      setIsCorrectingSpeech(false)
+    }
+  }, [content, isCorrectingSpeech])
 
   const handleSubmit = useCallback(async () => {
     if (!content.trim() || isStreaming) return
@@ -296,12 +345,14 @@ export const useChatInput = ({ sessionId, topicId, onSessionCreated }: UseChatIn
     imageId,
     ocrText,
     isStreaming,
+    isCorrectingSpeech,
     streamingText,
     pendingUserMessage,
     error,
     handleContentChange,
     handleImageSelect,
     handleImageClear,
+    handleCorrectSpeech,
     handleSubmit,
   }
 }

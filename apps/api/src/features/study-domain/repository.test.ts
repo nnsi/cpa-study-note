@@ -288,8 +288,8 @@ describe("StudyDomainRepository", () => {
     })
   })
 
-  describe("canDeleteStudyDomain", () => {
-    it("should return canDelete=false when subjects exist", async () => {
+  describe("softDelete cascade", () => {
+    it("should cascade soft-delete subjects, categories, and topics", async () => {
       const now = new Date()
       db.insert(schema.studyDomains)
         .values({ id: "domain-1", userId, name: "Domain", createdAt: now, updatedAt: now })
@@ -297,62 +297,47 @@ describe("StudyDomainRepository", () => {
       db.insert(schema.subjects)
         .values({ id: "subject-1", userId, studyDomainId: "domain-1", name: "Subject", displayOrder: 0, createdAt: now, updatedAt: now })
         .run()
+      db.insert(schema.categories)
+        .values({ id: "cat-1", userId, subjectId: "subject-1", name: "Category", depth: 1, displayOrder: 0, createdAt: now, updatedAt: now })
+        .run()
+      db.insert(schema.topics)
+        .values({ id: "topic-1", userId, categoryId: "cat-1", name: "Topic", displayOrder: 0, createdAt: now, updatedAt: now })
+        .run()
 
-      const result = await repository.canDeleteStudyDomain("domain-1", userId)
+      const result = await repository.softDelete("domain-1", userId)
 
-      expect(result.canDelete).toBe(false)
-      expect(result.reason).toContain("件の科目が紐づいています")
+      expect(result).toBe(true)
+
+      // All should be soft-deleted
+      const domains = db.select().from(schema.studyDomains).all()
+      expect(domains[0].deletedAt).not.toBeNull()
+
+      const subs = db.select().from(schema.subjects).all()
+      expect(subs[0].deletedAt).not.toBeNull()
+
+      const cats = db.select().from(schema.categories).all()
+      expect(cats[0].deletedAt).not.toBeNull()
+
+      const tops = db.select().from(schema.topics).all()
+      expect(tops[0].deletedAt).not.toBeNull()
     })
 
-    it("should return canDelete=true when no subjects exist", async () => {
+    it("should not cascade to other users' data", async () => {
       const now = new Date()
       db.insert(schema.studyDomains)
-        .values({ id: "empty-domain", userId, name: "Empty Domain", createdAt: now, updatedAt: now })
-        .run()
-
-      const result = await repository.canDeleteStudyDomain("empty-domain", userId)
-
-      expect(result.canDelete).toBe(true)
-      expect(result.reason).toBeUndefined()
-    })
-
-    it("should return canDelete=true for non-existent domain", async () => {
-      const result = await repository.canDeleteStudyDomain("non-existent", userId)
-
-      expect(result.canDelete).toBe(true)
-    })
-
-    it("should not count soft-deleted subjects", async () => {
-      const now = new Date()
-      db.insert(schema.studyDomains)
-        .values({ id: "domain-1", userId, name: "Domain", createdAt: now, updatedAt: now })
-        .run()
-      db.insert(schema.subjects)
-        .values({ id: "subject-1", userId, studyDomainId: "domain-1", name: "Deleted Subject", displayOrder: 0, createdAt: now, updatedAt: now, deletedAt: now })
-        .run()
-
-      const result = await repository.canDeleteStudyDomain("domain-1", userId)
-
-      expect(result.canDelete).toBe(true)
-    })
-
-    it("should count subjects correctly", async () => {
-      const now = new Date()
-      db.insert(schema.studyDomains)
-        .values({ id: "multi-subject", userId, name: "Multi Subject Domain", createdAt: now, updatedAt: now })
-        .run()
-
-      db.insert(schema.subjects)
         .values([
-          { id: "subj-1", userId, studyDomainId: "multi-subject", name: "Subject 1", displayOrder: 1, createdAt: now, updatedAt: now },
-          { id: "subj-2", userId, studyDomainId: "multi-subject", name: "Subject 2", displayOrder: 2, createdAt: now, updatedAt: now },
+          { id: "domain-1", userId, name: "Domain", createdAt: now, updatedAt: now },
+          { id: "domain-2", userId: otherUserId, name: "Other Domain", createdAt: now, updatedAt: now },
         ])
         .run()
+      db.insert(schema.subjects)
+        .values({ id: "subject-other", userId: otherUserId, studyDomainId: "domain-2", name: "Other Subject", displayOrder: 0, createdAt: now, updatedAt: now })
+        .run()
 
-      const result = await repository.canDeleteStudyDomain("multi-subject", userId)
+      await repository.softDelete("domain-1", userId)
 
-      expect(result.canDelete).toBe(false)
-      expect(result.reason).toContain("2件の科目が紐づいています")
+      const otherSubjects = db.select().from(schema.subjects).all()
+      expect(otherSubjects[0].deletedAt).toBeNull()
     })
   })
 })

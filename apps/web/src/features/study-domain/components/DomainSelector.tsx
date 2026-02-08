@@ -7,7 +7,7 @@ import { getColorClass } from "@/lib/colorClasses"
 /**
  * ヘッダーに表示する学習領域選択ドロップダウン
  */
-export function DomainSelector() {
+export const DomainSelector = () => {
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
@@ -18,7 +18,7 @@ export function DomainSelector() {
   // 外側クリックでドロップダウンを閉じる
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (dropdownRef.current && event.target instanceof Node && !dropdownRef.current.contains(event.target)) {
         setIsOpen(false)
       }
     }

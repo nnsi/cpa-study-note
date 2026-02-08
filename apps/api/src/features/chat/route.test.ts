@@ -1,5 +1,5 @@
 /// <reference types="@cloudflare/workers-types" />
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
+import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import { Hono } from "hono"
 import { SignJWT } from "jose"
 import { z } from "zod"
@@ -10,7 +10,6 @@ import {
   seedTestData,
   type TestDatabase,
 } from "../../test/mocks/db"
-import { createMockAIAdapter } from "../../test/mocks/ai"
 import type { Env, Variables } from "../../shared/types/env"
 import { parseJson, errorResponseSchema } from "../../test/helpers"
 import Database from "better-sqlite3"
@@ -176,7 +175,7 @@ describe("Chat Routes", () => {
 
       expect(res.status).toBe(404)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("Topic not found")
+      expect(body.error.message).toBe("論点が見つかりません")
     })
 
     it("should return 401 when unauthenticated in production mode", async () => {
@@ -314,7 +313,7 @@ describe("Chat Routes", () => {
 
       expect(res.status).toBe(404)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("Session not found")
+      expect(body.error.message).toBe("セッションが見つかりません")
     })
 
     it("should return 403 for session owned by another user", async () => {
@@ -352,7 +351,7 @@ describe("Chat Routes", () => {
 
       expect(res.status).toBe(403)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("Unauthorized")
+      expect(body.error.message).toBe("このセッションへのアクセス権限がありません")
     })
   })
 
@@ -676,7 +675,7 @@ describe("Chat Routes", () => {
 
       expect(res.status).toBe(404)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("Message not found")
+      expect(body.error.message).toBe("メッセージが見つかりません")
     })
 
     it("should return 403 for message in session owned by another user", async () => {
@@ -726,7 +725,7 @@ describe("Chat Routes", () => {
 
       expect(res.status).toBe(403)
       const body = await parseJson(res, errorResponseSchema)
-      expect(body.error).toBe("Forbidden")
+      expect(body.error.message).toBe("このメッセージへのアクセス権限がありません")
     })
   })
 

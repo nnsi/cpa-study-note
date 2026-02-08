@@ -15,10 +15,11 @@ export const useCreateNote = (topicId: string) => {
 
   return useMutation({
     mutationFn: (sessionId: string) => api.createNote(sessionId),
-    onSuccess: (_, sessionId) => {
+    onSuccess: (data, sessionId) => {
       queryClient.invalidateQueries({ queryKey: ["notes", "topic", topicId] })
       queryClient.invalidateQueries({ queryKey: ["notes"] })
-      queryClient.invalidateQueries({ queryKey: ["notes", "session", sessionId] })
+      // キャッシュに直接セットして即座にUI更新
+      queryClient.setQueryData(["notes", "session", sessionId], { note: data.note })
     },
   })
 }
@@ -50,6 +51,37 @@ export const useRefreshNote = (topicId: string) => {
 
   return useMutation({
     mutationFn: (noteId: string) => api.refreshNote(noteId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notes", "topic", topicId] })
+      queryClient.invalidateQueries({ queryKey: ["notes"] })
+    },
+  })
+}
+
+export const useNoteDetail = (noteId: string) => {
+  return useQuery({
+    queryKey: ["notes", noteId],
+    queryFn: () => api.getNoteDetail(noteId),
+  })
+}
+
+export const useUpdateNoteDetail = (noteId: string) => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (updates: { userMemo?: string; keyPoints?: string[]; stumbledPoints?: string[] }) =>
+      api.updateNoteDetail(noteId, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notes", noteId] })
+    },
+  })
+}
+
+// ノート削除
+export const useDeleteNote = (topicId: string) => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (noteId: string) => api.deleteNote(noteId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notes", "topic", topicId] })
       queryClient.invalidateQueries({ queryKey: ["notes"] })

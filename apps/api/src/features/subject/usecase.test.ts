@@ -6,12 +6,14 @@ import {
   createSubject,
   updateSubject,
   deleteSubject,
+  type SubjectDeps,
+} from "./usecase"
+import {
   getSubjectTree,
   updateSubjectTree,
   importCSVToSubject,
-  type SubjectUseCaseDeps,
-  type TreeUseCaseDeps,
-} from "./usecase"
+  type TreeDeps,
+} from "./tree-usecase"
 import { createTestDatabase, type TestDatabase } from "@/test/mocks/db"
 import { createTestUser, createTestStudyDomain, createTestSubject, createTestCategory, createTestTopic } from "@/test/helpers"
 import { createMockSimpleTransactionRunner } from "@/shared/lib/transaction"
@@ -21,7 +23,7 @@ import type { UpdateTreeRequest } from "@cpa-study/shared/schemas"
 
 describe("Subject UseCase", () => {
   let db: TestDatabase
-  let deps: SubjectUseCaseDeps
+  let deps: SubjectDeps
 
   beforeEach(() => {
     const result = createTestDatabase()
@@ -55,7 +57,7 @@ describe("Subject UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("NOT_FOUND")
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
 
@@ -67,7 +69,7 @@ describe("Subject UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("NOT_FOUND")
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
 
@@ -105,7 +107,7 @@ describe("Subject UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("NOT_FOUND")
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
 
@@ -119,7 +121,7 @@ describe("Subject UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("NOT_FOUND")
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
 
@@ -132,7 +134,7 @@ describe("Subject UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("NOT_FOUND")
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
 
@@ -145,7 +147,7 @@ describe("Subject UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("NOT_FOUND")
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
   })
@@ -188,7 +190,7 @@ describe("Subject UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("NOT_FOUND")
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
 
@@ -203,7 +205,7 @@ describe("Subject UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("NOT_FOUND")
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
   })
@@ -233,7 +235,7 @@ describe("Subject UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("NOT_FOUND")
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
 
@@ -247,7 +249,7 @@ describe("Subject UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("NOT_FOUND")
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
 
@@ -260,7 +262,7 @@ describe("Subject UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("NOT_FOUND")
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
 
@@ -304,7 +306,7 @@ describe("Subject UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("NOT_FOUND")
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
 
@@ -318,33 +320,28 @@ describe("Subject UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("NOT_FOUND")
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
 
-    it("should return HAS_CATEGORIES if subject has categories", async () => {
+    it("should cascade soft-delete categories and topics", async () => {
       const { id: userId } = createTestUser(db)
       const { id: domainId } = createTestStudyDomain(db, userId)
       const { id: subjectId } = createTestSubject(db, userId, domainId)
-      createTestCategory(db, userId, subjectId, { name: "Category" })
-
-      const result = await deleteSubject(deps, userId, subjectId)
-
-      expect(result.ok).toBe(false)
-      if (!result.ok) {
-        expect(result.error).toBe("HAS_CATEGORIES")
-      }
-    })
-
-    it("should allow deletion if all categories are soft-deleted", async () => {
-      const { id: userId } = createTestUser(db)
-      const { id: domainId } = createTestStudyDomain(db, userId)
-      const { id: subjectId } = createTestSubject(db, userId, domainId)
-      createTestCategory(db, userId, subjectId, { name: "Deleted Category", deletedAt: new Date() })
+      const { id: categoryId } = createTestCategory(db, userId, subjectId, { name: "Category" })
+      createTestTopic(db, userId, categoryId, { name: "Topic" })
 
       const result = await deleteSubject(deps, userId, subjectId)
 
       expect(result.ok).toBe(true)
+
+      // Categories should be soft-deleted
+      const cats = db.select().from(schema.categories).all()
+      expect(cats[0].deletedAt).not.toBeNull()
+
+      // Topics should be soft-deleted
+      const tops = db.select().from(schema.topics).all()
+      expect(tops[0].deletedAt).not.toBeNull()
     })
   })
 })
@@ -352,7 +349,7 @@ describe("Subject UseCase", () => {
 describe("Subject UseCase - Tree Operations", () => {
   let db: TestDatabase
   let subjectRepo: SubjectRepository
-  let treeDeps: TreeUseCaseDeps
+  let treeDeps: TreeDeps
 
   beforeEach(() => {
     const result = createTestDatabase()
@@ -426,7 +423,7 @@ describe("Subject UseCase - Tree Operations", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("NOT_FOUND")
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
 
@@ -440,7 +437,7 @@ describe("Subject UseCase - Tree Operations", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("NOT_FOUND")
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
   })
@@ -593,7 +590,7 @@ describe("Subject UseCase - Tree Operations", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("INVALID_ID")
+        expect(result.error.code).toBe("BAD_REQUEST")
       }
     })
 
@@ -608,7 +605,7 @@ describe("Subject UseCase - Tree Operations", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("NOT_FOUND")
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
   })
@@ -683,7 +680,7 @@ describe("Subject UseCase - Tree Operations", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("NOT_FOUND")
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
 

@@ -1,7 +1,7 @@
 /**
  * Image UseCase のテスト
  */
-import { describe, it, expect, vi, beforeEach } from "vitest"
+import { describe, it, expect, vi } from "vitest"
 import type { ImageRepository } from "./repository"
 import type { AIAdapter } from "@/shared/lib/ai"
 import {
@@ -41,6 +41,16 @@ const createMockAIAdapter = (overrides: Partial<AIAdapter> = {}): AIAdapter => (
   }),
   streamText: vi.fn(),
   ...overrides,
+})
+
+const createMockAIConfig = () => ({
+  chat: { model: "test-model", temperature: 0.7, maxTokens: 2000 },
+  evaluation: { model: "test-model", temperature: 0, maxTokens: 100 },
+  noteSummary: { model: "test-model", temperature: 0.3, maxTokens: 1000 },
+  ocr: { model: "openai/gpt-4o-mini", temperature: 0, maxTokens: 2000 },
+  speechCorrection: { model: "test-model", temperature: 0, maxTokens: 500 },
+  topicGenerator: { model: "test-model", temperature: 0.5, maxTokens: 3000 },
+  planAssistant: { model: "test-model", temperature: 0.5, maxTokens: 3000 },
 })
 
 // PNG マジックバイト
@@ -155,8 +165,7 @@ describe("Image UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("Image not found")
-        expect(result.status).toBe(404)
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
 
@@ -176,8 +185,7 @@ describe("Image UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("Unauthorized")
-        expect(result.status).toBe(403)
+        expect(result.error.code).toBe("FORBIDDEN")
       }
     })
 
@@ -198,8 +206,7 @@ describe("Image UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("Invalid file format")
-        expect(result.status).toBe(400)
+        expect(result.error.code).toBe("BAD_REQUEST")
       }
     })
 
@@ -221,8 +228,7 @@ describe("Image UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("Invalid file format")
-        expect(result.status).toBe(400)
+        expect(result.error.code).toBe("BAD_REQUEST")
       }
     })
   })
@@ -247,15 +253,15 @@ describe("Image UseCase", () => {
       })
 
       const result = await performOCR(
-        { imageRepo, aiAdapter, r2, apiBaseUrl: "https://api.example.com" },
+        { imageRepo, aiAdapter, aiConfig: createMockAIConfig(), r2 },
         "user-1",
         "image-1"
       )
 
       expect(result.ok).toBe(true)
       if (result.ok) {
-        expect(result.imageId).toBe("image-1")
-        expect(result.ocrText).toBe("抽出されたテキスト: 有価証券の評価損益")
+        expect(result.value.imageId).toBe("image-1")
+        expect(result.value.ocrText).toBe("抽出されたテキスト: 有価証券の評価損益")
       }
       expect(imageRepo.updateOcrText).toHaveBeenCalledWith(
         "image-1",
@@ -271,15 +277,14 @@ describe("Image UseCase", () => {
       const r2 = createMockR2Bucket()
 
       const result = await performOCR(
-        { imageRepo, aiAdapter, r2, apiBaseUrl: "https://api.example.com" },
+        { imageRepo, aiAdapter, aiConfig: createMockAIConfig(), r2 },
         "user-1",
         "non-existent"
       )
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("Image not found")
-        expect(result.status).toBe(404)
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
 
@@ -292,15 +297,14 @@ describe("Image UseCase", () => {
       const r2 = createMockR2Bucket()
 
       const result = await performOCR(
-        { imageRepo, aiAdapter, r2, apiBaseUrl: "https://api.example.com" },
+        { imageRepo, aiAdapter, aiConfig: createMockAIConfig(), r2 },
         "user-1",
         "image-1"
       )
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("Unauthorized")
-        expect(result.status).toBe(403)
+        expect(result.error.code).toBe("FORBIDDEN")
       }
     })
 
@@ -313,15 +317,14 @@ describe("Image UseCase", () => {
       const r2 = createMockR2Bucket() // 空のR2
 
       const result = await performOCR(
-        { imageRepo, aiAdapter, r2, apiBaseUrl: "https://api.example.com" },
+        { imageRepo, aiAdapter, aiConfig: createMockAIConfig(), r2 },
         "user-1",
         "image-1"
       )
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("Image file not found")
-        expect(result.status).toBe(404)
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
   })
@@ -337,10 +340,10 @@ describe("Image UseCase", () => {
 
       expect(result.ok).toBe(true)
       if (result.ok) {
-        expect(result.image.id).toBe("image-1")
-        expect(result.image.filename).toBe("test.png")
-        expect(result.image.mimeType).toBe("image/png")
-        expect(result.image.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T/)
+        expect(result.value.id).toBe("image-1")
+        expect(result.value.filename).toBe("test.png")
+        expect(result.value.mimeType).toBe("image/png")
+        expect(result.value.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T/)
       }
     })
 
@@ -353,8 +356,7 @@ describe("Image UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("Image not found")
-        expect(result.status).toBe(404)
+        expect(result.error.code).toBe("NOT_FOUND")
       }
     })
 
@@ -368,8 +370,7 @@ describe("Image UseCase", () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe("Unauthorized")
-        expect(result.status).toBe(403)
+        expect(result.error.code).toBe("FORBIDDEN")
       }
     })
   })

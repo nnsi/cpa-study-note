@@ -7,6 +7,8 @@ import { authMiddleware } from "@/shared/middleware/auth"
 import { createAuthRepository } from "./repository"
 import { createProviders } from "./providers"
 import { handleOAuthCallback, refreshAccessToken, getOrCreateDevUser, saveRefreshToken, logout } from "./usecase"
+import { handleResult } from "@/shared/lib/route-helpers"
+import { notFound, badRequest, unauthorized } from "@/shared/lib/errors"
 
 // Token expiration times
 const ACCESS_TOKEN_EXPIRES_IN = "15m"
@@ -80,7 +82,7 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
       const provider = providers.get(providerName)
 
       if (!provider) {
-        return c.json({ error: "Provider not found" }, 404)
+        return handleResult(c, { ok: false, error: notFound("Provider not found") })
       }
 
       const state = crypto.randomUUID()
@@ -104,11 +106,11 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
       const storedState = getCookie(c, "oauth_state")
 
       if (!code) {
-        return c.json({ error: "Missing code" }, 400)
+        return handleResult(c, { ok: false, error: badRequest("Missing code") })
       }
 
       if (state !== storedState) {
-        return c.json({ error: "Invalid state" }, 400)
+        return handleResult(c, { ok: false, error: badRequest("Invalid state") })
       }
 
       const result = await handleOAuthCallback(
@@ -118,13 +120,7 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
       )
 
       if (!result.ok) {
-        const statusMap: Record<string, 401 | 404 | 500> = {
-          PROVIDER_NOT_FOUND: 404,
-          TOKEN_EXCHANGE_FAILED: 401,
-          USER_INFO_FAILED: 401,
-          DB_ERROR: 500,
-        }
-        return c.json({ error: result.error }, statusMap[result.error] ?? 500)
+        return handleResult(c, result)
       }
 
       const user = result.value.user
@@ -147,7 +143,7 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
       // Save refresh token to DB（UseCase経由）
       const expiresAt = new Date()
       expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_EXPIRES_DAYS)
-      await saveRefreshToken(
+      const saveResult = await saveRefreshToken(
         { repo },
         {
           userId: user.id,
@@ -155,6 +151,10 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
           expiresAt,
         }
       )
+
+      if (!saveResult.ok) {
+        return handleResult(c, saveResult)
+      }
 
       // Set refresh token in HttpOnly cookie
       setCookie(c, "refresh_token", refreshToken, {
@@ -188,7 +188,7 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
       const refreshToken = getCookie(c, "refresh_token")
 
       if (!refreshToken) {
-        return c.json({ error: "No refresh token" }, 401)
+        return handleResult(c, { ok: false, error: unauthorized("No refresh token") })
       }
 
       const result = await refreshAccessToken(
@@ -207,7 +207,7 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
           maxAge: 0,
           path: "/api/auth",
         })
-        return c.json({ error: result.error }, 401)
+        return handleResult(c, result)
       }
 
       return c.json({
@@ -220,7 +220,7 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
     .post("/dev-login", async (c) => {
       // ローカル環境以外では無効
       if (env.ENVIRONMENT !== "local") {
-        return c.json({ error: "Not available" }, 404)
+        return handleResult(c, { ok: false, error: notFound("Not available") })
       }
 
       const devUserId = env.DEV_USER_ID || "test-user-1"
@@ -238,7 +238,7 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
       )
 
       if (!userResult.ok) {
-        return c.json({ error: "Failed to create dev user" }, 500)
+        return handleResult(c, userResult)
       }
 
       const existingUser = userResult.value
@@ -259,7 +259,7 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
       // Save refresh token to DB（UseCase経由）
       const expiresAt = new Date()
       expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_EXPIRES_DAYS)
-      await saveRefreshToken(
+      const saveResult = await saveRefreshToken(
         { repo },
         {
           userId: devUser.id,
@@ -267,6 +267,10 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
           expiresAt,
         }
       )
+
+      if (!saveResult.ok) {
+        return handleResult(c, saveResult)
+      }
 
       // Set refresh token in HttpOnly cookie
       setCookie(c, "refresh_token", refreshToken, {
@@ -290,7 +294,11 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
       if (refreshToken) {
         // Delete refresh token from DB（UseCase経由）
         const tokenHash = await hashToken(refreshToken)
-        await logout({ repo }, tokenHash)
+        const logoutResult = await logout({ repo }, tokenHash)
+        // エラーが発生してもクッキーはクリアする（ログ出力のみ）
+        if (!logoutResult.ok) {
+          console.error("[Auth] Logout DB error:", logoutResult.error)
+        }
       }
 
       // Clear refresh token cookie

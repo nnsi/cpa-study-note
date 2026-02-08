@@ -18,7 +18,7 @@ import {
   createSubject,
   updateSubject,
   deleteSubject,
-  type Subject,
+  type SubjectWithStats,
   type CreateSubjectInput,
   type UpdateSubjectInput,
 } from "@/features/subject/api"
@@ -37,8 +37,8 @@ function EditPage() {
   const [domainToEdit, setDomainToEdit] = useState<StudyDomain | null>(null)
   const [domainToDelete, setDomainToDelete] = useState<StudyDomain | null>(null)
   const [isCreateSubjectOpen, setIsCreateSubjectOpen] = useState(false)
-  const [subjectToEdit, setSubjectToEdit] = useState<Subject | null>(null)
-  const [subjectToDelete, setSubjectToDelete] = useState<Subject | null>(null)
+  const [subjectToEdit, setSubjectToEdit] = useState<SubjectWithStats | null>(null)
+  const [subjectToDelete, setSubjectToDelete] = useState<SubjectWithStats | null>(null)
   const [showCSVImporter, setShowCSVImporter] = useState(false)
 
   // Fetch domains
@@ -580,7 +580,7 @@ function SubjectModal({
   error,
 }: {
   title: string
-  subject?: Subject
+  subject?: SubjectWithStats
   onClose: () => void
   onSubmit: (data: CreateSubjectInput) => void
   isLoading: boolean

@@ -4,11 +4,7 @@
  * Cloudflare Durable Objects を使用した分散レート制限ストア
  * 本番環境向け。複数ワーカーインスタンス間で状態を共有。
  */
-import type {
-  RateLimitStore,
-  RateLimitConfig,
-  RateLimitResult,
-} from "../types"
+import type { RateLimitStore } from "../types"
 
 type CheckRequest = {
   action: "check" | "get"

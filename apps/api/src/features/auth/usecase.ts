@@ -1,18 +1,21 @@
 import { ok, err, type Result } from "@/shared/lib/result"
-import type { User, AuthError, OAuthUserInfo } from "./domain"
+import type { User, OAuthUserInfo } from "./domain"
 import type { AuthRepository } from "./repository"
 import type { createProviders } from "./providers"
 import type { User as EnvUser } from "@/shared/types/env"
 import type { Db } from "@cpa-study/db"
 import { createSampleDataForNewUser } from "./sample-data"
+import { notFound, unauthorized, internalError, type AppError } from "@/shared/lib/errors"
 
+// OAuth認証用の全依存関係
 type AuthDeps = {
   repo: AuthRepository
   providers: ReturnType<typeof createProviders>
   db: Db
 }
 
-type RefreshDeps = {
+// リポジトリのみを使用する操作用
+type AuthRepoDeps = {
   repo: AuthRepository
 }
 
@@ -20,24 +23,24 @@ export const handleOAuthCallback = async (
   deps: AuthDeps,
   providerName: string,
   code: string
-): Promise<Result<{ user: User; isNewUser: boolean }, AuthError>> => {
+): Promise<Result<{ user: User; isNewUser: boolean }, AppError>> => {
   const provider = deps.providers.get(providerName)
-  if (!provider) return err("PROVIDER_NOT_FOUND")
+  if (!provider) return err(notFound("認証プロバイダーが見つかりません", { provider: providerName }))
 
   let tokens
   try {
     tokens = await provider.exchangeCode(code)
   } catch {
-    return err("TOKEN_EXCHANGE_FAILED")
+    return err(unauthorized("認証コードの交換に失敗しました"))
   }
 
-  if (!tokens.access_token) return err("TOKEN_EXCHANGE_FAILED")
+  if (!tokens.access_token) return err(unauthorized("認証コードの交換に失敗しました"))
 
   let oauthUser: OAuthUserInfo
   try {
     oauthUser = await provider.getUserInfo(tokens)
   } catch {
-    return err("USER_INFO_FAILED")
+    return err(unauthorized("ユーザー情報の取得に失敗しました"))
   }
 
   // 既存接続を確認
@@ -48,7 +51,7 @@ export const handleOAuthCallback = async (
 
   if (existingConnection) {
     const user = await deps.repo.findUserById(existingConnection.userId)
-    if (!user) return err("DB_ERROR")
+    if (!user) return err(internalError("データベースエラーが発生しました"))
     return ok({ user, isNewUser: false })
   }
 
@@ -101,10 +104,6 @@ const hashToken = async (token: string) => {
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("")
 }
 
-type DevLoginDeps = {
-  repo: AuthRepository
-}
-
 type DevLoginInput = {
   userId: string
   email: string
@@ -123,9 +122,9 @@ type SaveRefreshTokenInput = {
  * Get or create a dev user for local development
  */
 export const getOrCreateDevUser = async (
-  deps: DevLoginDeps,
+  deps: AuthRepoDeps,
   input: DevLoginInput
-): Promise<Result<User, AuthError>> => {
+): Promise<Result<User, AppError>> => {
   let user = await deps.repo.findUserById(input.userId)
   if (!user) {
     user = await deps.repo.createUserWithId(input.userId, {
@@ -137,7 +136,7 @@ export const getOrCreateDevUser = async (
   }
 
   if (!user) {
-    return err("DB_ERROR")
+    return err(internalError("データベースエラーが発生しました"))
   }
 
   return ok(user)
@@ -147,9 +146,9 @@ export const getOrCreateDevUser = async (
  * Save a refresh token for a user
  */
 export const saveRefreshToken = async (
-  deps: DevLoginDeps,
+  deps: AuthRepoDeps,
   input: SaveRefreshTokenInput
-): Promise<Result<void, AuthError>> => {
+): Promise<Result<void, AppError>> => {
   await deps.repo.saveRefreshToken({
     userId: input.userId,
     tokenHash: input.tokenHash,
@@ -162,9 +161,9 @@ export const saveRefreshToken = async (
  * Logout by deleting the refresh token
  */
 export const logout = async (
-  deps: DevLoginDeps,
+  deps: AuthRepoDeps,
   refreshTokenHash: string
-): Promise<Result<void, AuthError>> => {
+): Promise<Result<void, AppError>> => {
   const storedToken = await deps.repo.findRefreshTokenByHash(refreshTokenHash)
   if (storedToken) {
     await deps.repo.deleteRefreshToken(storedToken.id)
@@ -173,32 +172,30 @@ export const logout = async (
 }
 
 export const refreshAccessToken = async (
-  deps: RefreshDeps,
+  deps: AuthRepoDeps,
   refreshToken: string,
   jwtSecret: Uint8Array,
   generateAccessToken: (user: EnvUser, secret: Uint8Array) => Promise<string>
-): Promise<
-  Result<{ accessToken: string; user: EnvUser }, AuthError>
-> => {
+): Promise<Result<{ accessToken: string; user: EnvUser }, AppError>> => {
   // Hash the provided token and look it up
   const tokenHash = await hashToken(refreshToken)
   const storedToken = await deps.repo.findRefreshTokenByHash(tokenHash)
 
   if (!storedToken) {
-    return err("INVALID_REFRESH_TOKEN")
+    return err(unauthorized("無効なリフレッシュトークンです"))
   }
 
   // Check expiration
   if (storedToken.expiresAt < new Date()) {
     // Delete expired token
     await deps.repo.deleteRefreshToken(storedToken.id)
-    return err("REFRESH_TOKEN_EXPIRED")
+    return err(unauthorized("リフレッシュトークンの有効期限が切れています"))
   }
 
   // Get user
   const user = await deps.repo.findUserById(storedToken.userId)
   if (!user) {
-    return err("DB_ERROR")
+    return err(internalError("データベースエラーが発生しました"))
   }
 
   // Generate new access token

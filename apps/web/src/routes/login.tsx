@@ -36,7 +36,7 @@ const providers = [
 function LoginPage() {
   const { isAuthenticated } = useAuthStore()
   const navigate = useNavigate()
-  const [isLoading, setIsLoading] = useState(false)
+  const [, setIsLoading] = useState(false)
 
   useEffect(() => {
     if (isAuthenticated()) {
