@@ -10,7 +10,7 @@ export const getUploadUrl = async (filename: string, mimeType: AllowedMimeType) 
   const res = await api.api.images["upload-url"].$post({
     json: { filename, mimeType },
   })
-  if (!res.ok) throw new Error("Failed to get upload URL")
+  if (!res.ok) throw new Error("アップロードURLの取得に失敗しました")
   const data = await res.json()
   return uploadUrlResponseSchema.parse(data)
 }
@@ -29,14 +29,14 @@ export const uploadImage = async (
     body: await file.arrayBuffer(),
     credentials: "include",
   })
-  if (!res.ok) throw new Error("Failed to upload image")
+  if (!res.ok) throw new Error("画像のアップロードに失敗しました")
 }
 
 export const performOCR = async (imageId: string) => {
   const res = await api.api.images[":imageId"].ocr.$post({
     param: { imageId },
   })
-  if (!res.ok) throw new Error("Failed to perform OCR")
+  if (!res.ok) throw new Error("OCR処理に失敗しました")
   const data = await res.json()
   return ocrResultResponseSchema.parse(data)
 }
@@ -45,7 +45,7 @@ export const getImage = async (imageId: string) => {
   const res = await api.api.images[":imageId"].$get({
     param: { imageId },
   })
-  if (!res.ok) throw new Error("Failed to get image")
+  if (!res.ok) throw new Error("画像の取得に失敗しました")
   const data = await res.json()
   return imageResponseSchema.parse(data)
 }

@@ -96,7 +96,7 @@ function SubjectEditPage() {
           onClose={() => setShowGenerator(false)}
           onComplete={() => {
             setShowGenerator(false)
-            queryClient.invalidateQueries({ queryKey: ["subject-tree", subjectId] })
+            queryClient.invalidateQueries({ queryKey: ["subjects", subjectId, "tree"] })
           }}
         />
       )}

@@ -4,7 +4,7 @@ import { allowedMimeTypes, type AllowedMimeType } from "@cpa-study/shared/schema
 import * as api from "./api"
 
 const isAllowedMimeType = (type: string): type is AllowedMimeType =>
-  (allowedMimeTypes as readonly string[]).includes(type)
+  Array.from<string>(allowedMimeTypes).includes(type)
 
 type UploadState = {
   status: "idle" | "uploading" | "processing" | "done" | "error"
@@ -39,7 +39,7 @@ export const useImageUpload = () => {
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
       if (!isAllowedMimeType(file.type)) {
-        throw new Error(`Unsupported file type: ${file.type}`)
+        throw new Error(`サポートされていないファイル形式です: ${file.type}`)
       }
 
       setState((prev) => ({

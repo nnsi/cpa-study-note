@@ -20,3 +20,8 @@ tfplan
 # Data files
 /csv/
 packages/db/seed.sql
+
+# E2E
+e2e/.auth/
+test-results/
+playwright-report/

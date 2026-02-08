@@ -58,6 +58,24 @@ export const useRefreshNote = (topicId: string) => {
   })
 }
 
+export const useNoteDetail = (noteId: string) => {
+  return useQuery({
+    queryKey: ["notes", noteId],
+    queryFn: () => api.getNoteDetail(noteId),
+  })
+}
+
+export const useUpdateNoteDetail = (noteId: string) => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (updates: { userMemo?: string; keyPoints?: string[]; stumbledPoints?: string[] }) =>
+      api.updateNoteDetail(noteId, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notes", noteId] })
+    },
+  })
+}
+
 // ノート削除
 export const useDeleteNote = (topicId: string) => {
   const queryClient = useQueryClient()

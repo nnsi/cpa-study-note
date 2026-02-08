@@ -15,7 +15,7 @@ export const getCheckHistory = async (
   const res = await api.api.learning.topics[":topicId"]["check-history"].$get({
     param: { topicId },
   })
-  if (!res.ok) throw new Error("Failed to fetch check history")
+  if (!res.ok) throw new Error("チェック履歴の取得に失敗しました")
   const json = await res.json()
   return checkHistoryListResponseSchema.parse(json)
 }

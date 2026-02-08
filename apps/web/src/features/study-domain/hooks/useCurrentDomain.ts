@@ -6,7 +6,7 @@ import * as api from "../api"
  * URL パラメータから現在の学習領域IDを取得し、
  * オプションで詳細情報もフェッチするフック
  */
-export function useCurrentDomain() {
+export const useCurrentDomain = () => {
   // /domains/:domainId/* パターンから domainId を取得
   // useParams はルートツリーから型を推論できないため、手動で型を指定
   const params = useParams({ strict: false }) as { domainId?: string }
@@ -17,7 +17,7 @@ export function useCurrentDomain() {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["study-domain", domainId],
+    queryKey: ["study-domains", domainId],
     queryFn: () => api.getStudyDomain(domainId!),
     enabled: !!domainId,
   })

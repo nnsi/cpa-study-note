@@ -27,13 +27,13 @@ export const ExerciseComplete = ({
       <div className="flex gap-3 w-full max-w-xs">
         <button
           onClick={onViewTopic}
-          className="flex-1 py-2.5 px-4 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+          className="flex-1 btn-primary py-2.5"
         >
           論点を見る
         </button>
         <button
           onClick={onContinue}
-          className="flex-1 py-2.5 px-4 border border-ink-300 text-ink-700 font-medium rounded-lg hover:bg-ink-50 transition-colors"
+          className="flex-1 btn-secondary py-2.5"
         >
           続けて追加
         </button>

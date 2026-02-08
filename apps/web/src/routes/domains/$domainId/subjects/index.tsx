@@ -64,7 +64,7 @@ function SubjectsPage() {
 
   // Fetch tree for expanded subject
   const { data: treeData, isLoading: isTreeLoading } = useQuery({
-    queryKey: ["subject-tree", expandedSubjectId],
+    queryKey: ["subjects", expandedSubjectId, "tree"],
     queryFn: () => getSubjectTree(expandedSubjectId!),
     enabled: !!expandedSubjectId,
   })

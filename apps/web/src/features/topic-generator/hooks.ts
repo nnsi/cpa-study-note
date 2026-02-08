@@ -205,7 +205,7 @@ export function useAddSuggestedTopics(subjectId: string) {
       await updateSubjectTree(subjectId, { categories: updatedCategories })
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["subject-tree", subjectId] })
+      queryClient.invalidateQueries({ queryKey: ["subjects", subjectId, "tree"] })
       queryClient.invalidateQueries({ queryKey: ["subjects"] })
     },
   })

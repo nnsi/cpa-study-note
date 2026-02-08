@@ -102,7 +102,7 @@ export const useExerciseConfirm = () => {
     },
     onSuccess: (_, variables) => {
       // 論点の問題一覧キャッシュを無効化
-      queryClient.invalidateQueries({ queryKey: ["topicExercises", variables.topicId] })
+      queryClient.invalidateQueries({ queryKey: ["exercises", variables.topicId] })
     },
   })
 
@@ -116,7 +116,7 @@ export const useExerciseConfirm = () => {
 
 export const useTopicExercises = (topicId: string | undefined) => {
   return useQuery<{ exercises: ExerciseWithImage[] }>({
-    queryKey: ["topicExercises", topicId],
+    queryKey: ["exercises", topicId],
     queryFn: () => api.getTopicExercises(topicId!),
     enabled: !!topicId,
   })

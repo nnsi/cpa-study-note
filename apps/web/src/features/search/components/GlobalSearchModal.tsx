@@ -43,9 +43,9 @@ export const GlobalSearchModal = ({ isOpen, query, setQuery, onClose }: Props) =
   // 選択されたアイテムをスクロールして表示
   useEffect(() => {
     if (resultsRef.current && results.length > 0) {
-      const selectedElement = resultsRef.current.children[selectedIndex] as HTMLElement
-      if (selectedElement) {
-        selectedElement.scrollIntoView({ block: "nearest" })
+      const el = resultsRef.current.children[selectedIndex]
+      if (el instanceof HTMLElement) {
+        el.scrollIntoView({ block: "nearest" })
       }
     }
   }, [selectedIndex, results.length])

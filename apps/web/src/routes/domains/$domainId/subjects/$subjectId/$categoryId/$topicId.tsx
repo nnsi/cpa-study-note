@@ -43,7 +43,7 @@ function TopicDetailPage() {
       const res = await api.api.view.topics[":topicId"].$get({
         param: { topicId },
       })
-      if (!res.ok) throw new Error("Failed to fetch topic")
+      if (!res.ok) throw new Error("論点の取得に失敗しました")
       const data = await res.json()
       return topicViewResponseSchema.parse(data)
     },
