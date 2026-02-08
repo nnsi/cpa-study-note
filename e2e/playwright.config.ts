@@ -14,6 +14,15 @@ export default defineConfig({
     baseURL: "http://localhost:4568",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
+    launchOptions: {
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--no-zygote",
+      ],
+    },
   },
   projects: [
     {
@@ -37,7 +46,6 @@ export default defineConfig({
       reuseExistingServer: !isCI,
       cwd: path.resolve(__dirname, ".."),
       env: {
-        NODE_OPTIONS: "--import tsconfig-paths/register",
         TS_NODE_PROJECT: path.resolve(__dirname, "tsconfig.json"),
       },
     },
