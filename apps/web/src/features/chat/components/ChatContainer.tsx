@@ -9,10 +9,20 @@ type Props = {
   sessionId: string | null
   topicId: string
   onSessionCreated?: (sessionId: string) => void
+  initialMessage?: string
 }
 
-export const ChatContainer = ({ sessionId, topicId, onSessionCreated }: Props) => {
+export const ChatContainer = ({ sessionId, topicId, onSessionCreated, initialMessage }: Props) => {
   const { messages, input } = useChat({ sessionId, topicId, onSessionCreated })
+  const hasAutoSentRef = useRef(false)
+
+  // クイックチャットからの自動送信
+  useEffect(() => {
+    if (initialMessage && !hasAutoSentRef.current && !input.isStreaming) {
+      hasAutoSentRef.current = true
+      input.sendMessage(initialMessage)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { mutate: createNote, isPending: isCreatingNote } = useCreateNote(topicId)
   const { data: existingNote } = useNoteBySession(sessionId)

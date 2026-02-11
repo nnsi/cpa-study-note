@@ -8,14 +8,20 @@ import { TopicNotes } from "@/features/note"
 import { ExerciseList, useTopicExercises } from "@/features/exercise"
 import { requireAuth } from "@/lib/auth"
 import { topicViewResponseSchema, type SessionWithStats } from "@cpa-study/shared/schemas"
+import { z } from "zod"
 
 const API_URL = import.meta.env.VITE_API_URL || ""
 const getImageUrl = (imageId: string) => `${API_URL}/api/images/${imageId}/file`
+
+const searchSchema = z.object({
+  quickChatQuestion: z.string().optional(),
+})
 
 export const Route = createFileRoute(
   "/domains/$domainId/subjects/$subjectId/$categoryId/$topicId"
 )({
   beforeLoad: requireAuth,
+  validateSearch: (search) => searchSchema.parse(search),
   component: TopicDetailPage,
 })
 
@@ -24,13 +30,17 @@ type Session = SessionWithStats
 
 function TopicDetailPage() {
   const { domainId, subjectId, categoryId, topicId } = Route.useParams()
+  const { quickChatQuestion } = Route.useSearch()
   const [activeTab, setActiveTab] = useState<"info" | "chat" | "notes" | "exercises">("chat")
   const [sidebarTab, setSidebarTab] = useState<"info" | "notes" | "sessions" | "exercises">(
     "info"
   )
+  // クイックチャットからの遷移時は新規セッションモードで開始
   // null = 新規セッションモード（最初のメッセージ送信でセッション作成）
   // "use-latest" = 最新のセッションを使用
-  const [selectedSessionId, setSelectedSessionId] = useState<string | null | "use-latest">("use-latest")
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null | "use-latest">(
+    quickChatQuestion ? null : "use-latest"
+  )
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
@@ -219,6 +229,7 @@ function TopicDetailPage() {
             sessionId={currentSessionId}
             topicId={topicId}
             onSessionCreated={handleSessionCreated}
+            initialMessage={quickChatQuestion}
           />
         </main>
       </div>
@@ -261,6 +272,7 @@ function TopicDetailPage() {
               sessionId={currentSessionId}
               topicId={topicId}
               onSessionCreated={handleSessionCreated}
+              initialMessage={quickChatQuestion}
             />
           </div>
         )}

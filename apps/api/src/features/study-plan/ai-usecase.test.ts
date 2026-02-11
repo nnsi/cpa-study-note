@@ -110,6 +110,7 @@ const createMockAIConfig = (): AIConfig => ({
   speechCorrection: { model: "test-model", temperature: 0, maxTokens: 500 },
   topicGenerator: { model: "test-model", temperature: 0.5, maxTokens: 3000 },
   planAssistant: { model: "test-model", temperature: 0.5, maxTokens: 3000 },
+  quickChatSuggest: { model: "test-model", temperature: 0, maxTokens: 500 },
 })
 
 // AsyncIterableからチャンクを収集するヘルパー

@@ -349,6 +349,7 @@ export const useChatInput = ({ sessionId, topicId, onSessionCreated }: UseChatIn
     streamingText,
     pendingUserMessage,
     error,
+    sendMessage,
     handleContentChange,
     handleImageSelect,
     handleImageClear,

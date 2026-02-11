@@ -6,6 +6,8 @@ import { MiniMetricsChart } from "@/features/metrics"
 import { TodayActivityCard, ContinueLearningSection } from "@/features/home"
 import { BookmarksList } from "@/features/bookmark"
 import { PageWrapper } from "@/components/layout"
+import { QuickChatInput } from "@/features/quick-chat"
+import { useStudyDomains } from "@/features/study-domain/hooks/useStudyDomains"
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -140,6 +142,13 @@ type User = {
 }
 
 function DashboardPage({ user }: { user: User | null }) {
+  const { studyDomains } = useStudyDomains()
+  const [selectedDomainId, setSelectedDomainId] = useState<string | null>(null)
+
+  // 単一ドメインなら自動選択、複数ならユーザー選択
+  const effectiveDomainId =
+    selectedDomainId ?? (studyDomains.length === 1 ? studyDomains[0]?.id ?? null : null)
+
   return (
     <div className="space-y-8 animate-fade-in">
       {/* 挨拶 */}
@@ -149,6 +158,29 @@ function DashboardPage({ user }: { user: User | null }) {
         </h1>
         <p className="text-ink-600">今日も学習を頑張りましょう</p>
       </div>
+
+      {/* クイックチャット */}
+      {studyDomains.length > 0 && (
+        <section>
+          {studyDomains.length > 1 && (
+            <div className="mb-2">
+              <select
+                value={effectiveDomainId ?? ""}
+                onChange={(e) => setSelectedDomainId(e.target.value || null)}
+                className="text-sm border border-ink-200 rounded-lg px-3 py-1.5 bg-white text-ink-700"
+              >
+                <option value="">学習領域を選択...</option>
+                {studyDomains.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.emoji ? `${d.emoji} ` : ""}{d.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          <QuickChatInput domainId={effectiveDomainId} />
+        </section>
+      )}
 
       {/* 続きから学習 */}
       <ContinueLearningSection />
