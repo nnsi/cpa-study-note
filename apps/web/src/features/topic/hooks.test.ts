@@ -33,14 +33,12 @@ describe("useCheckHistory", () => {
       history: [
         {
           id: "check-1",
-          topicId: "topic-1",
-          understood: true,
+          action: "checked" as const,
           checkedAt: "2024-01-15T10:00:00.000Z",
         },
         {
           id: "check-2",
-          topicId: "topic-1",
-          understood: false,
+          action: "unchecked" as const,
           checkedAt: "2024-01-10T10:00:00.000Z",
         },
       ],

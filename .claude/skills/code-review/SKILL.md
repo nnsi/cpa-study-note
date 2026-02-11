@@ -124,7 +124,7 @@ grep -r "c.json.*error" apps/api/src/features/**/route.ts
 ```
 
 **確認項目:**
-- `handleResult(c, result)` または `handleResultWith(c, result, mapper)` を使用
+- `handleResult(c, result)` / `handleResult(c, result, "key")` / `handleResult(c, result, "key", 201)` を使用（`handleResultWith` は廃止済み）
 - 直接エラー生成は `handleResult(c, err(xxxError("...")))` 形式
 - DIは `const deps = { repo }` 形式
 - POST/PUT は詳細データを返す（`{ message: "..." }` 禁止）

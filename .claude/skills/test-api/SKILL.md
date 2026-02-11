@@ -100,7 +100,7 @@ curl -N -X POST http://localhost:8787/api/sessions/{sessionId}/messages/stream \
 ### 一貫性チェックリスト
 
 **route.ts**
-- [ ] エラーハンドリングは `handleResult(c, result)` または `handleResultWith` を使用
+- [ ] エラーハンドリングは `handleResult(c, result)` / `handleResult(c, result, "key")` / `handleResult(c, result, "key", 201)` を使用（`handleResultWith` は廃止済み）
 - [ ] 直接エラー生成は `handleResult(c, err(xxxError("message")))` 形式
 - [ ] `errorResponse` や `c.json({ error: ... })` を直接使用していない
 - [ ] DIは `const deps = { repo }` 形式で作成

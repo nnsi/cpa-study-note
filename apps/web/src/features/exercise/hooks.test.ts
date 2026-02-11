@@ -58,7 +58,7 @@ describe("useExerciseAnalyze", () => {
       imageId: "img-1",
       ocrText: "テスト問題文",
       suggestedTopics: [
-        { id: "topic-1", name: "論点A", confidence: 0.9 },
+        { topicId: "topic-1", topicName: "論点A", subjectName: "科目A", confidence: "high" as const, reason: "テスト理由" },
       ],
     }
     vi.mocked(api.analyzeExercise).mockResolvedValue(mockResult)
@@ -145,11 +145,10 @@ describe("useExerciseConfirm", () => {
 
   it("確定を実行する", async () => {
     const mockResponse = {
-      exercise: {
-        id: "ex-1",
-        topicId: "topic-1",
-        markAsUnderstood: true,
-      },
+      exerciseId: "ex-1",
+      topicId: "topic-1",
+      topicChecked: true,
+      createdAt: "2024-01-15T10:00:00.000Z",
     }
     vi.mocked(api.confirmExercise).mockResolvedValue(mockResponse)
 
@@ -208,13 +207,10 @@ describe("useTopicExercises", () => {
     const mockExercises = {
       exercises: [
         {
-          id: "ex-1",
-          userId: "user-1",
-          topicId: "topic-1",
+          exerciseId: "ex-1",
           imageId: "img-1",
-          imageUrl: "https://example.com/img.png",
           ocrText: "問題文",
-          understood: true,
+          markedAsUnderstood: true,
           createdAt: "2024-01-15T10:00:00.000Z",
         },
       ],
