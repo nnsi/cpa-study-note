@@ -120,4 +120,9 @@ describe("recentTopicsQuerySchema - 境界値", () => {
       expect(result.data.limit).toBe(50)
     }
   })
+
+  it("limitが小数でエラー（int制約）", () => {
+    const result = recentTopicsQuerySchema.safeParse({ limit: 1.5 })
+    expect(result.success).toBe(false)
+  })
 })

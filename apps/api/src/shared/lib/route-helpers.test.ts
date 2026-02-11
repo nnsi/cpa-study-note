@@ -1,6 +1,6 @@
-import { describe, it, expect, vi } from "vitest"
+import { describe, it, expect } from "vitest"
 import { Hono } from "hono"
-import { errorResponse, handleResult, handleResultWith } from "./route-helpers"
+import { errorResponse, handleResult, handleResultImage } from "./route-helpers"
 import { ok, err } from "./result"
 import type { AppError } from "./errors"
 
@@ -98,42 +98,69 @@ describe("handleResult", () => {
   })
 })
 
-describe("handleResultWith", () => {
-  it("ok結果をtransformして200レスポンスに変換する", async () => {
+describe("handleResult with key", () => {
+  it("ok結果をキーでラップして200レスポンスに変換する", async () => {
     const result = ok({ id: "1", name: "テスト" })
     const res = await executeWithContext((c) =>
-      handleResultWith(c, result, (v) => ({ subject: v }))
+      handleResult(c, result, "subject")
     )
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body).toEqual({ subject: { id: "1", name: "テスト" } })
   })
 
-  it("ok結果を201で返せる", async () => {
+  it("ok結果をキーでラップして201で返せる", async () => {
     const result = ok({ id: "new" })
     const res = await executeWithContext((c) =>
-      handleResultWith(c, result, (v) => ({ created: v }), 201)
+      handleResult(c, result, "created", 201)
     )
     expect(res.status).toBe(201)
+    const body = await res.json()
+    expect(body).toEqual({ created: { id: "new" } })
   })
 
-  it("successStatusが204の場合は空ボディで返す", async () => {
-    const result = ok("ignored")
-    const res = await executeWithContext((c) =>
-      handleResultWith(c, result, (v) => ({ data: v }), 204)
-    )
-    expect(res.status).toBe(204)
-  })
-
-  it("err結果はtransformせず対応するHTTPステータスで返す", async () => {
+  it("err結果はキーに関わらず対応するHTTPステータスで返す", async () => {
     const error: AppError = { code: "UNAUTHORIZED", message: "認証エラー" }
     const result = err(error)
     const res = await executeWithContext((c) =>
-      handleResultWith(c, result, (v: any) => ({ data: v }))
+      handleResult(c, result, "data")
     )
     expect(res.status).toBe(401)
     const body = await res.json()
     expect(body.error.code).toBe("UNAUTHORIZED")
+  })
+})
+
+describe("handleResultImage", () => {
+  it("ok結果をバイナリレスポンスに変換する", async () => {
+    const body = new TextEncoder().encode("image data")
+    const result = ok({ body: body.buffer as ArrayBuffer, mimeType: "image/png" })
+    const res = await executeWithContext((c) =>
+      handleResultImage(c, result, "private, max-age=3600")
+    )
+    expect(res.status).toBe(200)
+    expect(res.headers.get("Content-Type")).toBe("image/png")
+    expect(res.headers.get("Cache-Control")).toBe("private, max-age=3600")
+  })
+
+  it("cacheControlなしの場合はCache-Controlヘッダーを含めない", async () => {
+    const body = new TextEncoder().encode("image data")
+    const result = ok({ body: body.buffer as ArrayBuffer, mimeType: "image/jpeg" })
+    const res = await executeWithContext((c) =>
+      handleResultImage(c, result)
+    )
+    expect(res.headers.get("Cache-Control")).toBeNull()
+  })
+
+  it("err結果をエラーレスポンスに変換する", async () => {
+    const error: AppError = { code: "NOT_FOUND", message: "画像が見つかりません" }
+    const result = err(error)
+    const res = await executeWithContext((c) =>
+      handleResultImage(c, result)
+    )
+    expect(res.status).toBe(404)
+    const body = await res.json()
+    expect(body.error.code).toBe("NOT_FOUND")
   })
 })
 

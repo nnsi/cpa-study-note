@@ -31,7 +31,7 @@ import {
   addRevision,
   updateRevision,
 } from "./usecase"
-import { handleResult, handleResultWith } from "@/shared/lib/route-helpers"
+import { handleResult } from "@/shared/lib/route-helpers"
 
 type StudyPlanRouteDeps = {
   db: Db
@@ -48,7 +48,7 @@ export const studyPlanRoutes = ({ db }: StudyPlanRouteDeps) => {
       const archived = c.req.query("archived")
       const filter = archived !== undefined ? { archived: archived === "true" } : undefined
       const result = await listPlans(deps, user.id, filter)
-      return handleResultWith(c, result, (plans) => ({ plans }))
+      return handleResult(c, result, "plans")
     })
 
     // 計画作成
@@ -56,7 +56,7 @@ export const studyPlanRoutes = ({ db }: StudyPlanRouteDeps) => {
       const user = c.get("user")
       const input = c.req.valid("json")
       const result = await createPlan(deps, user.id, input)
-      return handleResultWith(c, result, (plan) => ({ plan }), 201)
+      return handleResult(c, result, "plan", 201)
     })
 
     // 計画詳細
@@ -73,7 +73,7 @@ export const studyPlanRoutes = ({ db }: StudyPlanRouteDeps) => {
       const { planId } = c.req.valid("param")
       const input = c.req.valid("json")
       const result = await updatePlan(deps, user.id, planId, input)
-      return handleResultWith(c, result, (plan) => ({ plan }))
+      return handleResult(c, result, "plan")
     })
 
     // 計画アーカイブ
@@ -97,7 +97,7 @@ export const studyPlanRoutes = ({ db }: StudyPlanRouteDeps) => {
       const user = c.get("user")
       const { planId } = c.req.valid("param")
       const result = await duplicatePlan(deps, user.id, planId)
-      return handleResultWith(c, result, (plan) => ({ plan }), 201)
+      return handleResult(c, result, "plan", 201)
     })
 
     // 要素並べ替え (PUT must come before /:planId/items/:itemId to avoid conflict)
@@ -115,7 +115,7 @@ export const studyPlanRoutes = ({ db }: StudyPlanRouteDeps) => {
       const { planId } = c.req.valid("param")
       const input = c.req.valid("json")
       const result = await addItem(deps, user.id, planId, input)
-      return handleResultWith(c, result, (item) => ({ item }), 201)
+      return handleResult(c, result, "item", 201)
     })
 
     // 要素更新
@@ -124,7 +124,7 @@ export const studyPlanRoutes = ({ db }: StudyPlanRouteDeps) => {
       const { planId, itemId } = c.req.valid("param")
       const input = c.req.valid("json")
       const result = await updateItem(deps, user.id, planId, itemId, input)
-      return handleResultWith(c, result, (item) => ({ item }))
+      return handleResult(c, result, "item")
     })
 
     // 要素削除
@@ -141,7 +141,7 @@ export const studyPlanRoutes = ({ db }: StudyPlanRouteDeps) => {
       const { planId } = c.req.valid("param")
       const input = c.req.valid("json")
       const result = await addRevision(deps, user.id, planId, input)
-      return handleResultWith(c, result, (revision) => ({ revision }), 201)
+      return handleResult(c, result, "revision", 201)
     })
 
     // 変遷更新（理由追記）
@@ -150,7 +150,7 @@ export const studyPlanRoutes = ({ db }: StudyPlanRouteDeps) => {
       const { planId, revisionId } = c.req.valid("param")
       const input = c.req.valid("json")
       const result = await updateRevision(deps, user.id, planId, revisionId, input)
-      return handleResultWith(c, result, (revision) => ({ revision }))
+      return handleResult(c, result, "revision")
     })
 
   return app

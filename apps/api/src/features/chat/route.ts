@@ -12,14 +12,13 @@ import {
   getSession,
   listSessionsByTopic,
   listMessages,
-  getMessageForEvaluation,
   sendMessage,
   sendMessageWithNewSession,
   evaluateQuestion,
   listGoodQuestionsByTopic,
   correctSpeechText,
 } from "./usecase"
-import { handleResultWith, errorResponse } from "@/shared/lib/route-helpers"
+import { handleResult } from "@/shared/lib/route-helpers"
 
 type ChatDeps = {
   env: Env
@@ -51,7 +50,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
           topicId
         )
 
-        return handleResultWith(c, result, (value) => ({ session: value }), 201)
+        return handleResult(c, result, "session", 201)
       }
     )
 
@@ -64,7 +63,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         const user = c.get("user")
 
         const result = await listSessionsByTopic({ chatRepo }, user.id, topicId)
-        return handleResultWith(c, result, (value) => ({ sessions: value }))
+        return handleResult(c, result, "sessions")
       }
     )
 
@@ -77,7 +76,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         const user = c.get("user")
 
         const result = await listGoodQuestionsByTopic({ chatRepo }, user.id, topicId)
-        return handleResultWith(c, result, (value) => ({ questions: value }))
+        return handleResult(c, result, "questions")
       }
     )
 
@@ -87,7 +86,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
       const user = c.get("user")
 
       const result = await getSession({ chatRepo }, user.id, sessionId)
-      return handleResultWith(c, result, (value) => ({ session: value }))
+      return handleResult(c, result, "session")
     })
 
     // メッセージ一覧
@@ -96,7 +95,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
       const user = c.get("user")
 
       const result = await listMessages({ chatRepo }, user.id, sessionId)
-      return handleResultWith(c, result, (value) => ({ messages: value }))
+      return handleResult(c, result, "messages")
     })
 
     // メッセージ送信（ストリーミング）
@@ -162,7 +161,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
           text
         )
 
-        return handleResultWith(c, result, (correctedText) => ({ correctedText }))
+        return handleResult(c, result, "correctedText")
       }
     )
 
@@ -171,19 +170,13 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
       const messageId = c.req.param("messageId")
       const user = c.get("user")
 
-      const result = await getMessageForEvaluation({ chatRepo }, user.id, messageId)
-
-      if (!result.ok) {
-        return errorResponse(c, result.error)
-      }
-
       const evalResult = await evaluateQuestion(
         { chatRepo, learningRepo, aiAdapter, aiConfig },
+        user.id,
         messageId,
-        result.value
       )
 
-      return handleResultWith(c, evalResult, (value) => ({ quality: value }))
+      return handleResult(c, evalResult, "quality")
     })
 
   return app

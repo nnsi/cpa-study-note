@@ -19,7 +19,7 @@ import {
 import { createSubjectRepository } from "../subject/repository"
 import { bulkImportCSVToStudyDomain } from "../subject/tree-usecase"
 import { createNoTransactionRunner } from "@/shared/lib/transaction"
-import { handleResult, handleResultWith } from "@/shared/lib/route-helpers"
+import { handleResult } from "@/shared/lib/route-helpers"
 import { internalError } from "@/shared/lib/errors"
 import { err } from "@/shared/lib/result"
 
@@ -36,7 +36,7 @@ export const studyDomainRoutes = ({ db }: StudyDomainDeps) => {
     .get("/", authMiddleware, async (c) => {
       const user = c.get("user")
       const result = await listStudyDomains(deps, user.id)
-      return handleResultWith(c, result, (studyDomains) => ({ studyDomains }))
+      return handleResult(c, result, "studyDomains")
     })
 
     // Get study domain by ID
@@ -44,7 +44,7 @@ export const studyDomainRoutes = ({ db }: StudyDomainDeps) => {
       const user = c.get("user")
       const id = c.req.param("id")
       const result = await getStudyDomain(deps, id, user.id)
-      return handleResultWith(c, result, (studyDomain) => ({ studyDomain }))
+      return handleResult(c, result, "studyDomain")
     })
 
     // Create study domain
@@ -57,7 +57,7 @@ export const studyDomainRoutes = ({ db }: StudyDomainDeps) => {
         const data = c.req.valid("json")
         const result = await createStudyDomain(deps, user.id, data)
 
-        return handleResultWith(c, result, (studyDomain) => ({ studyDomain }), 201)
+        return handleResult(c, result, "studyDomain", 201)
       }
     )
 
@@ -71,7 +71,7 @@ export const studyDomainRoutes = ({ db }: StudyDomainDeps) => {
         const id = c.req.param("id")
         const data = c.req.valid("json")
         const result = await updateStudyDomain(deps, id, user.id, data)
-        return handleResultWith(c, result, (studyDomain) => ({ studyDomain }))
+        return handleResult(c, result, "studyDomain")
       }
     )
 
@@ -81,11 +81,7 @@ export const studyDomainRoutes = ({ db }: StudyDomainDeps) => {
       const id = c.req.param("id")
       const result = await deleteStudyDomain(deps, id, user.id)
 
-      if (!result.ok) {
-        return handleResult(c, result)
-      }
-
-      return c.json({ success: true })
+      return handleResult(c, result)
     })
 
     // Bulk import 4-column CSV

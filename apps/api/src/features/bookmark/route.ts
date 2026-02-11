@@ -9,7 +9,7 @@ import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
 import { createBookmarkRepository } from "./repository"
 import { getBookmarks, addBookmark, removeBookmark } from "./usecase"
-import { handleResult, handleResultWith } from "@/shared/lib/route-helpers"
+import { handleResult } from "@/shared/lib/route-helpers"
 
 type BookmarkDeps = {
   db: Db
@@ -24,7 +24,7 @@ export const bookmarkRoutes = ({ db }: BookmarkDeps) => {
     .get("/", authMiddleware, async (c) => {
       const user = c.get("user")
       const result = await getBookmarks(deps, user.id)
-      return handleResultWith(c, result, (bookmarks) => ({ bookmarks }))
+      return handleResult(c, result, "bookmarks")
     })
 
     // ブックマーク追加
@@ -33,13 +33,7 @@ export const bookmarkRoutes = ({ db }: BookmarkDeps) => {
       const { targetType, targetId } = c.req.valid("json")
 
       const result = await addBookmark(deps, user.id, targetType, targetId)
-
-      if (!result.ok) {
-        return handleResult(c, result)
-      }
-
-      const status = result.value.alreadyExists ? 200 : 201
-      return c.json({ bookmark: result.value.bookmark }, status)
+      return handleResult(c, result, "bookmark")
     })
 
     // ブックマーク削除

@@ -95,7 +95,7 @@ export const updateSubjectTree = async (
   userId: string,
   subjectId: string,
   tree: UpdateTreeRequest
-): Promise<Result<void, AppError>> => {
+): Promise<Result<TreeResponse, AppError>> => {
   const now = new Date()
 
   // 1. Verify subject ownership
@@ -228,7 +228,8 @@ export const updateSubjectTree = async (
     }
   })
 
-  return ok(undefined)
+  // Return updated tree
+  return getSubjectTree(deps, userId, subjectId)
 }
 
 /**

@@ -25,7 +25,7 @@ import {
   importCSVToSubject,
 } from "./tree-usecase"
 import type { SimpleTransactionRunner } from "../../shared/lib/transaction"
-import { handleResult, handleResultWith } from "@/shared/lib/route-helpers"
+import { handleResult } from "@/shared/lib/route-helpers"
 
 type SubjectRouteDeps = {
   db: Db
@@ -50,7 +50,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectRouteDeps) => {
         const user = c.get("user")
         const studyDomainId = resolveStudyDomainId(explicitStudyDomainId, user)
         const result = await listSubjects(deps, user.id, studyDomainId)
-        return handleResultWith(c, result, (subjects) => ({ subjects }))
+        return handleResult(c, result, "subjects")
       }
     )
 
@@ -59,7 +59,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectRouteDeps) => {
       const user = c.get("user")
       const id = c.req.param("id")
       const result = await getSubject(deps, user.id, id)
-      return handleResultWith(c, result, (subject) => ({ subject }))
+      return handleResult(c, result, "subject")
     })
 
     // Create subject under a study domain (別プレフィックスなのでそのまま)
@@ -75,14 +75,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectRouteDeps) => {
           studyDomainId: domainId,
           ...data,
         })
-
-        if (!result.ok) {
-          return handleResult(c, result)
-        }
-
-        // Get the created subject to return full data
-        const subjectResult = await getSubject(deps, user.id, result.value.id)
-        return handleResultWith(c, subjectResult, (subject) => ({ subject }), 201)
+        return handleResult(c, result, "subject", 201)
       }
     )
 
@@ -96,7 +89,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectRouteDeps) => {
         const id = c.req.param("id")
         const data = c.req.valid("json")
         const result = await updateSubject(deps, user.id, id, data)
-        return handleResultWith(c, result, (subject) => ({ subject }))
+        return handleResult(c, result, "subject")
       }
     )
 
@@ -105,12 +98,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectRouteDeps) => {
       const user = c.get("user")
       const id = c.req.param("id")
       const result = await deleteSubject(deps, user.id, id)
-
-      if (!result.ok) {
-        return handleResult(c, result)
-      }
-
-      return c.json({ success: true })
+      return handleResult(c, result)
     })
 
     // Get subject tree
@@ -118,7 +106,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectRouteDeps) => {
       const user = c.get("user")
       const id = c.req.param("id")
       const result = await getSubjectTree(treeDeps, user.id, id)
-      return handleResultWith(c, result, (tree) => ({ tree }))
+      return handleResult(c, result, "tree")
     })
 
     // Update subject tree
@@ -131,14 +119,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectRouteDeps) => {
         const id = c.req.param("id")
         const data = c.req.valid("json")
         const result = await updateSubjectTree(treeDeps, user.id, id, data)
-
-        if (!result.ok) {
-          return handleResult(c, result)
-        }
-
-        // Return updated tree
-        const treeResult = await getSubjectTree(treeDeps, user.id, id)
-        return handleResultWith(c, treeResult, (tree) => ({ tree }))
+        return handleResult(c, result, "tree")
       }
     )
 

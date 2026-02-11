@@ -13,7 +13,7 @@ import {
   getImage,
   getImageFile,
 } from "./usecase"
-import { handleResult, handleResultWith } from "@/shared/lib/route-helpers"
+import { handleResult, handleResultImage } from "@/shared/lib/route-helpers"
 import { payloadTooLarge } from "@/shared/lib/errors"
 import { err } from "@/shared/lib/result"
 
@@ -66,11 +66,7 @@ export const imageRoutes = ({ env, db }: ImageDeps) => {
         body
       )
 
-      if (!result.ok) {
-        return handleResult(c, result)
-      }
-
-      return c.json({ success: true })
+      return handleResult(c, result)
     })
 
     // OCR実行
@@ -98,7 +94,7 @@ export const imageRoutes = ({ env, db }: ImageDeps) => {
       const imageId = c.req.param("imageId")
 
       const result = await getImage({ imageRepo }, user.id, imageId)
-      return handleResultWith(c, result, (image) => ({ image }))
+      return handleResult(c, result, "image")
     })
 
     // 画像ファイル取得（バイナリ）
@@ -112,16 +108,7 @@ export const imageRoutes = ({ env, db }: ImageDeps) => {
         imageId
       )
 
-      if (!result.ok) {
-        return handleResult(c, result)
-      }
-
-      return new Response(result.value.body, {
-        headers: {
-          "Content-Type": result.value.mimeType,
-          "Cache-Control": "private, max-age=3600",
-        },
-      })
+      return handleResultImage(c, result, "private, max-age=3600")
     })
 
   return app
