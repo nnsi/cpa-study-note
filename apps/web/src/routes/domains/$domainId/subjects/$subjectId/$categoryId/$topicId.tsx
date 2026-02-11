@@ -87,7 +87,16 @@ function TopicDetailPage() {
   const handleSessionCreated = useCallback((newSessionId: string) => {
     setSelectedSessionId(newSessionId)
     queryClient.invalidateQueries({ queryKey: ["chat", "sessions", topicId] })
-  }, [queryClient, topicId])
+    // クイックチャットからの遷移後、URLからquickChatQuestionを消す（リロード時の再送防止）
+    if (quickChatQuestion) {
+      navigate({
+        to: "/domains/$domainId/subjects/$subjectId/$categoryId/$topicId",
+        params: { domainId, subjectId, categoryId, topicId },
+        search: {},
+        replace: true,
+      })
+    }
+  }, [queryClient, topicId, quickChatQuestion, navigate, domainId, subjectId, categoryId])
 
   // 選択中のセッションID
   // "use-latest" の場合は最新のセッションを使用、null は新規セッションモード
