@@ -1,9 +1,8 @@
-import { api } from "@/lib/api-client"
+import { api, extractErrorMessage } from "@/lib/api-client"
 import {
   searchTopicsResponseSchema,
   subjectsWithStatsListResponseSchema,
   subjectDetailResponseSchema,
-  successResponseSchema,
   treeDetailResponseSchema,
   csvImportResponseSchema,
   type CreateSubjectRequest,
@@ -21,7 +20,6 @@ import {
   type UpdateTreeRequest,
   type SubjectsWithStatsListResponse,
   type SubjectDetailResponse,
-  type SuccessResponse,
   type TreeDetailResponse,
   type CSVImportResponse,
 } from "@cpa-study/shared/schemas"
@@ -80,8 +78,7 @@ export const createSubject = async (
     json: data,
   })
   if (!res.ok) {
-    const error = await res.json()
-    throw new Error((error as { error?: { message?: string } }).error?.message ?? "科目の作成に失敗しました")
+    throw new Error(await extractErrorMessage(res, "科目の作成に失敗しました"))
   }
   const json = await res.json()
   return subjectDetailResponseSchema.parse(json)
@@ -96,23 +93,19 @@ export const updateSubject = async (
     json: data,
   })
   if (!res.ok) {
-    const error = await res.json()
-    throw new Error((error as { error?: { message?: string } }).error?.message ?? "科目の更新に失敗しました")
+    throw new Error(await extractErrorMessage(res, "科目の更新に失敗しました"))
   }
   const json = await res.json()
   return subjectDetailResponseSchema.parse(json)
 }
 
-export const deleteSubject = async (id: string): Promise<SuccessResponse> => {
+export const deleteSubject = async (id: string): Promise<void> => {
   const res = await api.api.subjects[":id"].$delete({
     param: { id },
   })
   if (!res.ok) {
-    const error = await res.json()
-    throw new Error((error as { error?: { message?: string } }).error?.message ?? "科目の削除に失敗しました")
+    throw new Error(await extractErrorMessage(res, "科目の削除に失敗しました"))
   }
-  const json = await res.json()
-  return successResponseSchema.parse(json)
 }
 
 export const getSubjectTree = async (id: string): Promise<TreeDetailResponse> => {
@@ -136,8 +129,7 @@ export const updateSubjectTree = async (
     json: tree,
   })
   if (!res.ok) {
-    const error = await res.json()
-    throw new Error((error as { error?: { message?: string } }).error?.message ?? "ツリーの更新に失敗しました")
+    throw new Error(await extractErrorMessage(res, "ツリーの更新に失敗しました"))
   }
   const json = await res.json()
   return treeDetailResponseSchema.parse(json)
@@ -152,8 +144,7 @@ export const importCSV = async (
     json: { csvContent },
   })
   if (!res.ok) {
-    const error = await res.json()
-    throw new Error((error as { error?: { message?: string } }).error?.message ?? "CSVインポートに失敗しました")
+    throw new Error(await extractErrorMessage(res, "CSVインポートに失敗しました"))
   }
   const json = await res.json()
   return csvImportResponseSchema.parse(json)

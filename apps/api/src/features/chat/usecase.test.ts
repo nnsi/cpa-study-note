@@ -535,8 +535,8 @@ describe("Chat UseCase", () => {
 
       const result = await evaluateQuestion(
         { chatRepo, learningRepo, aiAdapter: goodAdapter, aiConfig: defaultAIConfig },
+        testData.userId,
         message.id,
-        message.content
       )
 
       expect(result.ok).toBe(true)
@@ -569,8 +569,8 @@ describe("Chat UseCase", () => {
 
       const result = await evaluateQuestion(
         { chatRepo, learningRepo, aiAdapter: surfaceAdapter, aiConfig: defaultAIConfig },
+        testData.userId,
         message.id,
-        message.content
       )
 
       expect(result.ok).toBe(true)
@@ -603,8 +603,8 @@ describe("Chat UseCase", () => {
 
       const result = await evaluateQuestion(
         { chatRepo, learningRepo, aiAdapter: ambiguousAdapter, aiConfig: defaultAIConfig },
+        testData.userId,
         message.id,
-        message.content
       )
 
       expect(result.ok).toBe(true)

@@ -16,7 +16,7 @@ export const getDailyMetrics = async (
   const res = await api.api.metrics.daily.$get({
     query: { from, to },
   })
-  if (!res.ok) throw new Error("Failed to fetch daily metrics")
+  if (!res.ok) throw new Error("学習指標の取得に失敗しました")
   const data = await res.json()
   return dailyMetricsWrapperResponseSchema.parse(data)
 }

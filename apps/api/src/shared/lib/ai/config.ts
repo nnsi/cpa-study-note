@@ -20,6 +20,7 @@ export type AIConfig = {
   speechCorrection: AIModelConfig
   topicGenerator: AIModelConfig
   planAssistant: AIModelConfig
+  quickChatSuggest: AIModelConfig
 }
 
 /** ローカル開発用 */
@@ -59,6 +60,11 @@ const localAIConfig: AIConfig = {
     temperature: 0.5,
     maxTokens: 3000,
   },
+  quickChatSuggest: {
+    model: "google/gemini-2.5-flash",
+    temperature: 0,
+    maxTokens: 500,
+  },
 }
 
 /** staging/production用 */
@@ -97,6 +103,11 @@ const productionAIConfig: AIConfig = {
     model: "google/gemini-2.5-flash",
     temperature: 0.5,
     maxTokens: 3000,
+  },
+  quickChatSuggest: {
+    model: "google/gemini-2.5-flash",
+    temperature: 0,
+    maxTokens: 500,
   },
 }
 

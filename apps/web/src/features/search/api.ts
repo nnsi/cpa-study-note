@@ -12,7 +12,7 @@ export const searchTopics = async (
   const res = await api.api.view.search.$get({
     query: { q: query, limit: String(limit), studyDomainId },
   })
-  if (!res.ok) throw new Error("Failed to search topics")
+  if (!res.ok) throw new Error("検索に失敗しました")
   const json = await res.json()
   const data = searchTopicsResponseSchema.parse(json)
   // Transform to TopicSearchResult format (topic.ts schema has extra fields)

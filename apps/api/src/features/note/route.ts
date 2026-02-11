@@ -23,7 +23,7 @@ import {
   refreshNoteFromSession,
   deleteNote,
 } from "./usecase"
-import { handleResult, handleResultWith } from "@/shared/lib/route-helpers"
+import { handleResult } from "@/shared/lib/route-helpers"
 
 type NoteDeps = {
   env: Env
@@ -56,7 +56,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
           { userId: user.id, sessionId }
         )
 
-        return handleResultWith(c, result, (note) => ({ note }), 201)
+        return handleResult(c, result, "note", 201)
       }
     )
 
@@ -80,7 +80,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
           }
         )
 
-        return handleResultWith(c, result, (note) => ({ note }), 201)
+        return handleResult(c, result, "note", 201)
       }
     )
 
@@ -88,7 +88,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
     .get("/", authMiddleware, async (c) => {
       const user = c.get("user")
       const result = await listNotes({ noteRepo }, user.id)
-      return handleResultWith(c, result, (value) => ({ notes: value }))
+      return handleResult(c, result, "notes")
     })
 
     // 論点別ノート一覧
@@ -96,7 +96,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
       const user = c.get("user")
       const topicId = c.req.param("topicId")
       const result = await listNotesByTopic({ noteRepo }, user.id, topicId)
-      return handleResultWith(c, result, (value) => ({ notes: value }))
+      return handleResult(c, result, "notes")
     })
 
     // セッション別ノート取得
@@ -104,7 +104,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
       const user = c.get("user")
       const sessionId = c.req.param("sessionId")
       const result = await getNoteBySession({ noteRepo }, user.id, sessionId)
-      return handleResultWith(c, result, (value) => ({ note: value }))
+      return handleResult(c, result, "note")
     })
 
     // ノート詳細
@@ -113,7 +113,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
       const noteId = c.req.param("noteId")
 
       const result = await getNote({ noteRepo }, user.id, noteId)
-      return handleResultWith(c, result, (note) => ({ note }))
+      return handleResult(c, result, "note")
     })
 
     // ノート更新
@@ -127,7 +127,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
         const body = c.req.valid("json")
 
         const result = await updateNote({ noteRepo }, user.id, noteId, body)
-        return handleResultWith(c, result, (note) => ({ note }))
+        return handleResult(c, result, "note")
       }
     )
 
@@ -147,7 +147,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
         noteId
       )
 
-      return handleResultWith(c, result, (note) => ({ note }))
+      return handleResult(c, result, "note")
     })
 
     // ノート削除
@@ -156,11 +156,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
       const noteId = c.req.param("noteId")
 
       const result = await deleteNote({ noteRepo }, user.id, noteId)
-      if (!result.ok) {
-        return handleResult(c, result)
-      }
-
-      return c.json({ success: true })
+      return handleResult(c, result)
     })
 
   return app

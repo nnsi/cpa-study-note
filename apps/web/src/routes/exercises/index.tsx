@@ -11,6 +11,7 @@ import {
   ExerciseSuggestions,
   ExerciseComplete,
 } from "@/features/exercise"
+import { searchTopicsResponseSchema } from "@cpa-study/shared/schemas"
 import type { ViewTopicSearchResult, SearchTopicsResponse } from "@cpa-study/shared/schemas"
 
 const searchParamsSchema = z.object({
@@ -37,14 +38,15 @@ function ExercisePage() {
 
   // 論点検索
   const { data: searchResults, isLoading: isSearching } = useQuery<SearchTopicsResponse>({
-    queryKey: ["topicSearch", searchQuery],
+    queryKey: ["topics", "search", searchQuery],
     queryFn: async () => {
       if (!searchQuery.trim()) return { results: [], total: 0 }
       const res = await api.api.view.search.$get({
         query: { q: searchQuery, limit: "20" },
       })
       if (!res.ok) throw new Error("検索に失敗しました")
-      return res.json() as Promise<SearchTopicsResponse>
+      const json = await res.json()
+      return searchTopicsResponseSchema.parse(json)
     },
     enabled: step === "search" && searchQuery.trim().length > 0,
   })

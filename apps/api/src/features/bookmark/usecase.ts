@@ -46,7 +46,7 @@ export const addBookmark = async (
   userId: string,
   targetType: BookmarkTargetType,
   targetId: string
-): Promise<Result<{ bookmark: BookmarkWithDetails | null; alreadyExists: boolean }, AppError>> => {
+): Promise<Result<BookmarkWithDetails | null, AppError>> => {
   const { repo } = deps
 
   // 対象が存在するか確認（ユーザー境界と削除フラグを考慮）
@@ -75,7 +75,7 @@ export const addBookmark = async (
         }
       : null
 
-  return ok({ bookmark, alreadyExists: result.alreadyExists })
+  return ok(bookmark)
 }
 
 // ブックマーク削除

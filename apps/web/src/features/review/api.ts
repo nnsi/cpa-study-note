@@ -18,7 +18,7 @@ export const filterTopics = async (
   }
 
   const res = await api.api.view.topics.$get({ query })
-  if (!res.ok) throw new Error("Failed to filter topics")
+  if (!res.ok) throw new Error("論点のフィルタに失敗しました")
   const json = await res.json()
   const data = reviewListResponseSchema.parse(json)
   // Transform view API response to FilteredTopic format

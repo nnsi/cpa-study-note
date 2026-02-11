@@ -7,7 +7,7 @@ import {
 } from "@cpa-study/shared/schemas"
 import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
-import { handleResultWith } from "@/shared/lib/route-helpers"
+import { handleResult } from "@/shared/lib/route-helpers"
 import { createLearningRepository } from "./repository"
 import { createSubjectRepository } from "../subject/repository"
 import {
@@ -37,7 +37,7 @@ export const learningRoutes = ({ db }: LearningDeps) => {
       const user = c.get("user")
 
       const result = await touchTopic(deps, user.id, topicId)
-      return handleResultWith(c, result, (value) => ({ progress: value }))
+      return handleResult(c, result, "progress")
     })
 
     // Get progress for a topic
@@ -46,7 +46,7 @@ export const learningRoutes = ({ db }: LearningDeps) => {
       const user = c.get("user")
 
       const result = await getProgress(deps, user.id, topicId)
-      return handleResultWith(c, result, (value) => ({ progress: value }))
+      return handleResult(c, result, "progress")
     })
 
     // Update progress for a topic
@@ -60,7 +60,7 @@ export const learningRoutes = ({ db }: LearningDeps) => {
         const { understood } = c.req.valid("json")
 
         const result = await updateProgress(deps, user.id, topicId, understood)
-        return handleResultWith(c, result, (value) => ({ progress: value }))
+        return handleResult(c, result, "progress")
       }
     )
 
@@ -70,7 +70,7 @@ export const learningRoutes = ({ db }: LearningDeps) => {
       const user = c.get("user")
 
       const result = await getCheckHistory(deps, user.id, topicId)
-      return handleResultWith(c, result, (value) => ({ history: value }))
+      return handleResult(c, result, "history")
     })
 
     // List recent topics
@@ -83,7 +83,7 @@ export const learningRoutes = ({ db }: LearningDeps) => {
         const { limit } = c.req.valid("query")
 
         const result = await listRecentTopics(deps, user.id, limit)
-        return handleResultWith(c, result, (value) => ({ topics: value }))
+        return handleResult(c, result, "topics")
       }
     )
 
@@ -92,7 +92,7 @@ export const learningRoutes = ({ db }: LearningDeps) => {
       const user = c.get("user")
 
       const result = await listUserProgress(deps, user.id)
-      return handleResultWith(c, result, (value) => ({ progress: value }))
+      return handleResult(c, result, "progress")
     })
 
     // Get subject progress stats
@@ -100,7 +100,7 @@ export const learningRoutes = ({ db }: LearningDeps) => {
       const user = c.get("user")
 
       const result = await getSubjectProgressStats(subjectDeps, user.id)
-      return handleResultWith(c, result, (value) => ({ stats: value }))
+      return handleResult(c, result, "stats")
     })
 
   return app

@@ -30,7 +30,7 @@ function SubjectCategoriesPage() {
 
   // Fetch tree structure
   const { data: treeData, isLoading: treeLoading } = useQuery({
-    queryKey: ["subject-tree", subjectId],
+    queryKey: ["subjects", subjectId, "tree"],
     queryFn: () => getSubjectTree(subjectId),
   })
 

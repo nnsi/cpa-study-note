@@ -139,4 +139,99 @@ describe("logic", () => {
       expect(getRangeLabel("90days")).toBe("直近90日")
     })
   })
+
+  // ========================================
+  // 境界値テスト
+  // ========================================
+
+  describe("formatDate - 境界値", () => {
+    it("1月1日（年の最初の日）", () => {
+      expect(formatDate(new Date(2024, 0, 1))).toBe("2024-01-01")
+    })
+
+    it("12月31日（年の最後の日）", () => {
+      expect(formatDate(new Date(2024, 11, 31))).toBe("2024-12-31")
+    })
+
+    it("うるう年2月29日", () => {
+      expect(formatDate(new Date(2024, 1, 29))).toBe("2024-02-29")
+    })
+  })
+
+  describe("formatDisplayDate - 境界値", () => {
+    it("最小月日（1/1）", () => {
+      expect(formatDisplayDate("2024-01-01")).toBe("1/1")
+    })
+
+    it("最大月日（12/31）", () => {
+      expect(formatDisplayDate("2024-12-31")).toBe("12/31")
+    })
+  })
+
+  describe("generateDateRange - 境界値", () => {
+    it("from > to（逆順）→空配列", () => {
+      const result = generateDateRange("2024-01-05", "2024-01-01")
+      expect(result).toEqual([])
+    })
+
+    it("月跨ぎ（1/30→2/2で4日分）", () => {
+      const result = generateDateRange("2024-01-30", "2024-02-02")
+      expect(result).toEqual([
+        "2024-01-30",
+        "2024-01-31",
+        "2024-02-01",
+        "2024-02-02",
+      ])
+    })
+
+    it("うるう年（2/28→3/1で3日分）", () => {
+      const result = generateDateRange("2024-02-28", "2024-03-01")
+      expect(result).toEqual(["2024-02-28", "2024-02-29", "2024-03-01"])
+    })
+  })
+
+  describe("transformToChartData - 境界値", () => {
+    it("metricsに範囲外の日付があっても無視される", () => {
+      const metrics: DailyMetric[] = [
+        {
+          date: "2023-12-31",
+          checkedTopicCount: 99,
+          sessionCount: 99,
+          messageCount: 99,
+          goodQuestionCount: 99,
+        },
+      ]
+
+      const result = transformToChartData(metrics, "2024-01-01", "2024-01-02")
+
+      expect(result).toHaveLength(2)
+      expect(result[0].checkedTopicCount).toBe(0)
+      expect(result[1].checkedTopicCount).toBe(0)
+    })
+
+    it("重複日付（Mapなので後勝ち）", () => {
+      const metrics: DailyMetric[] = [
+        {
+          date: "2024-01-01",
+          checkedTopicCount: 1,
+          sessionCount: 1,
+          messageCount: 1,
+          goodQuestionCount: 1,
+        },
+        {
+          date: "2024-01-01",
+          checkedTopicCount: 5,
+          sessionCount: 5,
+          messageCount: 5,
+          goodQuestionCount: 5,
+        },
+      ]
+
+      const result = transformToChartData(metrics, "2024-01-01", "2024-01-01")
+
+      expect(result).toHaveLength(1)
+      expect(result[0].checkedTopicCount).toBe(5)
+      expect(result[0].sessionCount).toBe(5)
+    })
+  })
 })

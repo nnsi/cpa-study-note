@@ -375,9 +375,7 @@ describe("Subject Routes", () => {
         { headers: createAuthHeaders(userId) }
       )
 
-      expect(res.status).toBe(200)
-      const json = await res.json() as { success: boolean }
-      expect(json.success).toBe(true)
+      expect(res.status).toBe(204)
 
       // Verify it's soft-deleted (GET should return 404)
       const getRes = await client.api.subjects[":id"].$get(
@@ -426,7 +424,7 @@ describe("Subject Routes", () => {
         { headers: createAuthHeaders(userId) }
       )
 
-      expect(res.status).toBe(200)
+      expect(res.status).toBe(204)
     })
   })
 

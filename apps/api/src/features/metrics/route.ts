@@ -7,7 +7,7 @@ import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
 import { createMetricsRepository } from "./repository"
 import { getDailyMetrics, createSnapshot, getTodayMetrics } from "./usecase"
-import { handleResultWith } from "@/shared/lib/route-helpers"
+import { handleResult } from "@/shared/lib/route-helpers"
 
 type MetricsDeps = {
   db: Db
@@ -22,7 +22,7 @@ export const metricsRoutes = ({ db }: MetricsDeps) => {
     .get("/today", authMiddleware, async (c) => {
       const user = c.get("user")
       const result = await getTodayMetrics(deps, user.id, user.timezone)
-      return handleResultWith(c, result, (value) => ({ metrics: value }))
+      return handleResult(c, result, "metrics")
     })
 
     // 日次メトリクス取得（タイムゾーン考慮）
@@ -35,7 +35,7 @@ export const metricsRoutes = ({ db }: MetricsDeps) => {
         const { from, to } = c.req.valid("query")
 
         const result = await getDailyMetrics(deps, user.id, from, to, user.timezone)
-        return handleResultWith(c, result, (value) => ({ metrics: value }))
+        return handleResult(c, result, "metrics")
       }
     )
 
@@ -44,7 +44,7 @@ export const metricsRoutes = ({ db }: MetricsDeps) => {
       const user = c.get("user")
 
       const result = await createSnapshot(deps, user.id)
-      return handleResultWith(c, result, (value) => ({ snapshot: value }), 201)
+      return handleResult(c, result, "snapshot", 201)
     })
 
     // スナップショット作成（指定日）
@@ -57,7 +57,7 @@ export const metricsRoutes = ({ db }: MetricsDeps) => {
         const { date } = c.req.valid("param")
 
         const result = await createSnapshot(deps, user.id, date)
-        return handleResultWith(c, result, (value) => ({ snapshot: value }), 201)
+        return handleResult(c, result, "snapshot", 201)
       }
     )
 

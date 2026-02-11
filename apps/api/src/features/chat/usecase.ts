@@ -430,9 +430,15 @@ type QuestionEvaluation = {
 
 export const evaluateQuestion = async (
   deps: ChatDeps,
+  userId: string,
   messageId: string,
-  content: string
 ): Promise<Result<QuestionEvaluation, AppError>> => {
+  const msgResult = await getMessageForEvaluation({ chatRepo: deps.chatRepo }, userId, messageId)
+  if (!msgResult.ok) {
+    return msgResult
+  }
+
+  const content = msgResult.value
   const evaluationPrompt = buildEvaluationPrompt(content)
 
   const result = await deps.aiAdapter.generateText({

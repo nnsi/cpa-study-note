@@ -8,7 +8,7 @@ import { createAIAdapter, resolveAIConfig } from "@/shared/lib/ai"
 import { createExerciseRepository } from "./repository"
 import { createImageRepository } from "../image/repository"
 import { analyzeExercise, confirmExercise, getTopicExercises } from "./usecase"
-import { handleResult, handleResultWith } from "@/shared/lib/route-helpers"
+import { handleResult } from "@/shared/lib/route-helpers"
 import { payloadTooLarge, badRequest } from "@/shared/lib/errors"
 import { err } from "@/shared/lib/result"
 
@@ -107,7 +107,7 @@ export const exerciseRoutes = ({ env, db }: ExerciseDeps) => {
 
       const result = await getTopicExercises({ exerciseRepo }, user.id, topicId)
 
-      return handleResultWith(c, result, (data) => data)
+      return handleResult(c, result)
     })
 
   return app

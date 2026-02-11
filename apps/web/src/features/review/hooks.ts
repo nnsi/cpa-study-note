@@ -121,7 +121,7 @@ export const useTopicFilter = (): UseTopicFilterReturn => {
     groupedTopics,
     isLoading,
     isError,
-    error: error as Error | null,
+    error: error ?? null,
     totalCount: topics.length,
 
     applyFilters,

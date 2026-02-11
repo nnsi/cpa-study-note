@@ -192,13 +192,12 @@ describe("Bookmark UseCase", () => {
       expect(repo.getBookmarkDetails).toHaveBeenCalledWith("topic", "topic-1", "user-1")
       expect(result.ok).toBe(true)
       if (!result.ok) return
-      expect(result.value.alreadyExists).toBe(false)
-      expect(result.value.bookmark).not.toBeNull()
-      expect(result.value.bookmark?.id).toBe("bookmark-1")
-      expect(result.value.bookmark?.name).toBe("棚卸資産の評価")
+      expect(result.value).not.toBeNull()
+      expect(result.value?.id).toBe("bookmark-1")
+      expect(result.value?.name).toBe("棚卸資産の評価")
     })
 
-    it("should return alreadyExists=true for duplicate bookmark", async () => {
+    it("should return null for duplicate bookmark", async () => {
       const repo = createMockRepository({
         addBookmark: vi.fn().mockResolvedValue({ bookmark: null, alreadyExists: true }),
       })
@@ -210,8 +209,7 @@ describe("Bookmark UseCase", () => {
       expect(repo.addBookmark).toHaveBeenCalledWith("user-1", "topic", "topic-1")
       expect(result.ok).toBe(true)
       if (!result.ok) return
-      expect(result.value.alreadyExists).toBe(true)
-      expect(result.value.bookmark).toBeNull()
+      expect(result.value).toBeNull()
     })
 
     it("should return error for non-existent target", async () => {
@@ -237,7 +235,7 @@ describe("Bookmark UseCase", () => {
 
       expect(result.ok).toBe(true)
       if (!result.ok) return
-      expect(result.value.bookmark?.createdAt).toBe("2024-01-01T00:00:00.000Z")
+      expect(result.value?.createdAt).toBe("2024-01-01T00:00:00.000Z")
     })
 
     it("should add bookmark for subject target type", async () => {
@@ -266,8 +264,8 @@ describe("Bookmark UseCase", () => {
       expect(repo.addBookmark).toHaveBeenCalledWith("user-1", "subject", "subject-1")
       expect(result.ok).toBe(true)
       if (!result.ok) return
-      expect(result.value.bookmark?.targetType).toBe("subject")
-      expect(result.value.bookmark?.name).toBe("財務会計論")
+      expect(result.value?.targetType).toBe("subject")
+      expect(result.value?.name).toBe("財務会計論")
     })
 
     it("should add bookmark for category target type", async () => {
@@ -296,8 +294,8 @@ describe("Bookmark UseCase", () => {
       expect(repo.addBookmark).toHaveBeenCalledWith("user-1", "category", "category-1")
       expect(result.ok).toBe(true)
       if (!result.ok) return
-      expect(result.value.bookmark?.targetType).toBe("category")
-      expect(result.value.bookmark?.name).toBe("棚卸資産")
+      expect(result.value?.targetType).toBe("category")
+      expect(result.value?.name).toBe("棚卸資産")
     })
   })
 
@@ -350,6 +348,47 @@ describe("Bookmark UseCase", () => {
 
       expect(repo.removeBookmark).toHaveBeenCalledWith("user-1", "category", "category-1")
       expect(result.ok).toBe(true)
+    })
+  })
+
+  // === 境界値テスト ===
+
+  describe("addBookmark 境界値", () => {
+    it("targetType='subject'でtargetExistsが正しい引数で呼ばれる", async () => {
+      const repo = createMockRepository({
+        targetExists: vi.fn().mockResolvedValue(true),
+      })
+      const deps = { repo }
+
+      await addBookmark(deps, "user-1", "subject", "subject-1")
+
+      expect(repo.targetExists).toHaveBeenCalledWith("subject", "subject-1", "user-1")
+    })
+
+    it("targetType='category'でtargetExistsが正しい引数で呼ばれる", async () => {
+      const repo = createMockRepository({
+        targetExists: vi.fn().mockResolvedValue(true),
+      })
+      const deps = { repo }
+
+      await addBookmark(deps, "user-1", "category", "category-1")
+
+      expect(repo.targetExists).toHaveBeenCalledWith("category", "category-1", "user-1")
+    })
+
+    it("同一ターゲットの二重追加でnullが返る", async () => {
+      const repo = createMockRepository({
+        targetExists: vi.fn().mockResolvedValue(true),
+        addBookmark: vi.fn().mockResolvedValue({ bookmark: null, alreadyExists: true }),
+        getBookmarkDetails: vi.fn().mockResolvedValue(mockBookmarkDetails),
+      })
+      const deps = { repo }
+
+      const result = await addBookmark(deps, "user-1", "topic", "topic-1")
+
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      expect(result.value).toBeNull()
     })
   })
 })

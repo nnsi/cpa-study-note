@@ -1,9 +1,8 @@
-import { api } from "@/lib/api-client"
+import { api, extractErrorMessage } from "@/lib/api-client"
 import {
   studyDomainListResponseSchema,
   studyDomainSingleResponseSchema,
   bulkCSVImportResponseSchema,
-  successResponseSchema,
   type StudyDomainResponse,
   type CreateStudyDomainRequest,
   type UpdateStudyDomainRequest,
@@ -18,7 +17,7 @@ export type BulkCSVImportResult = BulkCSVImportResponse
 
 export const getStudyDomains = async (): Promise<{ studyDomains: StudyDomain[] }> => {
   const res = await api.api["study-domains"].$get()
-  if (!res.ok) throw new Error("Failed to fetch study domains")
+  if (!res.ok) throw new Error("学習領域の取得に失敗しました")
   const data = await res.json()
   return studyDomainListResponseSchema.parse(data)
 }
@@ -27,7 +26,7 @@ export const getStudyDomain = async (id: string): Promise<{ studyDomain: StudyDo
   const res = await api.api["study-domains"][":id"].$get({
     param: { id },
   })
-  if (!res.ok) throw new Error("Failed to fetch study domain")
+  if (!res.ok) throw new Error("学習領域の取得に失敗しました")
   const data = await res.json()
   return studyDomainSingleResponseSchema.parse(data)
 }
@@ -39,8 +38,7 @@ export const createStudyDomain = async (
     json: data,
   })
   if (!res.ok) {
-    const error = await res.json()
-    throw new Error((error as { error?: { message?: string } }).error?.message ?? "Failed to create study domain")
+    throw new Error(await extractErrorMessage(res, "学習領域の作成に失敗しました"))
   }
   const responseData = await res.json()
   return studyDomainSingleResponseSchema.parse(responseData)
@@ -55,23 +53,19 @@ export const updateStudyDomain = async (
     json: data,
   })
   if (!res.ok) {
-    const error = await res.json()
-    throw new Error((error as { error?: { message?: string } }).error?.message ?? "Failed to update study domain")
+    throw new Error(await extractErrorMessage(res, "学習領域の更新に失敗しました"))
   }
   const responseData = await res.json()
   return studyDomainSingleResponseSchema.parse(responseData)
 }
 
-export const deleteStudyDomain = async (id: string): Promise<{ success: boolean }> => {
+export const deleteStudyDomain = async (id: string): Promise<void> => {
   const res = await api.api["study-domains"][":id"].$delete({
     param: { id },
   })
   if (!res.ok) {
-    const error = await res.json()
-    throw new Error((error as { error?: { message?: string } }).error?.message ?? "Failed to delete study domain")
+    throw new Error(await extractErrorMessage(res, "学習領域の削除に失敗しました"))
   }
-  const data = await res.json()
-  return successResponseSchema.parse(data)
 }
 
 export const bulkImportCSV = async (
@@ -83,8 +77,7 @@ export const bulkImportCSV = async (
     json: { csvContent },
   })
   if (!res.ok) {
-    const error = await res.json()
-    throw new Error((error as { error?: { message?: string } }).error?.message ?? "CSVインポートに失敗しました")
+    throw new Error(await extractErrorMessage(res, "CSVインポートに失敗しました"))
   }
   const data = await res.json()
   return bulkCSVImportResponseSchema.parse(data)

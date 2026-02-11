@@ -16,6 +16,7 @@ import { createViewFeature } from "./features/view"
 import { createExerciseFeature } from "./features/exercise"
 import { createTopicGeneratorFeature } from "./features/topic-generator"
 import { createStudyPlanFeature } from "./features/study-plan"
+import { createQuickChatFeature } from "./features/quick-chat"
 import {
   createRateLimitStore,
   createRateLimiterFactory,
@@ -124,7 +125,9 @@ const createApp = (env: Env) => {
     .route("/api/view", createViewFeature(env, db))
     .route("/api/exercises", createExerciseFeature(env, db))
     .route("/api/topic-generator", createTopicGeneratorFeature(env, db))
+    .use("/api/quick-chat/*", limiter.moderate())
     .use("/api/study-plans/*/suggest", limiter.moderate())
+    .route("/api/quick-chat", createQuickChatFeature(env, db))
     .route("/api/study-plans", createStudyPlanFeature(env, db))
     .get("/api/health", (c) => c.json({ status: "ok" }))
     .onError((error, c) => {

@@ -93,7 +93,7 @@ export const createSubject = async (
   deps: SubjectDeps,
   userId: string,
   data: CreateSubjectData
-): Promise<Result<{ id: string }, AppError>> => {
+): Promise<Result<Subject, AppError>> => {
   // Verify the study domain belongs to the user
   const ownsStudyDomain = await deps.subjectRepo.verifyStudyDomainOwnership(data.studyDomainId, userId)
   if (!ownsStudyDomain) {
@@ -111,7 +111,13 @@ export const createSubject = async (
   }
 
   const result = await deps.subjectRepo.create(input)
-  return ok(result)
+
+  // Return full subject data
+  const subject = await deps.subjectRepo.findById(result.id, userId)
+  if (!subject) {
+    return err(notFound("作成した科目が見つかりません"))
+  }
+  return ok(subject)
 }
 
 export type UpdateSubjectData = {

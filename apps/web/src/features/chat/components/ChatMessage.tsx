@@ -1,12 +1,15 @@
 import { useState } from "react"
 import Markdown, { type Components } from "react-markdown"
 import remarkGfm from "remark-gfm"
+import remarkMath from "remark-math"
+import rehypeKatex from "rehype-katex"
 import type { DisplayMessage } from "../logic"
 
 const API_URL = import.meta.env.VITE_API_URL || ""
 
 // remarkPlugins配列をモジュールスコープで安定化（レンダリングごとの再生成を防止）
-const remarkPluginsStable = [remarkGfm]
+const remarkPluginsStable = [remarkGfm, remarkMath]
+const rehypePluginsStable = [rehypeKatex]
 
 // マークダウンコンポーネントのカスタム設定
 const markdownComponents: Components = {
@@ -169,7 +172,11 @@ export const ChatMessageView = ({ message, isStreaming }: Props) => {
           </div>
         ) : (
           <div className="prose prose-sm max-w-none break-words text-ink-800">
-            <Markdown components={markdownComponents} remarkPlugins={remarkPluginsStable}>
+            <Markdown
+              components={markdownComponents}
+              remarkPlugins={remarkPluginsStable}
+              rehypePlugins={rehypePluginsStable}
+            >
               {message.content}
             </Markdown>
           </div>

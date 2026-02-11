@@ -251,7 +251,7 @@ describe("MIME型チェック", () => {
         expect(result.current.status).toBe("error")
       })
 
-      expect(result.current.error).toBe(`Unsupported file type: ${mimeType}`)
+      expect(result.current.error).toBe(`サポートされていないファイル形式です: ${mimeType}`)
       // APIが呼ばれていないことを確認
       expect(api.getUploadUrl).not.toHaveBeenCalled()
     })

@@ -43,11 +43,17 @@ apps/api/src/features/{feature-name}/
 
 ### エラーハンドリング
 ```typescript
-// ✅ 正しい: handleResult を使用
-if (!result.ok) return handleResult(c, result)
+// ✅ 正しい: handleResult でそのまま返す（値をそのままJSON化）
+return handleResult(c, result)
 
-// ✅ 正しい: handleResultWith でレスポンス形式を指定
-return handleResultWith(c, result, (data) => ({ items: data }))
+// ✅ 正しい: handleResult でキー付きレスポンス（{ items: data }）
+return handleResult(c, result, "items")
+
+// ✅ 正しい: handleResult でステータス指定（201 Created）
+return handleResult(c, result, "subject", 201)
+
+// ✅ 正しい: void結果は自動的に 204 No Content
+return handleResult(c, result)  // result.value === undefined → 204
 
 // ✅ 正しい: 直接エラー生成する場合も err() + handleResult
 if (body.byteLength > MAX_SIZE) {
@@ -59,6 +65,12 @@ if (!result.ok) return errorResponse(c, result.error)
 
 // ❌ 禁止: c.json で直接エラーを返す
 return c.json({ error: "Not found" }, 404)
+
+// ❌ 禁止: if (!result.ok) で分岐してから c.json で返す
+if (!result.ok) return handleResult(c, result)
+return c.json({ item: result.value }, 200)
+
+// ❌ 廃止: handleResultWith（handleResult に統合済み）
 ```
 
 ### Deps型定義
@@ -267,7 +279,7 @@ import type { Db } from "@cpa-study/db"
 import { create{FeatureName}RequestSchema } from "@cpa-study/shared/schemas"
 import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
-import { handleResult, handleResultWith } from "@/shared/lib/route-helpers"
+import { handleResult } from "@/shared/lib/route-helpers"
 import { create{FeatureName}Repository } from "./repository"
 import { get{FeatureName}, create{FeatureName} } from "./usecase"
 
@@ -282,15 +294,15 @@ export const {featureName}Routes = ({ db }: {FeatureName}Deps) => {
   const deps = { repo }
 
   const app = new Hono<{ Bindings: Env; Variables: Variables }>()
-    // GET: handleResultWith でレスポンス形式を指定
+    // GET: handleResult でキー付きレスポンス
     .get("/:id", authMiddleware, async (c) => {
       const id = c.req.param("id")
       const user = c.get("user")
       const result = await get{FeatureName}(deps, user.id, id)
-      return handleResultWith(c, result, (data) => ({ {featureName}: data }))
+      return handleResult(c, result, "{featureName}")
     })
 
-    // POST: handleResult + 詳細データを返す
+    // POST: handleResult でキー+ステータス指定
     .post(
       "/",
       authMiddleware,
@@ -299,9 +311,7 @@ export const {featureName}Routes = ({ db }: {FeatureName}Deps) => {
         const user = c.get("user")
         const input = c.req.valid("json")
         const result = await create{FeatureName}(deps, user.id, input)
-
-        if (!result.ok) return handleResult(c, result)
-        return c.json({ {featureName}: result.value }, 201)
+        return handleResult(c, result, "{featureName}", 201)
       }
     )
 

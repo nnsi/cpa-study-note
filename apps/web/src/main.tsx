@@ -7,6 +7,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary"
 import { ToastContainer } from "./lib/toast"
 import { initializeAuth } from "./lib/auth"
 import "./index.css"
+import "katex/dist/katex.min.css"
 
 // QueryClient設定（パフォーマンス最適化）
 const queryClient = new QueryClient({

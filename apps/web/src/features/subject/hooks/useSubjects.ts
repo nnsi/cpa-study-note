@@ -4,7 +4,7 @@ import * as api from "../api"
 /**
  * 科目一覧を取得するフック
  */
-export function useSubjects(domainId: string | undefined) {
+export const useSubjects = (domainId: string | undefined) => {
   const { data, isLoading, error } = useQuery({
     queryKey: ["subjects", domainId],
     queryFn: () => api.getSubjects(domainId!),
@@ -21,9 +21,9 @@ export function useSubjects(domainId: string | undefined) {
 /**
  * 科目を取得するフック
  */
-export function useSubject(id: string | undefined) {
+export const useSubject = (id: string | undefined) => {
   const { data, isLoading, error } = useQuery({
-    queryKey: ["subject", id],
+    queryKey: ["subjects", id],
     queryFn: () => api.getSubject(id!),
     enabled: !!id,
   })
@@ -38,7 +38,7 @@ export function useSubject(id: string | undefined) {
 /**
  * 科目を作成するミューテーション
  */
-export function useCreateSubject() {
+export const useCreateSubject = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -53,7 +53,7 @@ export function useCreateSubject() {
 /**
  * 科目を更新するミューテーション
  */
-export function useUpdateSubject() {
+export const useUpdateSubject = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -61,7 +61,6 @@ export function useUpdateSubject() {
       api.updateSubject(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["subjects"] })
-      queryClient.invalidateQueries({ queryKey: ["subject"] })
     },
   })
 }
@@ -69,7 +68,7 @@ export function useUpdateSubject() {
 /**
  * 科目を削除するミューテーション
  */
-export function useDeleteSubject() {
+export const useDeleteSubject = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -83,9 +82,9 @@ export function useDeleteSubject() {
 /**
  * 科目のツリーを取得するフック
  */
-export function useSubjectTree(id: string | undefined) {
+export const useSubjectTree = (id: string | undefined) => {
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ["subject-tree", id],
+    queryKey: ["subjects", id, "tree"],
     queryFn: () => api.getSubjectTree(id!),
     enabled: !!id,
   })
@@ -101,14 +100,14 @@ export function useSubjectTree(id: string | undefined) {
 /**
  * 科目のツリーを更新するミューテーション
  */
-export function useUpdateSubjectTree() {
+export const useUpdateSubjectTree = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: ({ id, tree }: { id: string; tree: api.UpdateTreeInput }) =>
       api.updateSubjectTree(id, tree),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["subject-tree", variables.id] })
+      queryClient.invalidateQueries({ queryKey: ["subjects", variables.id, "tree"] })
     },
   })
 }
@@ -116,14 +115,14 @@ export function useUpdateSubjectTree() {
 /**
  * CSVインポートのミューテーション
  */
-export function useImportCSV() {
+export const useImportCSV = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: ({ id, csvContent }: { id: string; csvContent: string }) =>
       api.importCSV(id, csvContent),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["subject-tree", variables.id] })
+      queryClient.invalidateQueries({ queryKey: ["subjects", variables.id, "tree"] })
     },
   })
 }

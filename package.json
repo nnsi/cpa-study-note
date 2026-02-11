@@ -17,10 +17,19 @@
     "db:migrate": "pnpm --filter @cpa-study/db migrate",
     "db:seed": "pnpm --filter @cpa-study/db seed",
     "get-time": "node ./scripts/get-date.js",
-    "audit": "pnpm audit --audit-level moderate"
+    "audit": "pnpm audit --audit-level moderate",
+    "test:e2e": "playwright test --config e2e/playwright.config.ts",
+    "test:e2e:ui": "playwright test --config e2e/playwright.config.ts --ui",
+    "test:e2e:headed": "playwright test --config e2e/playwright.config.ts --headed"
   },
   "devDependencies": {
+    "@hono/node-server": "^1.19.9",
+    "@playwright/test": "1.56.1",
+    "@textlint-ja/textlint-rule-preset-ai-writing": "^1.6.1",
     "@vitest/coverage-v8": "^4.0.18",
+    "textlint": "^15.5.1",
+    "tsconfig-paths": "^4.2.0",
+    "tsx": "^4.19.2",
     "typescript": "^5.7.3",
     "vitest": "^4.0.18"
   },

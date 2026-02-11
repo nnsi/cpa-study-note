@@ -24,10 +24,6 @@ const uploadUrlResponseSchema = z.object({
   imageId: z.string(),
 })
 
-const uploadResponseSchema = z.object({
-  success: z.boolean(),
-})
-
 const imageMetadataResponseSchema = z.object({
   image: z.object({
     id: z.string(),
@@ -56,6 +52,7 @@ vi.mock("../../shared/lib/ai", () => ({
     speechCorrection: { model: "test-model", temperature: 0, maxTokens: 500 },
     topicGenerator: { model: "test-model", temperature: 0.5, maxTokens: 3000 },
     planAssistant: { model: "test-model", temperature: 0.5, maxTokens: 3000 },
+    quickChatSuggest: { model: "test-model", temperature: 0, maxTokens: 500 },
   }),
 }))
 
@@ -195,9 +192,7 @@ describe("Image Routes", () => {
         body: createPngBuffer(),
       })
 
-      expect(res.status).toBe(200)
-      const body = await parseJson(res, uploadResponseSchema)
-      expect(body.success).toBe(true)
+      expect(res.status).toBe(204)
     })
 
     it("存在しない画像IDは404を返す", async () => {

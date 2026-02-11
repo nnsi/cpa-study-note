@@ -11,15 +11,10 @@ type ErrorResponse = {
 }
 
 type SuccessStatus = 200 | 201 | 204
-type ErrorStatus = 400 | 401 | 403 | 404 | 409 | 500
+type ErrorStatus = 400 | 401 | 403 | 404 | 409 | 413 | 500
 
 /**
  * AppErrorをHTTPエラーレスポンスに変換する
- *
- * @example
- * const result = await getSubject(deps, userId, id)
- * if (!result.ok) return errorResponse(c, result.error)
- * return c.json({ subject: result.value })
  */
 export const errorResponse = (c: Context, error: AppError) => {
   const status = errorCodeToStatus[error.code] as ErrorStatus
@@ -36,70 +31,79 @@ export const errorResponse = (c: Context, error: AppError) => {
 }
 
 /**
- * Result型をHTTPレスポンスに変換する
+ * Result型をHTTPレスポンスに変換する（統合版）
  *
  * @example
- * // 基本的な使用
- * const result = await deleteSubject(deps, userId, id)
+ * // そのまま返す
  * return handleResult(c, result)
  *
- * @example
- * // 作成時（201）
- * const result = await createSubject(deps, userId, input)
- * return handleResult(c, result, 201)
+ * // キーでラップ
+ * return handleResult(c, result, "subject")       // → { subject: value }
+ *
+ * // ステータス指定
+ * return handleResult(c, result, 204)
+ *
+ * // キー + ステータス
+ * return handleResult(c, result, "subject", 201)  // → { subject: value } with 201
  */
-export const handleResult = <T>(
+export function handleResult<T>(
   c: Context,
   result: Result<T, AppError>,
-  successStatus: SuccessStatus = 200
-): Response => {
-  if (result.ok) {
-    if (successStatus === 204 || result.value === undefined) {
-      return c.body(null, 204)
-    }
-    return c.json(result.value, successStatus)
+): Response
+export function handleResult<T>(
+  c: Context,
+  result: Result<T, AppError>,
+  status: SuccessStatus,
+): Response
+export function handleResult<T>(
+  c: Context,
+  result: Result<T, AppError>,
+  key: string,
+  status?: SuccessStatus,
+): Response
+export function handleResult<T>(
+  c: Context,
+  result: Result<T, AppError>,
+  keyOrStatus?: string | SuccessStatus,
+  status?: SuccessStatus,
+): Response {
+  if (!result.ok) {
+    return errorResponse(c, result.error)
   }
 
-  const status = errorCodeToStatus[result.error.code] as ErrorStatus
-  const errorResponse: ErrorResponse = {
-    error: {
-      code: result.error.code,
-      message: result.error.message,
-      ...(result.error.details && { details: result.error.details }),
-    },
+  const key = typeof keyOrStatus === "string" ? keyOrStatus : undefined
+  const successStatus = typeof keyOrStatus === "number" ? keyOrStatus : (status ?? 200)
+
+  if (successStatus === 204 || result.value === undefined) {
+    return c.body(null, 204)
   }
 
-  return c.json(errorResponse, status)
+  const body = key ? { [key]: result.value } : result.value
+  return c.json(body, successStatus)
 }
 
 /**
- * Result型をHTTPレスポンスに変換する（成功時のレスポンス形式をカスタマイズ）
+ * Result型をバイナリレスポンスに変換する（画像ファイル配信用）
  *
  * @example
- * const result = await getSubject(deps, userId, id)
- * return handleResultWith(c, result, (subject) => ({ subject }))
+ * const result = await getImageFile(deps, userId, imageId)
+ * return handleResultImage(c, result, "private, max-age=3600")
  */
-export const handleResultWith = <T, R>(
+export const handleResultImage = <
+  T extends { body: ReadableStream | ArrayBuffer | null; mimeType: string },
+>(
   c: Context,
   result: Result<T, AppError>,
-  transform: (value: T) => R,
-  successStatus: SuccessStatus = 200
+  cacheControl?: string,
 ): Response => {
-  if (result.ok) {
-    if (successStatus === 204) {
-      return c.body(null, 204)
-    }
-    return c.json(transform(result.value), successStatus)
+  if (!result.ok) {
+    return errorResponse(c, result.error)
   }
 
-  const status = errorCodeToStatus[result.error.code] as ErrorStatus
-  const errorResponse: ErrorResponse = {
-    error: {
-      code: result.error.code,
-      message: result.error.message,
-      ...(result.error.details && { details: result.error.details }),
+  return new Response(result.value.body, {
+    headers: {
+      "Content-Type": result.value.mimeType,
+      ...(cacheControl && { "Cache-Control": cacheControl }),
     },
-  }
-
-  return c.json(errorResponse, status)
+  })
 }

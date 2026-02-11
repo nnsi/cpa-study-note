@@ -47,7 +47,7 @@ export const TopicInfo = ({ topic, progress, subjectId, sessions = [] }: Props) 
         param: { topicId: topic.id },
         json: { understood },
       })
-      if (!res.ok) throw new Error("Failed to update progress")
+      if (!res.ok) throw new Error("進捗の更新に失敗しました")
       return res.json()
     },
     onSuccess: () => {
@@ -145,7 +145,11 @@ export const TopicInfo = ({ topic, progress, subjectId, sessions = [] }: Props) 
 }
 
 // チェック履歴タイムラインコンポーネント
-const CheckHistoryTimeline = ({ history }: { history: CheckHistoryItem[] }) => {
+type CheckHistoryTimelineProps = {
+  history: CheckHistoryItem[]
+}
+
+const CheckHistoryTimeline = ({ history }: CheckHistoryTimelineProps) => {
   if (history.length === 0) {
     return (
       <p className="text-sm text-ink-500 text-center py-2">

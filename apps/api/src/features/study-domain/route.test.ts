@@ -12,7 +12,6 @@ import {
   createAuthHeaders,
   parseJson,
   errorResponseSchema,
-  successResponseSchema,
   type TestContext,
 } from "../../test/helpers"
 import * as schema from "@cpa-study/db/schema"
@@ -443,9 +442,7 @@ describe("Study Domain Routes", () => {
         headers: createAuthHeaders(ctx.testData.userId),
       })
 
-      expect(res.status).toBe(200)
-      const body = await parseJson(res, successResponseSchema)
-      expect(body.success).toBe(true)
+      expect(res.status).toBe(204)
 
       // Verify soft deletion (not visible anymore)
       const checkRes = await app.request("/study-domains/to-delete", {
@@ -496,9 +493,7 @@ describe("Study Domain Routes", () => {
         headers: createAuthHeaders(ctx.testData.userId),
       })
 
-      expect(res.status).toBe(200)
-      const body = await parseJson(res, successResponseSchema)
-      expect(body.success).toBe(true)
+      expect(res.status).toBe(204)
 
       // Subject should also be soft-deleted
       const subjectRes = await app.request("/study-domains/has-subjects", {
