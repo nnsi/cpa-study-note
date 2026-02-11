@@ -57,7 +57,7 @@ AI協働開発で最も重要なのは、**AIが「既存コードを見て同�
 
 ```
 features/
-└── topic/
+└── feature-x/
     ├── route.ts      # HTTPエンドポイント定義
     ├── usecase.ts    # ビジネスロジック
     ├── repository.ts # データアクセス
@@ -68,22 +68,22 @@ features/
 
 - 各層の責務が明確 → 「Repositoryを書いて」で何を書くべきか迷わない
 - 依存方向が一方向（Route → UseCase → Repository）→ AIが勝手に逆方向の依存を作らない
-- 既存の`chat/`フォルダを見せれば、同じ構成で`topic/`を作れる
+- 既存の類似機能フォルダを見せれば、同じ構成で新機能を作れる
 
-### 関数型スタイル（クラス不使用）
+### 関数型スタイル（ビジネスロジックではクラス不使用）
 
 ```typescript
 // ❌ クラスベース — 継承階層をAIが見落としやすい
-class TopicService extends BaseService {
-  constructor(private repo: TopicRepository) { super() }
-  async createTopic(data: CreateTopicInput) { ... }
+class ResourceService extends BaseService {
+  constructor(private repo: ResourceRepository) { super() }
+  async createResource(data: CreateResourceInput) { ... }
 }
 
 // ✅ 関数ベース — 入力→出力が明確
-export const createTopic = async (
-  deps: { repo: TopicRepository },
-  input: CreateTopicInput
-): Promise<Result<Topic, CreateTopicError>> => {
+export const createResource = async (
+  deps: { repo: ResourceRepository },
+  input: CreateResourceInput
+): Promise<Result<Resource, CreateResourceError>> => {
   // ...
 }
 ```
@@ -95,13 +95,15 @@ export const createTopic = async (
 - 副作用がdeps経由で明示される → AIが見落としにくい
 - テストが書きやすい → depsを差し替えるだけでモックが完結する
 
+※ UIのErrorBoundaryやインフラ都合（Durable Object）など、フレームワーク要件でクラスを使う箇所はある。ここで指しているのは「UseCase/Repositoryなどのビジネスロジック層は関数中心」という方針。
+
 ```typescript
 // テスト時はdepsを差し替えるだけ
 const mockRepo = {
-  findById: async () => ({ id: "1", name: "test" }),
-  createSession: async (input) => ({ id: "new", ...input }),
+  findById: async () => ({ id: "1", label: "test" }),
+  createRecord: async (input) => ({ id: "new", ...input }),
 }
-const result = await createSession({ repo: mockRepo }, "user1", "topic1")
+const result = await createRecord({ repo: mockRepo }, "actor-1", "resource-1")
 ```
 
 クラスベースだと`jest.mock()`やDIコンテナの設定が必要になるが、関数型なら引数で渡すだけ。AIがテストを書く際にも「この関数のdepsにモックを渡せばいい」と判断しやすい。
@@ -113,25 +115,25 @@ const result = await createSession({ repo: mockRepo }, "user1", "topic1")
 type Result<T, E> = { ok: true; value: T } | { ok: false; error: E }
 
 // 使用例
-export const createSession = async (
+export const createRecord = async (
   deps: Dependencies,
-  userId: string,
-  topicId: string
-): Promise<Result<Session, "TOPIC_NOT_FOUND" | "DB_ERROR">> => {
-  const topic = await deps.repo.findById(topicId)
-  if (!topic) {
-    return { ok: false, error: "TOPIC_NOT_FOUND" }
+  actorId: string,
+  resourceId: string
+): Promise<Result<RecordItem, "RESOURCE_NOT_FOUND" | "DB_ERROR">> => {
+  const resource = await deps.repo.findById(resourceId)
+  if (!resource) {
+    return { ok: false, error: "RESOURCE_NOT_FOUND" }
   }
-  const session = await deps.repo.createSession({ userId, topicId })
-  return { ok: true, value: session }
+  const record = await deps.repo.createRecord({ actorId, resourceId })
+  return { ok: true, value: record }
 }
 
 // 呼び出し側 — エラー処理を忘れるとコンパイルエラー
-const result = await createSession(deps, userId, topicId)
+const result = await createRecord(deps, actorId, resourceId)
 if (!result.ok) {
   return c.json({ error: result.error }, 404)
 }
-return c.json({ session: result.value }, 201)
+return c.json({ item: result.value }, 201)
 ```
 
 **なぜAIと相性が良いか：**
@@ -145,19 +147,19 @@ return c.json({ session: result.value }, 201)
 ```
 apps/api/src/features/
 ├── auth/      # 認証機能
-├── chat/      # チャット機能
-├── topic/     # トピック機能
-├── note/      # ノート機能
-└── image/     # 画像機能
+├── feature-a/ # 機能A
+├── feature-b/ # 機能B
+├── feature-c/ # 機能C
+└── feature-d/ # 機能D
 ```
 
 **なぜAIと相性が良いか：**
 
 - 1機能に関するファイルが1フォルダに集約 → コンテキストとして渡しやすい
-- 「ブックマーク機能を作って」だけで、AIが`chat/`や`topic/`を参考に同じ構成で作る
+- 「ブックマーク機能を作って」だけで、AIが既存の類似機能を参考に同じ構成で作る
 - 機能間の境界が明確で、AIが勝手に機能を跨いだ依存を作りにくい
 
-**コンテキストウィンドウ対策としても有効：** コードベースが大きくなると、全ファイルをAIのコンテキストに入れることは不可能になる。Package by Featureなら「`bookmark/`フォルダだけ渡せば、その機能に必要な情報が揃う」。関連ファイルが散らばっている構成だと、AIに何を渡すべきか人間が判断しなければならない。
+**コンテキストウィンドウ対策としても有効：** コードベースが大きくなると、全ファイルをAIのコンテキストに入れることは不可能になる。Package by Featureなら「対象機能フォルダだけ渡せば、その機能に必要な情報が揃う」。関連ファイルが散らばっている構成だと、AIに何を渡すべきか人間が判断しなければならない。
 
 ### Hono RPCによるフロントエンド型連携
 
@@ -168,12 +170,12 @@ apps/api/src/features/
 export type AppType = ReturnType<typeof createApp>
 
 // フロントエンド: api-client.ts
-import type { AppType } from "@cpa-study/api"
+import type { AppType } from "@your-org/api"
 export const api = hc<AppType>(import.meta.env.VITE_API_URL)
 
 // フロントエンド: 使用時（自動補完が効く）
-const res = await api.api.chat.sessions[":sessionId"].messages.$get({
-  param: { sessionId },
+const res = await api.api.resources[":resourceId"].items.$get({
+  param: { resourceId },
 })
 ```
 
@@ -283,7 +285,7 @@ export const createXxxFeature = (env: Env, db: Db) => {
 }
 ```
 
-このレベルまで具体化しておくと、「ブックマーク機能作って」だけで正しい構成のコードが生成される。AIはCLAUDE.mdのアーキテクチャルールと既存の`chat/`や`topic/`の構成を見て、同じパターンで新機能を作る。
+このレベルまで具体化しておくと、「ブックマーク機能作って」だけで正しい構成のコードが生成される。AIはCLAUDE.mdのアーキテクチャルールと既存の類似機能構成を見て、同じパターンで新機能を作る。
 
 ---
 
@@ -304,7 +306,7 @@ docs/
 │   │   └── tasks.md           # タスクリスト
 │   ├── v2/
 │   │   └── design.md          # v2設計
-│   └── exercise-img-to-topic/ # 機能単位の設計
+│   └── feature-x/              # 機能単位の設計
 │       └── design.md
 ├── adr/                       # Architecture Decision Records
 ├── design-p/                  # 設計思想・方針
@@ -319,7 +321,7 @@ docs/
 
 ### バージョン別・機能別に設計ドキュメントを整理
 
-実際のプロジェクトでは、設計ドキュメントをバージョン単位（`v1/`, `v2/`）と機能単位（`exercise-img-to-topic/`）で整理している。こうすることで、AIに「v2.1の設計書を読んで」と言えば関連ドキュメントがまとまっている。
+実際のプロジェクトでは、設計ドキュメントをバージョン単位（`v1/`, `v2/`）と機能単位（`feature-x/`）で整理している。こうすることで、AIに「最新版の設計書を読んで」と言えば関連ドキュメントがまとまっている。
 
 AIが自律的に判断できるよう、以下の要素を含めている。
 
@@ -437,16 +439,16 @@ UXを改善するものだった。
 
 ### アーキテクチャの一貫性
 
-バックエンド13機能・フロントエンド15機能を作った結果：
+バックエンド14機能・フロントエンド16機能を作った結果：
 
 | 指標 | 一致率 |
 |------|--------|
-| バックエンド: route.ts + usecase.ts 保有率 | 13/13 = **100%** |
-| バックエンド: コアファイル全体（route/usecase/repository/index） | 59/62 = **95.2%** |
-| フロントエンド: api.ts + index.ts 保有率 | 15/15 = **100%** |
-| フロントエンド: コアファイル全体（api/hooks/components/index） | 57/60 = **95.0%** |
+| バックエンド: route.ts + usecase.ts 保有率 | 14/14 = **100%** |
+| バックエンド: コアファイル全体（route/usecase/repository/index） | 54/56 = **96.4%** |
+| フロントエンド: api.ts + index.ts 保有率 | 16/16 = **100%** |
+| フロントエンド: コアファイル全体（api/hooks/components/index） | 61/64 = **95.3%** |
 
-100%でない理由は意図的な逸脱（データソースのない`view`機能にrepository.tsは不要、など）で、構成を間違えたケースではない。
+100%でない理由は意図的な逸脱（例: データソースを直接持たない参照系機能ではバックエンドの`repository.ts`を省略、フロントは機能規模に応じて`hooks`/`components`を単一ファイルかディレクトリに分ける）で、構成を間違えたケースではない。
 
 ### テスト
 
@@ -456,14 +458,14 @@ UXを改善するものだった。
 | テストコード行数 | 約21,200行 |
 | テスト比率 | 全TypeScriptコードの**44.3%** |
 
-テストコードもこの仕組みで書かせている。「`chat/`のテストを参考に`bookmark/`のテストを書いて」で、モック構成やアサーションのパターンが揃う。
+テストコードもこの仕組みで書かせている。「既存機能Aのテストを参考に、新機能Bのテストを書いて」で、モック構成やアサーションのパターンが揃う。
 
 ### フィードバックループの実績
 
 | 指標 | 数値 |
 |------|------|
-| 日記エントリ数 | 20件（21日間でほぼ毎日） |
-| 日記の総行数 | 約6,600行 |
+| 日記エントリ数 | 22件（2026-01-19〜2026-02-11） |
+| 日記の総行数 | 約7,100行 |
 | 日記内の反省点セクション | 38件 |
 | 落とし穴テーブルの項目数 | 17項目 |
 
@@ -475,9 +477,9 @@ UXを改善するものだった。
 
 実際の数字で見ると、次のとおり。
 
-- CLAUDE.md本体は**60行**。詳細ルールは`docs/memo/development-rules.md`に**103行**
-- 最初のCLAUDE.mdは数行のアーキテクチャルールだけ。20日間の開発で現在の形になった
-- 落とし穴テーブルの17項目は、20日間で1日1項目弱のペースで自然に蓄積
+- CLAUDE.md本体は**72行**。詳細ルールは`docs/memo/development-rules.md`に**103行**
+- 最初のCLAUDE.mdは数行のアーキテクチャルールだけ。24日間の開発で現在の形になった
+- 落とし穴テーブルの17項目は、24日間で自然に蓄積
 
 つまり「仕込み」は開発と並行して育つもので、別途時間を取る必要はない。
 
@@ -487,7 +489,7 @@ UXを改善するものだった。
 
 1. **要件を伝える**
    ```
-   「特定の科目をブックマークできる機能を作って」
+   「ブックマーク機能を作って」
    ```
 
 2. **AIが設計ドキュメントを作成**
@@ -496,7 +498,7 @@ UXを改善するものだった。
 
 3. **実装**
    - AIがCLAUDE.mdのルールに従って実装
-   - 既存の`chat/`や`topic/`を参考に同じ構成で作成
+   - 既存の類似機能を参考に同じ構成で作成
    - スキル名の指定なし、アーキテクチャの説明なしでも一貫したコードが出る
 
 4. **日記で振り返り**
@@ -516,17 +518,17 @@ UXを改善するものだった。
 
 **同じ問題を繰り返す。** 「curlで日本語をPOSTすると文字化けする」という問題を、複数のセッションで繰り返し踏んでいる。落とし穴テーブルに書いても、環境依存の問題はセッションをまたぐと忘れられがち。
 
-**型チェックだけでは見つからないバグがある。** フロントエンドの`addBookmark`関数が、APIレスポンスを間違ったスキーマでパースしていた。型チェックは通っていたが、実行時にZodバリデーションエラーが発生。E2Eテストを書くまで気づかなかった。仕組みがあっても、実際に動かすテストは必要。
+**型チェックだけでは見つからないバグがある。** フロントエンドのある関数で、APIレスポンスを間違ったスキーマでパースしていた。型チェックは通っていたが、実行時にZodバリデーションエラーが発生。E2Eテストを書くまで気づかなかった。仕組みがあっても、実際に動かすテストは必要。
 
 ---
 
 ## 限界・注意点
 
-- 仕組みを育てる手間は必要。ただし「事前に何時間もかけて準備する」のではなく、開発しながら日記→ルールのフィードバックループで自然に育つ。このプロジェクトのCLAUDE.mdは60行、落とし穴テーブルは20日間で17項目。この投資は人間のチーム開発でも有効なので、AI協働をやめても無駄にはならない
+- 仕組みを育てる手間は必要。ただし「事前に何時間もかけて準備する」のではなく、開発しながら日記→ルールのフィードバックループで自然に育つ。このプロジェクトのCLAUDE.mdは72行、落とし穴テーブルは24日間で17項目。この投資は人間のチーム開発でも有効なので、AI協働をやめても無駄にはならない
 - ルールの肥大化には注意が必要。落とし穴が増えすぎるとファイルが長くなる。実際、このプロジェクトでは詳細ルールを`docs/memo/development-rules.md`に分離し、CLAUDE.mdは簡潔に保っている
 - AIの判断を過信しないこと。日記で「異論」を書かせても、最終判断は人間がすべき
 - 向き不向きがある。明確な構造を持つWebアプリには向くが、探索的な開発には向かない
-- テストとレビューは別途必要。この記事はアーキテクチャの一貫性を保つ仕組みであり、品質保証は別の話。型チェック・リント・テストのCI/CDは当然必要だし、AIが書いたコードを人間がレビューするプロセスも省略すべきではない。なお、このプロジェクトではAIにユニットテスト（約17,000行）とE2Eテスト（Playwright）も書かせており、テストコードもこの仕組みで一貫性を保っている
+- テストとレビューは別途必要。この記事はアーキテクチャの一貫性を保つ仕組みであり、品質保証は別の話。型チェック・リント・テストのCI/CDは当然必要だし、AIが書いたコードを人間がレビューするプロセスも省略すべきではない。なお、このプロジェクトではAIにユニットテスト（約19,600行）とE2Eテスト（Playwright, API E2E含め約2,000行）も書かせており、テストコードもこの仕組みで一貫性を保っている
 - チーム開発への適用は未検証。この記事は「1人の開発者 + AI」の構図。複数人がAIと同時に協働する場合のワークフローは、今後の課題として残っている
 
 ---
