@@ -193,7 +193,7 @@ describe("useDeleteSubject", () => {
   })
 
   it("科目を削除する", async () => {
-    vi.mocked(api.deleteSubject).mockResolvedValue({ success: true })
+    vi.mocked(api.deleteSubject).mockResolvedValue(undefined)
 
     const { result } = renderHook(() => useDeleteSubject(), {
       wrapper: createWrapper(),

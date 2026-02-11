@@ -1,13 +1,11 @@
 import { api, extractErrorMessage } from "@/lib/api-client"
 import {
   type CreateManualNoteRequest,
-  type SuccessResponse,
   noteSingleResponseSchema,
   notesListResponseSchema,
   notesFullListResponseSchema,
   noteBySessionResponseSchema,
   noteCreateResponseSchema,
-  successResponseSchema,
 } from "@cpa-study/shared/schemas"
 
 // 全ノート一覧取得
@@ -88,13 +86,11 @@ export const updateNoteDetail = async (
 }
 
 // ノート削除
-export const deleteNote = async (noteId: string): Promise<SuccessResponse> => {
+export const deleteNote = async (noteId: string): Promise<void> => {
   const res = await api.api.notes[":noteId"].$delete({
     param: { noteId },
   })
   if (!res.ok) {
     throw new Error(await extractErrorMessage(res, "ノートの削除に失敗しました"))
   }
-  const json = await res.json()
-  return successResponseSchema.parse(json)
 }

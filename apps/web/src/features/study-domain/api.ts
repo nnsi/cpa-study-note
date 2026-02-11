@@ -3,7 +3,6 @@ import {
   studyDomainListResponseSchema,
   studyDomainSingleResponseSchema,
   bulkCSVImportResponseSchema,
-  successResponseSchema,
   type StudyDomainResponse,
   type CreateStudyDomainRequest,
   type UpdateStudyDomainRequest,
@@ -60,15 +59,13 @@ export const updateStudyDomain = async (
   return studyDomainSingleResponseSchema.parse(responseData)
 }
 
-export const deleteStudyDomain = async (id: string): Promise<{ success: boolean }> => {
+export const deleteStudyDomain = async (id: string): Promise<void> => {
   const res = await api.api["study-domains"][":id"].$delete({
     param: { id },
   })
   if (!res.ok) {
     throw new Error(await extractErrorMessage(res, "学習領域の削除に失敗しました"))
   }
-  const data = await res.json()
-  return successResponseSchema.parse(data)
 }
 
 export const bulkImportCSV = async (

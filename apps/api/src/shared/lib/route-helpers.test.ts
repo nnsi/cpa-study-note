@@ -4,6 +4,8 @@ import { errorResponse, handleResult, handleResultImage } from "./route-helpers"
 import { ok, err } from "./result"
 import type { AppError } from "./errors"
 
+type ErrorBody = { error: { code: string; message: string; details?: unknown } }
+
 // テスト用Honoアプリを作成してContextを取得するヘルパー
 const executeWithContext = async (
   handler: (c: any) => Response | Promise<Response>
@@ -19,7 +21,7 @@ describe("errorResponse", () => {
     const error: AppError = { code: "NOT_FOUND", message: "見つかりません" }
     const res = await executeWithContext((c) => errorResponse(c, error))
     expect(res.status).toBe(404)
-    const body = await res.json()
+    const body: ErrorBody = await res.json()
     expect(body.error.code).toBe("NOT_FOUND")
     expect(body.error.message).toBe("見つかりません")
   })
@@ -37,14 +39,14 @@ describe("errorResponse", () => {
       details: { field: "name" },
     }
     const res = await executeWithContext((c) => errorResponse(c, error))
-    const body = await res.json()
+    const body: ErrorBody = await res.json()
     expect(body.error.details).toEqual({ field: "name" })
   })
 
   it("detailsがない場合はレスポンスに含めない", async () => {
     const error: AppError = { code: "INTERNAL_ERROR", message: "内部エラー" }
     const res = await executeWithContext((c) => errorResponse(c, error))
-    const body = await res.json()
+    const body: ErrorBody = await res.json()
     expect(body.error.details).toBeUndefined()
   })
 })
@@ -81,7 +83,7 @@ describe("handleResult", () => {
     const result = err(error)
     const res = await executeWithContext((c) => handleResult(c, result))
     expect(res.status).toBe(403)
-    const body = await res.json()
+    const body: ErrorBody = await res.json()
     expect(body.error.code).toBe("FORBIDDEN")
   })
 
@@ -93,7 +95,7 @@ describe("handleResult", () => {
     }
     const result = err(error)
     const res = await executeWithContext((c) => handleResult(c, result))
-    const body = await res.json()
+    const body: ErrorBody = await res.json()
     expect(body.error.details).toEqual({ existing: "data" })
   })
 })
@@ -126,7 +128,7 @@ describe("handleResult with key", () => {
       handleResult(c, result, "data")
     )
     expect(res.status).toBe(401)
-    const body = await res.json()
+    const body: ErrorBody = await res.json()
     expect(body.error.code).toBe("UNAUTHORIZED")
   })
 })
@@ -159,7 +161,7 @@ describe("handleResultImage", () => {
       handleResultImage(c, result)
     )
     expect(res.status).toBe(404)
-    const body = await res.json()
+    const body: ErrorBody = await res.json()
     expect(body.error.code).toBe("NOT_FOUND")
   })
 })

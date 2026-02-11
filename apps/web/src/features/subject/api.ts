@@ -3,7 +3,6 @@ import {
   searchTopicsResponseSchema,
   subjectsWithStatsListResponseSchema,
   subjectDetailResponseSchema,
-  successResponseSchema,
   treeDetailResponseSchema,
   csvImportResponseSchema,
   type CreateSubjectRequest,
@@ -21,7 +20,6 @@ import {
   type UpdateTreeRequest,
   type SubjectsWithStatsListResponse,
   type SubjectDetailResponse,
-  type SuccessResponse,
   type TreeDetailResponse,
   type CSVImportResponse,
 } from "@cpa-study/shared/schemas"
@@ -101,15 +99,13 @@ export const updateSubject = async (
   return subjectDetailResponseSchema.parse(json)
 }
 
-export const deleteSubject = async (id: string): Promise<SuccessResponse> => {
+export const deleteSubject = async (id: string): Promise<void> => {
   const res = await api.api.subjects[":id"].$delete({
     param: { id },
   })
   if (!res.ok) {
     throw new Error(await extractErrorMessage(res, "科目の削除に失敗しました"))
   }
-  const json = await res.json()
-  return successResponseSchema.parse(json)
 }
 
 export const getSubjectTree = async (id: string): Promise<TreeDetailResponse> => {

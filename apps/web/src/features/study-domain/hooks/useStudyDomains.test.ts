@@ -176,7 +176,7 @@ describe("useDeleteStudyDomain", () => {
   })
 
   it("学習領域を削除する", async () => {
-    vi.mocked(api.deleteStudyDomain).mockResolvedValue({ success: true })
+    vi.mocked(api.deleteStudyDomain).mockResolvedValue(undefined)
 
     const { result } = renderHook(() => useDeleteStudyDomain(), {
       wrapper: createWrapper(),

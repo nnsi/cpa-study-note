@@ -31,6 +31,18 @@
 - `wrangler.toml` の `database_id` 等はプレースホルダー。固定値をコミットしない
 - リソース削除前に `infra/*.tf` を確認
 
+## テスト実行
+
+- `pnpm --filter <package> test` を使う（`vitest run` を直接叩かない）
+- 各パッケージのvitest.configに環境設定（happy-dom等）が紐づいているため、直接実行すると環境が適用されずテストが壊れる
+
+```bash
+pnpm --filter web test                    # web全テスト
+pnpm --filter web test -- src/path/to.test.ts  # 指定ファイル
+pnpm --filter api test                    # api全テスト
+pnpm --filter shared test                 # shared全テスト
+```
+
 ## コード探索
 
 - 定義元→`goToDefinition`、影響範囲→`findReferences`、型情報→`hover`
