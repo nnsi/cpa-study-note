@@ -5,11 +5,11 @@ import { reviewListQuerySchema, searchQuerySchema } from "@cpa-study/shared/sche
 import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
 import { handleResult } from "@/shared/lib/route-helpers"
-import { createTopicViewRepo } from "./repositories/topicViewRepo"
-import { createSubjectDashboardViewRepo } from "./repositories/subjectDashboardViewRepo"
-import { createReviewListViewRepo } from "./repositories/reviewListViewRepo"
-import { createCategoryTopicsViewRepo } from "./repositories/categoryTopicsViewRepo"
-import { createSearchViewRepo } from "./repositories/searchViewRepo"
+import { createTopicViewRepository } from "./repositories/topicViewRepo"
+import { createSubjectDashboardViewRepository } from "./repositories/subjectDashboardViewRepo"
+import { createReviewListViewRepository } from "./repositories/reviewListViewRepo"
+import { createCategoryTopicsViewRepository } from "./repositories/categoryTopicsViewRepo"
+import { createSearchViewRepository } from "./repositories/searchViewRepo"
 import { getTopicView, getSubjectDashboard, getReviewList, getCategoryTopics, searchTopics } from "./usecase"
 
 type ViewDeps = {
@@ -17,11 +17,11 @@ type ViewDeps = {
 }
 
 export const viewRoutes = ({ db }: ViewDeps) => {
-  const topicViewRepo = createTopicViewRepo(db)
-  const subjectDashboardViewRepo = createSubjectDashboardViewRepo(db)
-  const reviewListViewRepo = createReviewListViewRepo(db)
-  const categoryTopicsViewRepo = createCategoryTopicsViewRepo(db)
-  const searchViewRepo = createSearchViewRepo(db)
+  const topicViewRepo = createTopicViewRepository(db)
+  const subjectDashboardViewRepo = createSubjectDashboardViewRepository(db)
+  const reviewListViewRepo = createReviewListViewRepository(db)
+  const categoryTopicsViewRepo = createCategoryTopicsViewRepository(db)
+  const searchViewRepo = createSearchViewRepository(db)
 
   const deps = {
     topicViewRepo,

@@ -29,11 +29,11 @@ export type ReviewListData = {
   total: number
 }
 
-export type ReviewListViewRepo = {
+export type ReviewListViewRepository = {
   getReviewList: (userId: string, filters?: ReviewListFilters) => Promise<ReviewListData>
 }
 
-export const createReviewListViewRepo = (db: Db): ReviewListViewRepo => ({
+export const createReviewListViewRepository = (db: Db): ReviewListViewRepository => ({
   getReviewList: async (userId, filters = {}) => {
     const { understood, daysSince, limit = 50 } = filters
 

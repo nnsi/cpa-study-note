@@ -13,14 +13,13 @@ export const getBookmarks = async (
   deps: BookmarkDeps,
   userId: string
 ): Promise<Result<BookmarkWithDetails[], AppError>> => {
-  const { repo } = deps
-  const bookmarks = await repo.findBookmarksByUser(userId)
+  const bookmarks = await deps.repo.findBookmarksByUser(userId)
 
   // ブックマークの詳細情報を取得（ユーザー境界と削除フラグを考慮）
   const bookmarksWithDetails: BookmarkWithDetails[] = []
 
   for (const bookmark of bookmarks) {
-    const details = await repo.getBookmarkDetails(bookmark.targetType, bookmark.targetId, userId)
+    const details = await deps.repo.getBookmarkDetails(bookmark.targetType, bookmark.targetId, userId)
 
     if (details) {
       bookmarksWithDetails.push({
@@ -47,19 +46,17 @@ export const addBookmark = async (
   targetType: BookmarkTargetType,
   targetId: string
 ): Promise<Result<BookmarkWithDetails | null, AppError>> => {
-  const { repo } = deps
-
   // 対象が存在するか確認（ユーザー境界と削除フラグを考慮）
-  const exists = await repo.targetExists(targetType, targetId, userId)
+  const exists = await deps.repo.targetExists(targetType, targetId, userId)
   if (!exists) {
     return err(notFound("ブックマーク対象が見つかりません"))
   }
 
   // ブックマーク追加（冪等、重複は無視）
-  const result = await repo.addBookmark(userId, targetType, targetId)
+  const result = await deps.repo.addBookmark(userId, targetType, targetId)
 
   // 追加されたブックマークの詳細を取得
-  const details = await repo.getBookmarkDetails(targetType, targetId, userId)
+  const details = await deps.repo.getBookmarkDetails(targetType, targetId, userId)
   const bookmark: BookmarkWithDetails | null =
     details && result.bookmark
       ? {
@@ -85,8 +82,7 @@ export const removeBookmark = async (
   targetType: BookmarkTargetType,
   targetId: string
 ): Promise<Result<void, AppError>> => {
-  const { repo } = deps
-  const removed = await repo.removeBookmark(userId, targetType, targetId)
+  const removed = await deps.repo.removeBookmark(userId, targetType, targetId)
 
   if (!removed) {
     return err(notFound("ブックマークが見つかりません"))

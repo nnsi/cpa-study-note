@@ -35,6 +35,7 @@
 
 - `pnpm --filter <package> test` を使う（`vitest run` を直接叩かない）
 - 各パッケージのvitest.configに環境設定（happy-dom等）が紐づいているため、直接実行すると環境が適用されずテストが壊れる
+- **修正後は影響範囲だけでなく全パッケージのテストを実行する**: API変更がフロントやsharedに影響する可能性があるため、必ず `web`, `api`, `shared` 全てを回す
 
 ```bash
 pnpm --filter web test                    # web全テスト

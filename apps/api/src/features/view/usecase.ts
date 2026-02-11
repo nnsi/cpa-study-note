@@ -1,10 +1,10 @@
 import { ok, err, type Result } from "@/shared/lib/result"
 import { notFound, type AppError } from "@/shared/lib/errors"
-import type { TopicViewRepo, TopicViewData } from "./repositories/topicViewRepo"
-import type { SubjectDashboardViewRepo, SubjectDashboardData } from "./repositories/subjectDashboardViewRepo"
-import type { ReviewListViewRepo, ReviewListData, ReviewListFilters } from "./repositories/reviewListViewRepo"
-import type { CategoryTopicsViewRepo, CategoryTopicsData } from "./repositories/categoryTopicsViewRepo"
-import type { SearchViewRepo } from "./repositories/searchViewRepo"
+import type { TopicViewRepository, TopicViewData } from "./repositories/topicViewRepo"
+import type { SubjectDashboardViewRepository, SubjectDashboardData } from "./repositories/subjectDashboardViewRepo"
+import type { ReviewListViewRepository, ReviewListData, ReviewListFilters } from "./repositories/reviewListViewRepo"
+import type { CategoryTopicsViewRepository, CategoryTopicsData } from "./repositories/categoryTopicsViewRepo"
+import type { SearchViewRepository } from "./repositories/searchViewRepo"
 import type {
   TopicViewResponse,
   SubjectDashboardResponse,
@@ -15,11 +15,11 @@ import type {
 
 // Dependencies
 export type ViewDeps = {
-  topicViewRepo: TopicViewRepo
-  subjectDashboardViewRepo: SubjectDashboardViewRepo
-  reviewListViewRepo: ReviewListViewRepo
-  categoryTopicsViewRepo?: CategoryTopicsViewRepo
-  searchViewRepo?: SearchViewRepo
+  topicViewRepo: TopicViewRepository
+  subjectDashboardViewRepo: SubjectDashboardViewRepository
+  reviewListViewRepo: ReviewListViewRepository
+  categoryTopicsViewRepo?: CategoryTopicsViewRepository
+  searchViewRepo?: SearchViewRepository
 }
 
 /**
@@ -78,7 +78,7 @@ export const getCategoryTopics = async (
   categoryId: string
 ): Promise<Result<CategoryTopicsResponse, AppError>> => {
   if (!deps.categoryTopicsViewRepo) {
-    return err(notFound("CategoryTopicsViewRepo not configured"))
+    return err(notFound("CategoryTopicsViewRepository not configured"))
   }
 
   const data = await deps.categoryTopicsViewRepo.getCategoryTopics(categoryId, userId)
@@ -101,7 +101,7 @@ export const searchTopics = async (
   limit?: number
 ): Promise<Result<SearchTopicsResponse, AppError>> => {
   if (!deps.searchViewRepo) {
-    return err(notFound("SearchViewRepo not configured"))
+    return err(notFound("SearchViewRepository not configured"))
   }
 
   const data = await deps.searchViewRepo.searchTopics(userId, query, studyDomainId, limit)

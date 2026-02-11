@@ -98,7 +98,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectRouteDeps) => {
       const user = c.get("user")
       const id = c.req.param("id")
       const result = await deleteSubject(deps, user.id, id)
-      return handleResult(c, result)
+      return handleResult(c, result, 204)
     })
 
     // Get subject tree

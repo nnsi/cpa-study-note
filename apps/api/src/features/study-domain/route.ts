@@ -81,7 +81,7 @@ export const studyDomainRoutes = ({ db }: StudyDomainDeps) => {
       const id = c.req.param("id")
       const result = await deleteStudyDomain(deps, id, user.id)
 
-      return handleResult(c, result)
+      return handleResult(c, result, 204)
     })
 
     // Bulk import 4-column CSV

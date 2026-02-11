@@ -156,7 +156,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
       const noteId = c.req.param("noteId")
 
       const result = await deleteNote({ noteRepo }, user.id, noteId)
-      return handleResult(c, result)
+      return handleResult(c, result, 204)
     })
 
   return app

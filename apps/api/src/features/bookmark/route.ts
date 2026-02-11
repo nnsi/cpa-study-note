@@ -33,7 +33,7 @@ export const bookmarkRoutes = ({ db }: BookmarkDeps) => {
       const { targetType, targetId } = c.req.valid("json")
 
       const result = await addBookmark(deps, user.id, targetType, targetId)
-      return handleResult(c, result, "bookmark")
+      return handleResult(c, result, "bookmark", 201)
     })
 
     // ブックマーク削除
