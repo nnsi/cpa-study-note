@@ -120,8 +120,16 @@ export const suggestTopicsForChat = async (
   const fallback = { suggestions: [] }
   const parsed = parseLLMJson(aiResponse, suggestionsSchema, fallback)
 
-  // 5. existing タイプの topicId を検証し、不正なIDは除外
+  // 5. ルックアップマップ構築
   const topicMap = new Map(allTopics.map((t) => [t.topicId, t]))
+  const subjectNameToId = new Map<string, string>()
+  const categoryLookup = new Map<string, string>() // key: `${subjectId}:${categoryName}`
+  for (const t of allTopics) {
+    subjectNameToId.set(t.subjectName, t.subjectId)
+    categoryLookup.set(`${t.subjectId}:${t.categoryName}`, t.categoryId)
+  }
+
+  // 6. サジェストを検証・エンリッチ
   const validSuggestions: QuickChatSuggestion[] = []
 
   for (const suggestion of parsed.suggestions) {
@@ -140,8 +148,18 @@ export const suggestTopicsForChat = async (
       }
       // topicIdが不正な場合はスキップ
     } else {
-      // new タイプはそのまま追加
-      validSuggestions.push(suggestion)
+      // new タイプ: 名前からsubjectId/categoryIdを解決
+      const resolvedSubjectId = subjectNameToId.get(suggestion.subjectName)
+      if (!resolvedSubjectId) continue // 科目が見つからない場合はスキップ
+
+      const resolvedCategoryId =
+        categoryLookup.get(`${resolvedSubjectId}:${suggestion.categoryName}`) ?? null
+
+      validSuggestions.push({
+        ...suggestion,
+        subjectId: resolvedSubjectId,
+        categoryId: resolvedCategoryId,
+      })
     }
   }
 

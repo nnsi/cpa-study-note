@@ -14,8 +14,14 @@ export function QuickChatInput({ domainId }: QuickChatInputProps) {
     suggestions,
     isLoading,
     error,
+    confirmingNewTopic,
+    isCreatingTopic,
+    createError,
     handleSubmitQuestion,
     handleSelectExistingTopic,
+    handleSelectNewTopic,
+    handleConfirmNewTopic,
+    handleCancelNewTopic,
     handleClear,
   } = useQuickChat({ domainId })
 
@@ -118,11 +124,23 @@ export function QuickChatInput({ domainId }: QuickChatInputProps) {
         </div>
       )}
 
+      {/* 論点作成エラー */}
+      {createError && (
+        <div className="text-sm text-crimson-600 px-1">
+          {createError}
+        </div>
+      )}
+
       {/* サジェスト結果 */}
       {suggestions && suggestions.length > 0 && (
         <SuggestionList
           suggestions={suggestions}
+          confirmingNewTopic={confirmingNewTopic}
+          isCreatingTopic={isCreatingTopic}
           onSelectExisting={handleSelectExistingTopic}
+          onSelectNew={handleSelectNewTopic}
+          onConfirmNew={handleConfirmNewTopic}
+          onCancelNew={handleCancelNewTopic}
           onClear={handleClear}
         />
       )}
@@ -139,11 +157,21 @@ export function QuickChatInput({ domainId }: QuickChatInputProps) {
 
 function SuggestionList({
   suggestions,
+  confirmingNewTopic,
+  isCreatingTopic,
   onSelectExisting,
+  onSelectNew,
+  onConfirmNew,
+  onCancelNew,
   onClear,
 }: {
   suggestions: QuickChatSuggestion[]
+  confirmingNewTopic: QuickChatSuggestion | null
+  isCreatingTopic: boolean
   onSelectExisting: (suggestion: QuickChatSuggestion) => void
+  onSelectNew: (suggestion: QuickChatSuggestion) => void
+  onConfirmNew: () => void
+  onCancelNew: () => void
   onClear: () => void
 }) {
   const existingSuggestions = suggestions.filter((s) => s.type === "existing")
@@ -206,31 +234,81 @@ function SuggestionList({
                 <span className="text-2xs text-ink-400 font-medium">新規論点の作成</span>
               </div>
             )}
-            {newSuggestions.map((suggestion, index) => (
-              <div
-                key={`new-${index}`}
-                className="w-full text-left px-4 py-3 opacity-70"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="mt-0.5">
-                    <svg className="w-4 h-4 text-ink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                    </svg>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="font-medium text-ink-700 truncate block">
-                      {suggestion.topicName}
-                    </span>
-                    <p className="text-xs text-ink-500 mt-0.5 truncate">
-                      {suggestion.subjectName} &rsaquo; {suggestion.categoryName}
-                    </p>
-                    <p className="text-xs text-ink-400 mt-1">
-                      ※ 新規論点の作成は論点マップから行えます
-                    </p>
-                  </div>
+            {newSuggestions.map((suggestion, index) => {
+              const isConfirming =
+                confirmingNewTopic?.topicName === suggestion.topicName &&
+                confirmingNewTopic?.categoryName === suggestion.categoryName
+              const canSelect = !!suggestion.subjectId
+
+              return (
+                <div key={`new-${index}`}>
+                  <button
+                    type="button"
+                    onClick={() => canSelect && onSelectNew(suggestion)}
+                    disabled={!canSelect || isCreatingTopic}
+                    className={`w-full text-left px-4 py-3 transition-colors ${
+                      canSelect
+                        ? "hover:bg-indigo-50 cursor-pointer"
+                        : "opacity-50 cursor-not-allowed"
+                    } ${isConfirming ? "bg-indigo-50" : ""}`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5">
+                        <svg className="w-4 h-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                        </svg>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span className="font-medium text-ink-800 truncate block">
+                          {suggestion.topicName}
+                        </span>
+                        <p className="text-xs text-ink-500 mt-0.5 truncate">
+                          {suggestion.subjectName} &rsaquo; {suggestion.categoryName}
+                          {!suggestion.categoryId && (
+                            <span className="ml-1 text-ink-400">（新規カテゴリ）</span>
+                          )}
+                        </p>
+                        {suggestion.reason && (
+                          <p className="text-xs text-ink-400 mt-0.5">{suggestion.reason}</p>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* 確認UI */}
+                  {isConfirming && (
+                    <div className="px-4 pb-3 bg-indigo-50 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={onConfirmNew}
+                        disabled={isCreatingTopic}
+                        className="flex-1 py-2 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {isCreatingTopic ? (
+                          <>
+                            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                            作成中...
+                          </>
+                        ) : (
+                          "作成してチャット開始"
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={onCancelNew}
+                        disabled={isCreatingTopic}
+                        className="py-2 px-3 text-sm text-ink-500 hover:text-ink-700 transition-colors disabled:opacity-50"
+                      >
+                        戻る
+                      </button>
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </>
         )}
       </div>
