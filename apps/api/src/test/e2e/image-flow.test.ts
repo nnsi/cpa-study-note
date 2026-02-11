@@ -22,10 +22,6 @@ const uploadUrlResponseSchema = z.object({
   uploadUrl: z.string(),
 })
 
-const uploadResponseSchema = z.object({
-  success: z.boolean(),
-})
-
 const ocrResponseSchema = z.object({
   imageId: z.string(),
   ocrText: z.string(),
@@ -131,9 +127,7 @@ describe("E2E: Image Flow", () => {
       const imageData = createTestImage()
       const res = await req.postRaw(`/api/images/${imageId}/upload`, imageData)
 
-      expect(res.status).toBe(200)
-      const data = uploadResponseSchema.parse(await res.json())
-      expect(data.success).toBe(true)
+      expect(res.status).toBe(204)
     })
 
     it("should perform OCR on uploaded image", async () => {
@@ -288,7 +282,7 @@ describe("E2E: Image Flow", () => {
       // Step 2: Upload image
       const imageData = createTestImage()
       const uploadRes = await req.postRaw(`/api/images/${imageId}/upload`, imageData)
-      expect(uploadRes.status).toBe(200)
+      expect(uploadRes.status).toBe(204)
 
       // Step 3: Perform OCR
       const ocrRes = await req.post(`/api/images/${imageId}/ocr`)
