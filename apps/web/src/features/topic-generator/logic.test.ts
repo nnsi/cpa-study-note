@@ -191,3 +191,47 @@ describe("toggleCategory", () => {
     expect(original.get("A")?.size).toBe(2)
   })
 })
+
+// ========================================
+// 境界値テスト
+// ========================================
+
+describe("parseSuggestionsFromText - 境界値", () => {
+  it("空文字入力→null", () => {
+    expect(parseSuggestionsFromText("")).toBeNull()
+  })
+
+  it("空白のみの入力→null", () => {
+    expect(parseSuggestionsFromText("   \n\t  ")).toBeNull()
+  })
+})
+
+describe("toggleTopic - 境界値", () => {
+  it("存在しないカテゴリ名→新しくキーが作られてtopicが追加される", () => {
+    const selection = new Map([["A", new Set(["t1"])]])
+    const result = toggleTopic(selection, "B", "t2")
+    expect(result.has("B")).toBe(true)
+    expect(result.get("B")?.has("t2")).toBe(true)
+    // 既存のカテゴリAはそのまま
+    expect(result.get("A")?.has("t1")).toBe(true)
+  })
+})
+
+describe("toggleCategory - 境界値", () => {
+  it("allTopics空配列→全選択状態の判定でcurrent.size===0===allTopics.lengthでtrueになり全解除される", () => {
+    const selection = new Map([["A", new Set<string>()]])
+    const result = toggleCategory(selection, "A", [])
+    // current.size (0) === allTopics.length (0) → true → 全解除（空Setが設定される）
+    expect(result.get("A")?.size).toBe(0)
+  })
+})
+
+describe("countSelected - 境界値", () => {
+  it("カテゴリはあるがtopicsが空Setのケース→0", () => {
+    const selection = new Map([
+      ["A", new Set<string>()],
+      ["B", new Set<string>()],
+    ])
+    expect(countSelected(selection)).toBe(0)
+  })
+})

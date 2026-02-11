@@ -214,6 +214,42 @@ export const createTestDatabase = (): {
     CREATE INDEX IF NOT EXISTS exercises_user_id_idx ON exercises(user_id);
     CREATE INDEX IF NOT EXISTS exercises_topic_id_idx ON exercises(topic_id);
     CREATE INDEX IF NOT EXISTS exercises_image_id_idx ON exercises(image_id);
+
+    CREATE TABLE IF NOT EXISTS study_plans (
+      id TEXT PRIMARY KEY NOT NULL,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      title TEXT NOT NULL,
+      intent TEXT,
+      scope TEXT NOT NULL,
+      subject_id TEXT REFERENCES subjects(id) ON DELETE SET NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      archived_at INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS study_plans_user_id_idx ON study_plans(user_id);
+    CREATE INDEX IF NOT EXISTS study_plans_user_archived_idx ON study_plans(user_id, archived_at);
+    CREATE INDEX IF NOT EXISTS study_plans_subject_id_idx ON study_plans(subject_id);
+
+    CREATE TABLE IF NOT EXISTS study_plan_items (
+      id TEXT PRIMARY KEY NOT NULL,
+      study_plan_id TEXT NOT NULL REFERENCES study_plans(id) ON DELETE CASCADE,
+      topic_id TEXT REFERENCES topics(id) ON DELETE SET NULL,
+      description TEXT NOT NULL,
+      rationale TEXT,
+      order_index INTEGER NOT NULL,
+      created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS study_plan_items_plan_id_idx ON study_plan_items(study_plan_id);
+    CREATE INDEX IF NOT EXISTS study_plan_items_topic_id_idx ON study_plan_items(topic_id);
+
+    CREATE TABLE IF NOT EXISTS study_plan_revisions (
+      id TEXT PRIMARY KEY NOT NULL,
+      study_plan_id TEXT NOT NULL REFERENCES study_plans(id) ON DELETE CASCADE,
+      summary TEXT NOT NULL,
+      reason TEXT,
+      created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS study_plan_revisions_plan_id_idx ON study_plan_revisions(study_plan_id);
   `)
 
   const db = drizzle(sqlite, { schema })

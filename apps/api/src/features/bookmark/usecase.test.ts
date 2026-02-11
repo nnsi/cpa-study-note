@@ -352,4 +352,46 @@ describe("Bookmark UseCase", () => {
       expect(result.ok).toBe(true)
     })
   })
+
+  // === 境界値テスト ===
+
+  describe("addBookmark 境界値", () => {
+    it("targetType='subject'でtargetExistsが正しい引数で呼ばれる", async () => {
+      const repo = createMockRepository({
+        targetExists: vi.fn().mockResolvedValue(true),
+      })
+      const deps = { repo }
+
+      await addBookmark(deps, "user-1", "subject", "subject-1")
+
+      expect(repo.targetExists).toHaveBeenCalledWith("subject", "subject-1", "user-1")
+    })
+
+    it("targetType='category'でtargetExistsが正しい引数で呼ばれる", async () => {
+      const repo = createMockRepository({
+        targetExists: vi.fn().mockResolvedValue(true),
+      })
+      const deps = { repo }
+
+      await addBookmark(deps, "user-1", "category", "category-1")
+
+      expect(repo.targetExists).toHaveBeenCalledWith("category", "category-1", "user-1")
+    })
+
+    it("同一ターゲットの二重追加でalreadyExists応答が返る", async () => {
+      const repo = createMockRepository({
+        targetExists: vi.fn().mockResolvedValue(true),
+        addBookmark: vi.fn().mockResolvedValue({ bookmark: null, alreadyExists: true }),
+        getBookmarkDetails: vi.fn().mockResolvedValue(mockBookmarkDetails),
+      })
+      const deps = { repo }
+
+      const result = await addBookmark(deps, "user-1", "topic", "topic-1")
+
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      expect(result.value.alreadyExists).toBe(true)
+      expect(result.value.bookmark).toBeNull()
+    })
+  })
 })

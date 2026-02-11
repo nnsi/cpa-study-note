@@ -640,4 +640,132 @@ describe("Note UseCase", () => {
       }
     })
   })
+
+  // === 境界値テスト ===
+
+  describe("createManualNote 境界値", () => {
+    it("keyPoints空配列かつstumbledPoints空配列で正常に作成される", async () => {
+      const topic = createMockTopic()
+      const createdNote = createMockNote({
+        sessionId: null,
+        aiSummary: null,
+        userMemo: "メモのみのノート",
+        keyPoints: [],
+        stumbledPoints: [],
+      })
+
+      const noteRepo = createMockNoteRepo({
+        create: vi.fn().mockResolvedValue(createdNote),
+      })
+      const subjectRepo = createMockSubjectRepo({
+        findTopicById: vi.fn().mockResolvedValue(topic),
+      })
+
+      const result = await createManualNote(
+        { noteRepo, subjectRepo },
+        {
+          userId: "user-1",
+          topicId: "topic-1",
+          userMemo: "メモのみのノート",
+          keyPoints: [],
+          stumbledPoints: [],
+        }
+      )
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.value.keyPoints).toEqual([])
+        expect(result.value.stumbledPoints).toEqual([])
+      }
+      expect(noteRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          keyPoints: [],
+          stumbledPoints: [],
+        })
+      )
+    })
+
+    it("keyPointsが1要素のみで正常に作成される", async () => {
+      const topic = createMockTopic()
+      const createdNote = createMockNote({
+        sessionId: null,
+        aiSummary: null,
+        userMemo: "1ポイントノート",
+        keyPoints: ["唯一のポイント"],
+        stumbledPoints: [],
+      })
+
+      const noteRepo = createMockNoteRepo({
+        create: vi.fn().mockResolvedValue(createdNote),
+      })
+      const subjectRepo = createMockSubjectRepo({
+        findTopicById: vi.fn().mockResolvedValue(topic),
+      })
+
+      const result = await createManualNote(
+        { noteRepo, subjectRepo },
+        {
+          userId: "user-1",
+          topicId: "topic-1",
+          userMemo: "1ポイントノート",
+          keyPoints: ["唯一のポイント"],
+        }
+      )
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.value.keyPoints).toEqual(["唯一のポイント"])
+      }
+      expect(noteRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          keyPoints: ["唯一のポイント"],
+          stumbledPoints: [],
+        })
+      )
+    })
+  })
+
+  describe("createNoteFromSession 境界値", () => {
+    it("メッセージが1件のみのセッションで正常にAIサマリー生成される", async () => {
+      const session = createMockSession()
+      const messages = [
+        createMockMessage({ role: "user", content: "たった一つの質問" }),
+      ]
+      const createdNote = createMockNote({
+        aiSummary: "1メッセージの要約",
+        keyPoints: ["ポイント1"],
+        stumbledPoints: [],
+      })
+
+      const noteRepo = createMockNoteRepo({
+        create: vi.fn().mockResolvedValue(createdNote),
+      })
+      const chatRepo = createMockChatRepo({
+        findSessionById: vi.fn().mockResolvedValue(session),
+        findMessagesBySession: vi.fn().mockResolvedValue(messages),
+      })
+      const aiAdapter = createMockAIAdapter({
+        generateText: vi.fn().mockResolvedValue({
+          content: JSON.stringify({
+            summary: "1メッセージの要約",
+            keyPoints: ["ポイント1"],
+            stumbledPoints: [],
+          }),
+        }),
+      })
+
+      const result = await createNoteFromSession(
+        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: defaultAIConfig.noteSummary },
+        { userId: "user-1", sessionId: "session-1" }
+      )
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.value.aiSummary).toBe("1メッセージの要約")
+      }
+      expect(aiAdapter.generateText).toHaveBeenCalled()
+      const callArgs = (aiAdapter.generateText as ReturnType<typeof vi.fn>).mock.calls[0][0]
+      expect(callArgs.messages[0].content).toContain("たった一つの質問")
+    })
+  })
 })
