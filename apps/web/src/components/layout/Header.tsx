@@ -109,7 +109,7 @@ export const Header = ({ onSearchClick }: HeaderProps) => {
                     type="button"
                     onClick={() => {
                       setMenuOpen(false)
-                      navigate({ to: "/domains" })
+                      navigate({ to: "/edit" })
                     }}
                     className="w-full text-left px-4 py-2.5 text-sm text-ink-700 hover:bg-ink-50 transition-colors flex items-center gap-2"
                   >

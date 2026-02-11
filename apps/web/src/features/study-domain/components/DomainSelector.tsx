@@ -169,7 +169,7 @@ export const DomainSelector = () => {
           {/* 学習領域の管理リンク */}
           <div className="px-1">
             <Link
-              to="/domains"
+              to="/edit"
               onClick={() => setIsOpen(false)}
               className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-ink-50 transition-colors text-ink-600"
             >
