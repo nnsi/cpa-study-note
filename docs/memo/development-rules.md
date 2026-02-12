@@ -10,12 +10,13 @@ CLAUDE.mdから切り出した詳細ルール。
 - **curlとブラウザ両方で確認**: curlで動いてもブラウザで動くとは限らない（CORS、Cookie、認証の組み合わせ）
 - **現実的なデータサイズでテスト**: 小さなテストデータだけでなく、数MBの画像など実際のユースケースを想定
 
-## APIエラーのデバッグ
+## APIログ
 
-- **ログ確認**: ローカル環境ではAPIサーバーがリクエスト/レスポンス/エラーの詳細ログをコンソールに出力
-- **ログファイル**: `pnpm --filter api dev:log` でログを `apps/api/logs/api.log` に保存
-- **エラー詳細**: 500エラー時はスタックトレース、cause、リクエストパスを出力
-- **ログフォーマット**: `[ISO日時] --> METHOD /path` (リクエスト), `[ISO日時] <-- METHOD /path STATUS DURATIONms` (レスポンス)
+- **構造化ログ**: 全環境でJSON形式のログを `console.log/warn/error` で出力（`shared/lib/logger.ts`）
+- **requestId**: 全ログにリクエスト単位のIDが付与される。1リクエスト内のログを追跡可能
+- **ログの使い方**: Route層で `c.get("logger").child({ feature: "xxx" })` を取得し、UseCase層にdeps経由で渡す
+- **`console.*` を直接使わない**: 新規コードでは必ず `logger.error/warn/info/debug` を使う
+- **実装指針**: `docs/memo/logging-guide.md` を参照
 
 ## UI変更時のチェック
 

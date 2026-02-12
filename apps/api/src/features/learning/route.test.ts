@@ -20,6 +20,7 @@ import {
   errorResponseSchema,
   type TestContext,
 } from "../../test/helpers"
+import { loggerMiddleware } from "../../shared/middleware/logger"
 import * as schema from "@cpa-study/db/schema"
 
 // レスポンススキーマ定義
@@ -97,6 +98,7 @@ describe("Learning Routes", () => {
       Object.assign(c.env, ctx.env)
       await next()
     })
+    app.use("*", loggerMiddleware())
     app.route("/learning", routes)
   })
 
@@ -538,6 +540,7 @@ describe("Learning Routes", () => {
         Object.assign(c.env, prodEnv)
         await next()
       })
+      prodApp.use("*", loggerMiddleware())
       prodApp.route("/learning", routes)
 
       const res = await prodApp.request(`/learning/topics/${ctx.testData.topicId}/touch`, {
@@ -562,6 +565,7 @@ describe("Learning Routes", () => {
         Object.assign(c.env, prodEnv)
         await next()
       })
+      prodApp.use("*", loggerMiddleware())
       prodApp.route("/learning", routes)
 
       const res = await prodApp.request("/learning/topics/recent", {
@@ -585,6 +589,7 @@ describe("Learning Routes", () => {
         Object.assign(c.env, prodEnv)
         await next()
       })
+      prodApp.use("*", loggerMiddleware())
       prodApp.route("/learning", routes)
 
       const res = await prodApp.request("/learning/subjects/progress-stats", {

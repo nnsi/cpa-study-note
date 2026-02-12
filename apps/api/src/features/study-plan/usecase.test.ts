@@ -3,6 +3,7 @@
  */
 import { describe, it, expect, vi } from "vitest"
 import type { StudyPlanRepository, StudyPlan, StudyPlanItem, StudyPlanRevision, StudyPlanWithItemCount } from "./repository"
+import { noopLogger } from "../../test/helpers"
 import {
   listPlans,
   getPlanDetail,
@@ -96,7 +97,7 @@ describe("StudyPlan UseCase", () => {
         findPlansByUser: vi.fn().mockResolvedValue(plans),
       })
 
-      const result = await listPlans({ repo }, "user-1")
+      const result = await listPlans({ repo, logger: noopLogger }, "user-1")
 
       expect(result.ok).toBe(true)
       if (!result.ok) return
@@ -111,7 +112,7 @@ describe("StudyPlan UseCase", () => {
         findPlansByUser: vi.fn().mockResolvedValue([]),
       })
 
-      await listPlans({ repo }, "user-1", { archived: true })
+      await listPlans({ repo, logger: noopLogger }, "user-1", { archived: true })
 
       expect(repo.findPlansByUser).toHaveBeenCalledWith("user-1", { archived: true })
     })
@@ -121,7 +122,7 @@ describe("StudyPlan UseCase", () => {
         findPlansByUser: vi.fn().mockResolvedValue([]),
       })
 
-      const result = await listPlans({ repo }, "user-1")
+      const result = await listPlans({ repo, logger: noopLogger }, "user-1")
 
       expect(result.ok).toBe(true)
       if (!result.ok) return
@@ -141,7 +142,7 @@ describe("StudyPlan UseCase", () => {
         findRevisionsByPlan: vi.fn().mockResolvedValue(revisions),
       })
 
-      const result = await getPlanDetail({ repo }, "user-1", "plan-1")
+      const result = await getPlanDetail({ repo, logger: noopLogger }, "user-1", "plan-1")
 
       expect(result.ok).toBe(true)
       if (!result.ok) return
@@ -155,7 +156,7 @@ describe("StudyPlan UseCase", () => {
         isPlanOwnedByUser: vi.fn().mockResolvedValue(false),
       })
 
-      const result = await getPlanDetail({ repo }, "other-user", "plan-1")
+      const result = await getPlanDetail({ repo, logger: noopLogger }, "other-user", "plan-1")
 
       expect(result.ok).toBe(false)
       if (result.ok) return
@@ -168,7 +169,7 @@ describe("StudyPlan UseCase", () => {
         findPlanById: vi.fn().mockResolvedValue(null),
       })
 
-      const result = await getPlanDetail({ repo }, "user-1", "non-existent")
+      const result = await getPlanDetail({ repo, logger: noopLogger }, "user-1", "non-existent")
 
       expect(result.ok).toBe(false)
       if (result.ok) return
@@ -183,7 +184,7 @@ describe("StudyPlan UseCase", () => {
         createPlan: vi.fn().mockResolvedValue(created),
       })
 
-      const result = await createPlan({ repo }, "user-1", {
+      const result = await createPlan({ repo, logger: noopLogger }, "user-1", {
         title: "財務会計学習計画",
         intent: "短答式対策",
         scope: "subject",
@@ -209,7 +210,7 @@ describe("StudyPlan UseCase", () => {
         createPlan: vi.fn().mockResolvedValue(created),
       })
 
-      const result = await createPlan({ repo }, "user-1", {
+      const result = await createPlan({ repo, logger: noopLogger }, "user-1", {
         title: "シンプルな計画",
         scope: "all",
       })
@@ -228,7 +229,7 @@ describe("StudyPlan UseCase", () => {
         updatePlan: vi.fn().mockResolvedValue(updated),
       })
 
-      const result = await updatePlan({ repo }, "user-1", "plan-1", { title: "更新後のタイトル" })
+      const result = await updatePlan({ repo, logger: noopLogger }, "user-1", "plan-1", { title: "更新後のタイトル" })
 
       expect(result.ok).toBe(true)
       if (!result.ok) return
@@ -240,7 +241,7 @@ describe("StudyPlan UseCase", () => {
         isPlanOwnedByUser: vi.fn().mockResolvedValue(false),
       })
 
-      const result = await updatePlan({ repo }, "other-user", "plan-1", { title: "不正な更新" })
+      const result = await updatePlan({ repo, logger: noopLogger }, "other-user", "plan-1", { title: "不正な更新" })
 
       expect(result.ok).toBe(false)
       if (result.ok) return
@@ -253,7 +254,7 @@ describe("StudyPlan UseCase", () => {
         updatePlan: vi.fn().mockResolvedValue(null),
       })
 
-      const result = await updatePlan({ repo }, "user-1", "non-existent", { title: "test" })
+      const result = await updatePlan({ repo, logger: noopLogger }, "user-1", "non-existent", { title: "test" })
 
       expect(result.ok).toBe(false)
       if (result.ok) return
@@ -268,7 +269,7 @@ describe("StudyPlan UseCase", () => {
         archivePlan: vi.fn().mockResolvedValue(true),
       })
 
-      const result = await archivePlan({ repo }, "user-1", "plan-1")
+      const result = await archivePlan({ repo, logger: noopLogger }, "user-1", "plan-1")
 
       expect(result.ok).toBe(true)
     })
@@ -278,7 +279,7 @@ describe("StudyPlan UseCase", () => {
         isPlanOwnedByUser: vi.fn().mockResolvedValue(false),
       })
 
-      const result = await archivePlan({ repo }, "other-user", "plan-1")
+      const result = await archivePlan({ repo, logger: noopLogger }, "other-user", "plan-1")
 
       expect(result.ok).toBe(false)
       if (result.ok) return
@@ -291,7 +292,7 @@ describe("StudyPlan UseCase", () => {
         archivePlan: vi.fn().mockResolvedValue(false),
       })
 
-      const result = await archivePlan({ repo }, "user-1", "non-existent")
+      const result = await archivePlan({ repo, logger: noopLogger }, "user-1", "non-existent")
 
       expect(result.ok).toBe(false)
       if (result.ok) return
@@ -306,7 +307,7 @@ describe("StudyPlan UseCase", () => {
         unarchivePlan: vi.fn().mockResolvedValue(true),
       })
 
-      const result = await unarchivePlan({ repo }, "user-1", "plan-1")
+      const result = await unarchivePlan({ repo, logger: noopLogger }, "user-1", "plan-1")
 
       expect(result.ok).toBe(true)
     })
@@ -316,7 +317,7 @@ describe("StudyPlan UseCase", () => {
         isPlanOwnedByUser: vi.fn().mockResolvedValue(false),
       })
 
-      const result = await unarchivePlan({ repo }, "other-user", "plan-1")
+      const result = await unarchivePlan({ repo, logger: noopLogger }, "other-user", "plan-1")
 
       expect(result.ok).toBe(false)
       if (result.ok) return
@@ -332,7 +333,7 @@ describe("StudyPlan UseCase", () => {
         duplicatePlan: vi.fn().mockResolvedValue(duplicated),
       })
 
-      const result = await duplicatePlan({ repo }, "user-1", "plan-1")
+      const result = await duplicatePlan({ repo, logger: noopLogger }, "user-1", "plan-1")
 
       expect(result.ok).toBe(true)
       if (!result.ok) return
@@ -344,7 +345,7 @@ describe("StudyPlan UseCase", () => {
         isPlanOwnedByUser: vi.fn().mockResolvedValue(false),
       })
 
-      const result = await duplicatePlan({ repo }, "other-user", "plan-1")
+      const result = await duplicatePlan({ repo, logger: noopLogger }, "other-user", "plan-1")
 
       expect(result.ok).toBe(false)
       if (result.ok) return
@@ -357,7 +358,7 @@ describe("StudyPlan UseCase", () => {
         duplicatePlan: vi.fn().mockResolvedValue(null),
       })
 
-      const result = await duplicatePlan({ repo }, "user-1", "non-existent")
+      const result = await duplicatePlan({ repo, logger: noopLogger }, "user-1", "non-existent")
 
       expect(result.ok).toBe(false)
       if (result.ok) return
@@ -373,7 +374,7 @@ describe("StudyPlan UseCase", () => {
         createItem: vi.fn().mockResolvedValue(item),
       })
 
-      const result = await addItem({ repo }, "user-1", "plan-1", {
+      const result = await addItem({ repo, logger: noopLogger }, "user-1", "plan-1", {
         topicId: "topic-1",
         description: "有価証券の分類と評価",
         rationale: "基礎的な論点",
@@ -390,7 +391,7 @@ describe("StudyPlan UseCase", () => {
         isPlanOwnedByUser: vi.fn().mockResolvedValue(false),
       })
 
-      const result = await addItem({ repo }, "other-user", "plan-1", {
+      const result = await addItem({ repo, logger: noopLogger }, "other-user", "plan-1", {
         description: "test",
         orderIndex: 0,
       })
@@ -409,7 +410,7 @@ describe("StudyPlan UseCase", () => {
         updateItem: vi.fn().mockResolvedValue(updated),
       })
 
-      const result = await updateItem({ repo }, "user-1", "plan-1", "item-1", { description: "更新後の説明" })
+      const result = await updateItem({ repo, logger: noopLogger }, "user-1", "plan-1", "item-1", { description: "更新後の説明" })
 
       expect(result.ok).toBe(true)
       if (!result.ok) return
@@ -422,7 +423,7 @@ describe("StudyPlan UseCase", () => {
         updateItem: vi.fn().mockResolvedValue(null),
       })
 
-      const result = await updateItem({ repo }, "user-1", "plan-1", "non-existent", { description: "test" })
+      const result = await updateItem({ repo, logger: noopLogger }, "user-1", "plan-1", "non-existent", { description: "test" })
 
       expect(result.ok).toBe(false)
       if (result.ok) return
@@ -440,7 +441,7 @@ describe("StudyPlan UseCase", () => {
         createRevision: vi.fn().mockResolvedValue(createMockRevision()),
       })
 
-      const result = await removeItem({ repo }, "user-1", "plan-1", "item-1")
+      const result = await removeItem({ repo, logger: noopLogger }, "user-1", "plan-1", "item-1")
 
       expect(result.ok).toBe(true)
       expect(repo.deleteItem).toHaveBeenCalledWith("item-1")
@@ -458,7 +459,7 @@ describe("StudyPlan UseCase", () => {
         findItemById: vi.fn().mockResolvedValue(null),
       })
 
-      const result = await removeItem({ repo }, "user-1", "plan-1", "non-existent")
+      const result = await removeItem({ repo, logger: noopLogger }, "user-1", "plan-1", "non-existent")
 
       expect(result.ok).toBe(false)
       if (result.ok) return
@@ -470,7 +471,7 @@ describe("StudyPlan UseCase", () => {
         isPlanOwnedByUser: vi.fn().mockResolvedValue(false),
       })
 
-      const result = await removeItem({ repo }, "other-user", "plan-1", "item-1")
+      const result = await removeItem({ repo, logger: noopLogger }, "other-user", "plan-1", "item-1")
 
       expect(result.ok).toBe(false)
       if (result.ok) return
@@ -484,7 +485,7 @@ describe("StudyPlan UseCase", () => {
         isPlanOwnedByUser: vi.fn().mockResolvedValue(true),
       })
 
-      const result = await reorderItems({ repo }, "user-1", "plan-1", ["item-2", "item-1", "item-3"])
+      const result = await reorderItems({ repo, logger: noopLogger }, "user-1", "plan-1", ["item-2", "item-1", "item-3"])
 
       expect(result.ok).toBe(true)
       expect(repo.reorderItems).toHaveBeenCalledWith("plan-1", ["item-2", "item-1", "item-3"])
@@ -495,7 +496,7 @@ describe("StudyPlan UseCase", () => {
         isPlanOwnedByUser: vi.fn().mockResolvedValue(false),
       })
 
-      const result = await reorderItems({ repo }, "other-user", "plan-1", ["item-1"])
+      const result = await reorderItems({ repo, logger: noopLogger }, "other-user", "plan-1", ["item-1"])
 
       expect(result.ok).toBe(false)
       if (result.ok) return
@@ -511,7 +512,7 @@ describe("StudyPlan UseCase", () => {
         createRevision: vi.fn().mockResolvedValue(revision),
       })
 
-      const result = await addRevision({ repo }, "user-1", "plan-1", {
+      const result = await addRevision({ repo, logger: noopLogger }, "user-1", "plan-1", {
         summary: "要素を追加",
         reason: "網羅性の向上",
       })
@@ -527,7 +528,7 @@ describe("StudyPlan UseCase", () => {
         isPlanOwnedByUser: vi.fn().mockResolvedValue(false),
       })
 
-      const result = await addRevision({ repo }, "other-user", "plan-1", { summary: "test" })
+      const result = await addRevision({ repo, logger: noopLogger }, "other-user", "plan-1", { summary: "test" })
 
       expect(result.ok).toBe(false)
       if (result.ok) return
@@ -543,7 +544,7 @@ describe("StudyPlan UseCase", () => {
         updateRevision: vi.fn().mockResolvedValue(updated),
       })
 
-      const result = await updateRevision({ repo }, "user-1", "plan-1", "revision-1", { reason: "追記された理由" })
+      const result = await updateRevision({ repo, logger: noopLogger }, "user-1", "plan-1", "revision-1", { reason: "追記された理由" })
 
       expect(result.ok).toBe(true)
       if (!result.ok) return
@@ -556,7 +557,7 @@ describe("StudyPlan UseCase", () => {
         updateRevision: vi.fn().mockResolvedValue(null),
       })
 
-      const result = await updateRevision({ repo }, "user-1", "plan-1", "non-existent", { reason: "test" })
+      const result = await updateRevision({ repo, logger: noopLogger }, "user-1", "plan-1", "non-existent", { reason: "test" })
 
       expect(result.ok).toBe(false)
       if (result.ok) return
@@ -568,7 +569,7 @@ describe("StudyPlan UseCase", () => {
         isPlanOwnedByUser: vi.fn().mockResolvedValue(false),
       })
 
-      const result = await updateRevision({ repo }, "other-user", "plan-1", "revision-1", { reason: "test" })
+      const result = await updateRevision({ repo, logger: noopLogger }, "other-user", "plan-1", "revision-1", { reason: "test" })
 
       expect(result.ok).toBe(false)
       if (result.ok) return
@@ -585,7 +586,7 @@ describe("StudyPlan UseCase", () => {
         archivePlan: vi.fn().mockResolvedValue(true),
       })
 
-      const result = await archivePlan({ repo }, "user-1", "plan-1")
+      const result = await archivePlan({ repo, logger: noopLogger }, "user-1", "plan-1")
 
       expect(result.ok).toBe(true)
       expect(repo.archivePlan).toHaveBeenCalledWith("plan-1")
@@ -600,7 +601,7 @@ describe("StudyPlan UseCase", () => {
         duplicatePlan: vi.fn().mockResolvedValue(duplicated),
       })
 
-      const result = await duplicatePlan({ repo }, "user-1", "plan-1")
+      const result = await duplicatePlan({ repo, logger: noopLogger }, "user-1", "plan-1")
 
       expect(result.ok).toBe(true)
       if (!result.ok) return
@@ -619,7 +620,7 @@ describe("StudyPlan UseCase", () => {
         isPlanOwnedByUser: vi.fn().mockResolvedValue(true),
       })
 
-      const result = await reorderItems({ repo }, "user-1", "plan-1", ["item-1"])
+      const result = await reorderItems({ repo, logger: noopLogger }, "user-1", "plan-1", ["item-1"])
 
       expect(result.ok).toBe(true)
       expect(repo.reorderItems).toHaveBeenCalledWith("plan-1", ["item-1"])

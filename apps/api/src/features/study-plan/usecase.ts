@@ -1,10 +1,12 @@
 import type { StudyPlanRepository, StudyPlan, StudyPlanItem, StudyPlanRevision, StudyPlanWithItemCount } from "./repository"
 import type { StudyPlanResponse, StudyPlanItemResponse, StudyPlanRevisionResponse, StudyPlanScope } from "@cpa-study/shared/schemas"
+import type { Logger } from "@/shared/lib/logger"
 import { ok, err, type Result } from "@/shared/lib/result"
 import { notFound, type AppError } from "@/shared/lib/errors"
 
 export type StudyPlanDeps = {
   repo: StudyPlanRepository
+  logger: Logger
 }
 
 // Helper to convert DB plan to response format

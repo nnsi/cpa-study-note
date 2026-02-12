@@ -8,6 +8,7 @@ import type {
 } from "./repository"
 import { ok, err, type Result } from "@/shared/lib/result"
 import { notFound, type AppError } from "@/shared/lib/errors"
+import type { Logger } from "@/shared/lib/logger"
 
 // User type for resolving studyDomainId
 type User = {
@@ -28,6 +29,7 @@ export const resolveStudyDomainId = (
 // Dependencies
 export type SubjectDeps = {
   subjectRepo: SubjectRepository
+  logger: Logger
 }
 
 type SubjectWithStats = Subject & {
@@ -41,18 +43,19 @@ export const listSubjects = async (
   userId: string,
   studyDomainId: string
 ): Promise<Result<SubjectWithStats[], AppError>> => {
+  const { subjectRepo, logger } = deps
   // Verify the study domain belongs to the user
-  const ownsStudyDomain = await deps.subjectRepo.verifyStudyDomainOwnership(studyDomainId, userId)
+  const ownsStudyDomain = await subjectRepo.verifyStudyDomainOwnership(studyDomainId, userId)
   if (!ownsStudyDomain) {
     return err(notFound("学習領域が見つかりません"))
   }
 
-  const subjects = await deps.subjectRepo.findByStudyDomainId(studyDomainId, userId)
+  const subjects = await subjectRepo.findByStudyDomainId(studyDomainId, userId)
 
   // 統計情報を一括取得してマージ
   const subjectIds = subjects.map((s) => s.id)
   const stats = subjectIds.length > 0
-    ? await deps.subjectRepo.getBatchSubjectStats(subjectIds, userId)
+    ? await subjectRepo.getBatchSubjectStats(subjectIds, userId)
     : []
   const statsMap = new Map(stats.map((s) => [s.subjectId, s]))
 
@@ -73,7 +76,8 @@ export const getSubject = async (
   userId: string,
   subjectId: string
 ): Promise<Result<Subject, AppError>> => {
-  const subject = await deps.subjectRepo.findById(subjectId, userId)
+  const { subjectRepo, logger } = deps
+  const subject = await subjectRepo.findById(subjectId, userId)
   if (!subject) {
     return err(notFound("科目が見つかりません"))
   }
@@ -94,8 +98,9 @@ export const createSubject = async (
   userId: string,
   data: CreateSubjectData
 ): Promise<Result<Subject, AppError>> => {
+  const { subjectRepo, logger } = deps
   // Verify the study domain belongs to the user
-  const ownsStudyDomain = await deps.subjectRepo.verifyStudyDomainOwnership(data.studyDomainId, userId)
+  const ownsStudyDomain = await subjectRepo.verifyStudyDomainOwnership(data.studyDomainId, userId)
   if (!ownsStudyDomain) {
     return err(notFound("学習領域が見つかりません"))
   }
@@ -110,10 +115,10 @@ export const createSubject = async (
     displayOrder: data.displayOrder,
   }
 
-  const result = await deps.subjectRepo.create(input)
+  const result = await subjectRepo.create(input)
 
   // Return full subject data
-  const subject = await deps.subjectRepo.findById(result.id, userId)
+  const subject = await subjectRepo.findById(result.id, userId)
   if (!subject) {
     return err(notFound("作成した科目が見つかりません"))
   }
@@ -134,6 +139,7 @@ export const updateSubject = async (
   subjectId: string,
   data: UpdateSubjectData
 ): Promise<Result<Subject, AppError>> => {
+  const { subjectRepo, logger } = deps
   const input: UpdateSubjectInput = {}
   if (data.name !== undefined) input.name = data.name
   if (data.description !== undefined) input.description = data.description
@@ -141,7 +147,7 @@ export const updateSubject = async (
   if (data.color !== undefined) input.color = data.color
   if (data.displayOrder !== undefined) input.displayOrder = data.displayOrder
 
-  const result = await deps.subjectRepo.update(subjectId, userId, input)
+  const result = await subjectRepo.update(subjectId, userId, input)
   if (!result) {
     return err(notFound("科目が見つかりません"))
   }
@@ -153,7 +159,8 @@ export const deleteSubject = async (
   userId: string,
   subjectId: string
 ): Promise<Result<void, AppError>> => {
-  const result = await deps.subjectRepo.softDelete(subjectId, userId)
+  const { subjectRepo, logger } = deps
+  const result = await subjectRepo.softDelete(subjectId, userId)
   if (!result) {
     return err(notFound("科目が見つかりません"))
   }

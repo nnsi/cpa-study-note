@@ -15,13 +15,13 @@ type MetricsDeps = {
 
 export const metricsRoutes = ({ db }: MetricsDeps) => {
   const metricsRepo = createMetricsRepository(db)
-  const deps = { metricsRepo }
 
   const app = new Hono<{ Bindings: Env; Variables: Variables }>()
     // 今日の活動メトリクス取得（リアルタイム、タイムゾーン考慮）
     .get("/today", authMiddleware, async (c) => {
       const user = c.get("user")
-      const result = await getTodayMetrics(deps, user.id, user.timezone)
+      const logger = c.get("logger").child({ feature: "metrics" })
+      const result = await getTodayMetrics({ metricsRepo, logger }, user.id, user.timezone)
       return handleResult(c, result, "metrics")
     })
 
@@ -33,8 +33,9 @@ export const metricsRoutes = ({ db }: MetricsDeps) => {
       async (c) => {
         const user = c.get("user")
         const { from, to } = c.req.valid("query")
+        const logger = c.get("logger").child({ feature: "metrics" })
 
-        const result = await getDailyMetrics(deps, user.id, from, to, user.timezone)
+        const result = await getDailyMetrics({ metricsRepo, logger }, user.id, from, to, user.timezone)
         return handleResult(c, result, "metrics")
       }
     )
@@ -42,8 +43,9 @@ export const metricsRoutes = ({ db }: MetricsDeps) => {
     // スナップショット作成（当日分）
     .post("/snapshot", authMiddleware, async (c) => {
       const user = c.get("user")
+      const logger = c.get("logger").child({ feature: "metrics" })
 
-      const result = await createSnapshot(deps, user.id)
+      const result = await createSnapshot({ metricsRepo, logger }, user.id)
       return handleResult(c, result, "snapshot", 201)
     })
 
@@ -55,8 +57,9 @@ export const metricsRoutes = ({ db }: MetricsDeps) => {
       async (c) => {
         const user = c.get("user")
         const { date } = c.req.valid("param")
+        const logger = c.get("logger").child({ feature: "metrics" })
 
-        const result = await createSnapshot(deps, user.id, date)
+        const result = await createSnapshot({ metricsRepo, logger }, user.id, date)
         return handleResult(c, result, "snapshot", 201)
       }
     )

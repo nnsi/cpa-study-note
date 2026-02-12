@@ -4,9 +4,19 @@
  */
 import { z } from "zod"
 import type { Env } from "@/shared/types/env"
+import type { Logger } from "@/shared/lib/logger"
 import { createTestDatabase, TestDatabase, seedTestData } from "./mocks/db"
 import { createMockR2Bucket } from "./mocks/r2"
 import * as schema from "@cpa-study/db/schema"
+
+/** テスト用の何もしないLogger */
+export const noopLogger: Logger = {
+  debug: () => {},
+  info: () => {},
+  warn: () => {},
+  error: () => {},
+  child: () => noopLogger,
+}
 
 // レスポンスをZodスキーマで検証してパースするヘルパー
 export const parseJson = async <T>(res: Response, zodSchema: z.ZodType<T>): Promise<T> => {

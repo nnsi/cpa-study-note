@@ -6,6 +6,7 @@ import { createLearningRepository, type LearningRepository } from "../learning/r
 import { createMockAIAdapter } from "../../test/mocks/ai"
 import type { AIAdapter, StreamChunk } from "../../shared/lib/ai"
 import { defaultAIConfig } from "../../shared/lib/ai"
+import { noopLogger } from "../../test/helpers"
 import {
   createSession,
   listSessionsByTopic,
@@ -35,7 +36,7 @@ describe("Chat UseCase", () => {
   describe("createSession", () => {
     it("should create a new chat session", async () => {
       const result = await createSession(
-        { chatRepo, learningRepo },
+        { chatRepo, learningRepo, logger: noopLogger },
         testData.userId,
         testData.topicId
       )
@@ -52,7 +53,7 @@ describe("Chat UseCase", () => {
 
     it("should reject session creation for non-existent topic", async () => {
       const result = await createSession(
-        { chatRepo, learningRepo },
+        { chatRepo, learningRepo, logger: noopLogger },
         testData.userId,
         "non-existent-topic-id"
       )
@@ -107,7 +108,7 @@ describe("Chat UseCase", () => {
       })
 
       const result = await listSessionsByTopic(
-        { chatRepo },
+        { chatRepo, logger: noopLogger },
         testData.userId,
         testData.topicId
       )
@@ -136,7 +137,7 @@ describe("Chat UseCase", () => {
       })
 
       const result = await listSessionsByTopic(
-        { chatRepo },
+        { chatRepo, logger: noopLogger },
         testData.userId,
         testData.topicId
       )
@@ -154,7 +155,7 @@ describe("Chat UseCase", () => {
         topicId: testData.topicId,
       })
 
-      const result = await getSession({ chatRepo }, testData.userId, session.id)
+      const result = await getSession({ chatRepo, logger: noopLogger }, testData.userId, session.id)
 
       expect(result.ok).toBe(true)
       if (!result.ok) return
@@ -169,7 +170,7 @@ describe("Chat UseCase", () => {
         topicId: testData.topicId,
       })
 
-      const result = await getSession({ chatRepo }, "other-user-id", session.id)
+      const result = await getSession({ chatRepo, logger: noopLogger }, "other-user-id", session.id)
 
       expect(result.ok).toBe(false)
       if (result.ok) return
@@ -179,7 +180,7 @@ describe("Chat UseCase", () => {
 
     it("should return 404 for non-existent session", async () => {
       const result = await getSession(
-        { chatRepo },
+        { chatRepo, logger: noopLogger },
         testData.userId,
         "non-existent-session"
       )
@@ -216,7 +217,7 @@ describe("Chat UseCase", () => {
       })
 
       const result = await listMessages(
-        { chatRepo },
+        { chatRepo, logger: noopLogger },
         testData.userId,
         session.id
       )
@@ -238,7 +239,7 @@ describe("Chat UseCase", () => {
       })
 
       const result = await listMessages(
-        { chatRepo },
+        { chatRepo, logger: noopLogger },
         "other-user-id",
         session.id
       )
@@ -251,7 +252,7 @@ describe("Chat UseCase", () => {
 
     it("should return 404 for non-existent session", async () => {
       const result = await listMessages(
-        { chatRepo },
+        { chatRepo, logger: noopLogger },
         testData.userId,
         "non-existent-session"
       )
@@ -280,7 +281,7 @@ describe("Chat UseCase", () => {
 
       const chunks: StreamChunk[] = []
       for await (const chunk of sendMessage(
-        { chatRepo, learningRepo, aiAdapter, aiConfig: defaultAIConfig },
+        { chatRepo, learningRepo, aiAdapter, aiConfig: defaultAIConfig, logger: noopLogger },
         {
           sessionId: session.id,
           userId: testData.userId,
@@ -324,7 +325,7 @@ describe("Chat UseCase", () => {
 
       const chunks: StreamChunk[] = []
       for await (const chunk of sendMessage(
-        { chatRepo, learningRepo, aiAdapter: errorAdapter, aiConfig: defaultAIConfig },
+        { chatRepo, learningRepo, aiAdapter: errorAdapter, aiConfig: defaultAIConfig, logger: noopLogger },
         {
           sessionId: session.id,
           userId: testData.userId,
@@ -349,7 +350,7 @@ describe("Chat UseCase", () => {
 
       const chunks: StreamChunk[] = []
       for await (const chunk of sendMessage(
-        { chatRepo, learningRepo, aiAdapter, aiConfig: defaultAIConfig },
+        { chatRepo, learningRepo, aiAdapter, aiConfig: defaultAIConfig, logger: noopLogger },
         {
           sessionId: session.id,
           userId: "other-user-id",
@@ -372,7 +373,7 @@ describe("Chat UseCase", () => {
 
       const chunks: StreamChunk[] = []
       for await (const chunk of sendMessage(
-        { chatRepo, learningRepo, aiAdapter, aiConfig: defaultAIConfig },
+        { chatRepo, learningRepo, aiAdapter, aiConfig: defaultAIConfig, logger: noopLogger },
         {
           sessionId: session.id,
           userId: testData.userId,
@@ -408,7 +409,7 @@ describe("Chat UseCase", () => {
       })
 
       for await (const _ of sendMessage(
-        { chatRepo, learningRepo, aiAdapter: trackingAdapter, aiConfig: defaultAIConfig },
+        { chatRepo, learningRepo, aiAdapter: trackingAdapter, aiConfig: defaultAIConfig, logger: noopLogger },
         {
           sessionId: session.id,
           userId: testData.userId,
@@ -439,7 +440,7 @@ describe("Chat UseCase", () => {
     it("should create session and send message simultaneously", async () => {
       const chunks: (StreamChunk & { sessionId?: string })[] = []
       for await (const chunk of sendMessageWithNewSession(
-        { chatRepo, learningRepo, aiAdapter, aiConfig: defaultAIConfig },
+        { chatRepo, learningRepo, aiAdapter, aiConfig: defaultAIConfig, logger: noopLogger },
         {
           topicId: testData.topicId,
           userId: testData.userId,
@@ -478,7 +479,7 @@ describe("Chat UseCase", () => {
     it("should reject for non-existent topic", async () => {
       const chunks: StreamChunk[] = []
       for await (const chunk of sendMessageWithNewSession(
-        { chatRepo, learningRepo, aiAdapter, aiConfig: defaultAIConfig },
+        { chatRepo, learningRepo, aiAdapter, aiConfig: defaultAIConfig, logger: noopLogger },
         {
           topicId: "non-existent-topic",
           userId: testData.userId,
@@ -495,7 +496,7 @@ describe("Chat UseCase", () => {
 
     it("should update progress after message sent", async () => {
       for await (const _ of sendMessageWithNewSession(
-        { chatRepo, learningRepo, aiAdapter, aiConfig: defaultAIConfig },
+        { chatRepo, learningRepo, aiAdapter, aiConfig: defaultAIConfig, logger: noopLogger },
         {
           topicId: testData.topicId,
           userId: testData.userId,
@@ -534,7 +535,7 @@ describe("Chat UseCase", () => {
       })
 
       const result = await evaluateQuestion(
-        { chatRepo, learningRepo, aiAdapter: goodAdapter, aiConfig: defaultAIConfig },
+        { chatRepo, learningRepo, aiAdapter: goodAdapter, aiConfig: defaultAIConfig, logger: noopLogger },
         testData.userId,
         message.id,
       )
@@ -568,7 +569,7 @@ describe("Chat UseCase", () => {
       })
 
       const result = await evaluateQuestion(
-        { chatRepo, learningRepo, aiAdapter: surfaceAdapter, aiConfig: defaultAIConfig },
+        { chatRepo, learningRepo, aiAdapter: surfaceAdapter, aiConfig: defaultAIConfig, logger: noopLogger },
         testData.userId,
         message.id,
       )
@@ -602,7 +603,7 @@ describe("Chat UseCase", () => {
       })
 
       const result = await evaluateQuestion(
-        { chatRepo, learningRepo, aiAdapter: ambiguousAdapter, aiConfig: defaultAIConfig },
+        { chatRepo, learningRepo, aiAdapter: ambiguousAdapter, aiConfig: defaultAIConfig, logger: noopLogger },
         testData.userId,
         message.id,
       )

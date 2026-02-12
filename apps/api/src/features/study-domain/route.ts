@@ -35,15 +35,17 @@ export const studyDomainRoutes = ({ db }: StudyDomainDeps) => {
     // List user's study domains
     .get("/", authMiddleware, async (c) => {
       const user = c.get("user")
-      const result = await listStudyDomains(deps, user.id)
+      const logger = c.get("logger").child({ feature: "study-domain" })
+      const result = await listStudyDomains({ ...deps, logger }, user.id)
       return handleResult(c, result, "studyDomains")
     })
 
     // Get study domain by ID
     .get("/:id", authMiddleware, async (c) => {
       const user = c.get("user")
+      const logger = c.get("logger").child({ feature: "study-domain" })
       const id = c.req.param("id")
-      const result = await getStudyDomain(deps, id, user.id)
+      const result = await getStudyDomain({ ...deps, logger }, id, user.id)
       return handleResult(c, result, "studyDomain")
     })
 
@@ -54,8 +56,9 @@ export const studyDomainRoutes = ({ db }: StudyDomainDeps) => {
       zValidator("json", createStudyDomainRequestSchema),
       async (c) => {
         const user = c.get("user")
+        const logger = c.get("logger").child({ feature: "study-domain" })
         const data = c.req.valid("json")
-        const result = await createStudyDomain(deps, user.id, data)
+        const result = await createStudyDomain({ ...deps, logger }, user.id, data)
 
         return handleResult(c, result, "studyDomain", 201)
       }
@@ -68,9 +71,10 @@ export const studyDomainRoutes = ({ db }: StudyDomainDeps) => {
       zValidator("json", updateStudyDomainRequestSchema),
       async (c) => {
         const user = c.get("user")
+        const logger = c.get("logger").child({ feature: "study-domain" })
         const id = c.req.param("id")
         const data = c.req.valid("json")
-        const result = await updateStudyDomain(deps, id, user.id, data)
+        const result = await updateStudyDomain({ ...deps, logger }, id, user.id, data)
         return handleResult(c, result, "studyDomain")
       }
     )
@@ -78,8 +82,9 @@ export const studyDomainRoutes = ({ db }: StudyDomainDeps) => {
     // Delete study domain (soft delete)
     .delete("/:id", authMiddleware, async (c) => {
       const user = c.get("user")
+      const logger = c.get("logger").child({ feature: "study-domain" })
       const id = c.req.param("id")
-      const result = await deleteStudyDomain(deps, id, user.id)
+      const result = await deleteStudyDomain({ ...deps, logger }, id, user.id)
 
       return handleResult(c, result, 204)
     })
@@ -93,16 +98,17 @@ export const studyDomainRoutes = ({ db }: StudyDomainDeps) => {
         const user = c.get("user")
         const id = c.req.param("id")
         const { csvContent } = c.req.valid("json")
+        const logger = c.get("logger").child({ feature: "study-domain" })
 
         try {
           const subjectRepo = createSubjectRepository(db)
           const txRunner = createNoTransactionRunner(db)
-          const treeDeps = { subjectRepo, db, txRunner }
+          const treeDeps = { subjectRepo, db, txRunner, logger }
 
           const result = await bulkImportCSVToStudyDomain(treeDeps, user.id, id, csvContent)
           return handleResult(c, result)
         } catch (e) {
-          console.error("Import error:", e)
+          logger.error("CSV import failed", { error: e instanceof Error ? e.message : String(e) })
           return handleResult(c, err(internalError("インポート中にエラーが発生しました")))
         }
       }

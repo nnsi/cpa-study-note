@@ -85,6 +85,18 @@ importers:
         specifier: ^4.0.0
         version: 4.61.1(@cloudflare/workers-types@4.20260131.0)
 
+  apps/tail-worker:
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: ^4.20260131.0
+        version: 4.20260131.0
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+      wrangler:
+        specifier: ^4.0.0
+        version: 4.61.1(@cloudflare/workers-types@4.20260131.0)
+
   apps/web:
     dependencies:
       '@cpa-study/shared':

@@ -4,6 +4,7 @@ import type {
   StudyDomainRepository,
   StudyDomain,
 } from "./repository"
+import { noopLogger } from "../../test/helpers"
 import {
   listStudyDomains,
   getStudyDomain,
@@ -39,7 +40,7 @@ describe("Study Domain UseCase", () => {
   describe("listStudyDomains", () => {
     it("should return user's study domains", async () => {
       const repo = createMockRepository()
-      const deps = { repo }
+      const deps = { repo, logger: noopLogger }
 
       const result = await listStudyDomains(deps, "user-1")
 
@@ -53,7 +54,7 @@ describe("Study Domain UseCase", () => {
 
     it("should convert dates to ISO strings", async () => {
       const repo = createMockRepository()
-      const deps = { repo }
+      const deps = { repo, logger: noopLogger }
 
       const result = await listStudyDomains(deps, "user-1")
 
@@ -67,7 +68,7 @@ describe("Study Domain UseCase", () => {
       const repo = createMockRepository({
         findByUserId: vi.fn().mockResolvedValue([]),
       })
-      const deps = { repo }
+      const deps = { repo, logger: noopLogger }
 
       const result = await listStudyDomains(deps, "user-1")
 
@@ -80,7 +81,7 @@ describe("Study Domain UseCase", () => {
   describe("getStudyDomain", () => {
     it("should return study domain when found", async () => {
       const repo = createMockRepository()
-      const deps = { repo }
+      const deps = { repo, logger: noopLogger }
 
       const result = await getStudyDomain(deps, "domain-1", "user-1")
 
@@ -94,7 +95,7 @@ describe("Study Domain UseCase", () => {
 
     it("should convert dates to ISO strings", async () => {
       const repo = createMockRepository()
-      const deps = { repo }
+      const deps = { repo, logger: noopLogger }
 
       const result = await getStudyDomain(deps, "domain-1", "user-1")
 
@@ -109,7 +110,7 @@ describe("Study Domain UseCase", () => {
       const repo = createMockRepository({
         findById: vi.fn().mockResolvedValue(null),
       })
-      const deps = { repo }
+      const deps = { repo, logger: noopLogger }
 
       const result = await getStudyDomain(deps, "non-existent", "user-1")
 
@@ -131,7 +132,7 @@ describe("Study Domain UseCase", () => {
         create: vi.fn().mockResolvedValue({ id: "new-domain" }),
         findById: vi.fn().mockResolvedValue(newDomain),
       })
-      const deps = { repo }
+      const deps = { repo, logger: noopLogger }
 
       const result = await createStudyDomain(deps, "user-1", {
         name: "New Domain",
@@ -151,7 +152,7 @@ describe("Study Domain UseCase", () => {
         create: vi.fn().mockResolvedValue({ id: "new-domain" }),
         findById: vi.fn().mockResolvedValue(mockStudyDomain),
       })
-      const deps = { repo }
+      const deps = { repo, logger: noopLogger }
 
       await createStudyDomain(deps, "user-1", {
         name: "New Domain",
@@ -179,7 +180,7 @@ describe("Study Domain UseCase", () => {
       const repo = createMockRepository({
         update: vi.fn().mockResolvedValue(updatedDomain),
       })
-      const deps = { repo }
+      const deps = { repo, logger: noopLogger }
 
       const result = await updateStudyDomain(deps, "domain-1", "user-1", { name: "Updated Name" })
 
@@ -194,7 +195,7 @@ describe("Study Domain UseCase", () => {
       const repo = createMockRepository({
         update: vi.fn().mockResolvedValue(null),
       })
-      const deps = { repo }
+      const deps = { repo, logger: noopLogger }
 
       const result = await updateStudyDomain(deps, "non-existent", "user-1", { name: "New Name" })
 
@@ -212,7 +213,7 @@ describe("Study Domain UseCase", () => {
       const repo = createMockRepository({
         update: vi.fn().mockResolvedValue(updatedDomain),
       })
-      const deps = { repo }
+      const deps = { repo, logger: noopLogger }
 
       const result = await updateStudyDomain(deps, "domain-1", "user-1", { name: "Updated" })
 
@@ -229,7 +230,7 @@ describe("Study Domain UseCase", () => {
         findById: vi.fn().mockResolvedValue(mockStudyDomain),
         softDelete: vi.fn().mockResolvedValue(true),
       })
-      const deps = { repo }
+      const deps = { repo, logger: noopLogger }
 
       const result = await deleteStudyDomain(deps, "domain-1", "user-1")
 
@@ -241,7 +242,7 @@ describe("Study Domain UseCase", () => {
       const repo = createMockRepository({
         findById: vi.fn().mockResolvedValue(null),
       })
-      const deps = { repo }
+      const deps = { repo, logger: noopLogger }
 
       const result = await deleteStudyDomain(deps, "non-existent", "user-1")
 

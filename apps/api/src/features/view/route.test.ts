@@ -20,6 +20,7 @@ import {
   parseJson,
   type TestContext,
 } from "../../test/helpers"
+import { loggerMiddleware } from "../../shared/middleware/logger"
 import * as schema from "@cpa-study/db/schema"
 
 // レスポンススキーマ定義
@@ -203,6 +204,7 @@ describe("View Routes - Read-Only Guarantee", () => {
       Object.assign(c.env, ctx.env)
       await next()
     })
+    app.use("*", loggerMiddleware())
     app.route("/view", routes)
   })
 
@@ -493,6 +495,7 @@ describe("View Routes - Functional Tests", () => {
       Object.assign(c.env, ctx.env)
       await next()
     })
+    app.use("*", loggerMiddleware())
     app.route("/view", routes)
   })
 

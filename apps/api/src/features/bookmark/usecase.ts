@@ -1,11 +1,13 @@
 import type { BookmarkTargetType } from "@cpa-study/db/schema"
 import type { BookmarkRepository } from "./repository"
 import type { BookmarkWithDetails } from "@cpa-study/shared/schemas"
+import type { Logger } from "@/shared/lib/logger"
 import { ok, err, type Result } from "@/shared/lib/result"
 import { notFound, type AppError } from "@/shared/lib/errors"
 
 export type BookmarkDeps = {
   repo: BookmarkRepository
+  logger: Logger
 }
 
 // ブックマーク一覧を詳細情報付きで取得
@@ -13,13 +15,14 @@ export const getBookmarks = async (
   deps: BookmarkDeps,
   userId: string
 ): Promise<Result<BookmarkWithDetails[], AppError>> => {
-  const bookmarks = await deps.repo.findBookmarksByUser(userId)
+  const { repo, logger } = deps
+  const bookmarks = await repo.findBookmarksByUser(userId)
 
   // ブックマークの詳細情報を取得（ユーザー境界と削除フラグを考慮）
   const bookmarksWithDetails: BookmarkWithDetails[] = []
 
   for (const bookmark of bookmarks) {
-    const details = await deps.repo.getBookmarkDetails(bookmark.targetType, bookmark.targetId, userId)
+    const details = await repo.getBookmarkDetails(bookmark.targetType, bookmark.targetId, userId)
 
     if (details) {
       bookmarksWithDetails.push({
@@ -46,17 +49,18 @@ export const addBookmark = async (
   targetType: BookmarkTargetType,
   targetId: string
 ): Promise<Result<BookmarkWithDetails | null, AppError>> => {
+  const { repo, logger } = deps
   // 対象が存在するか確認（ユーザー境界と削除フラグを考慮）
-  const exists = await deps.repo.targetExists(targetType, targetId, userId)
+  const exists = await repo.targetExists(targetType, targetId, userId)
   if (!exists) {
     return err(notFound("ブックマーク対象が見つかりません"))
   }
 
   // ブックマーク追加（冪等、重複は無視）
-  const result = await deps.repo.addBookmark(userId, targetType, targetId)
+  const result = await repo.addBookmark(userId, targetType, targetId)
 
   // 追加されたブックマークの詳細を取得
-  const details = await deps.repo.getBookmarkDetails(targetType, targetId, userId)
+  const details = await repo.getBookmarkDetails(targetType, targetId, userId)
   const bookmark: BookmarkWithDetails | null =
     details && result.bookmark
       ? {
@@ -82,7 +86,8 @@ export const removeBookmark = async (
   targetType: BookmarkTargetType,
   targetId: string
 ): Promise<Result<void, AppError>> => {
-  const removed = await deps.repo.removeBookmark(userId, targetType, targetId)
+  const { repo, logger } = deps
+  const removed = await repo.removeBookmark(userId, targetType, targetId)
 
   if (!removed) {
     return err(notFound("ブックマークが見つかりません"))

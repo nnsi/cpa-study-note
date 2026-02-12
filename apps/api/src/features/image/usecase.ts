@@ -1,5 +1,6 @@
 import type { ImageRepository } from "./repository"
 import type { AIAdapter, AIConfig } from "@/shared/lib/ai"
+import type { Logger } from "@/shared/lib/logger"
 import type { Image as ImageResponse } from "@cpa-study/shared/schemas"
 import { ok, err, type Result } from "@/shared/lib/result"
 import { notFound, forbidden, badRequest, type AppError } from "@/shared/lib/errors"
@@ -46,6 +47,7 @@ type ImageDeps = {
   aiConfig: AIConfig
   r2: R2Bucket
   apiBaseUrl: string
+  logger: Logger
 }
 
 type CreateUploadInput = {
@@ -71,10 +73,10 @@ const toImageResponse = (image: {
 
 // アップロードURL取得 + メタデータ作成
 export const createUploadUrl = async (
-  deps: Pick<ImageDeps, "imageRepo" | "apiBaseUrl">,
+  deps: Pick<ImageDeps, "imageRepo" | "apiBaseUrl" | "logger">,
   input: CreateUploadInput
 ): Promise<{ uploadUrl: string; imageId: string }> => {
-  const { imageRepo, apiBaseUrl } = deps
+  const { imageRepo, apiBaseUrl, logger } = deps
   const { userId, filename, mimeType } = input
 
   const imageId = crypto.randomUUID()
@@ -101,12 +103,12 @@ export const createUploadUrl = async (
 
 // 画像アップロード
 export const uploadImage = async (
-  deps: Pick<ImageDeps, "imageRepo" | "r2">,
+  deps: Pick<ImageDeps, "imageRepo" | "r2" | "logger">,
   userId: string,
   imageId: string,
   body: ArrayBuffer
 ): Promise<Result<void, AppError>> => {
-  const { imageRepo, r2 } = deps
+  const { imageRepo, r2, logger } = deps
 
   const image = await imageRepo.findById(imageId)
   if (!image) {
@@ -134,11 +136,11 @@ export const uploadImage = async (
 
 // OCR実行
 export const performOCR = async (
-  deps: Pick<ImageDeps, "imageRepo" | "aiAdapter" | "aiConfig" | "r2">,
+  deps: Pick<ImageDeps, "imageRepo" | "aiAdapter" | "aiConfig" | "r2" | "logger">,
   userId: string,
   imageId: string
 ): Promise<Result<{ imageId: string; ocrText: string }, AppError>> => {
-  const { imageRepo, aiAdapter, aiConfig, r2 } = deps
+  const { imageRepo, aiAdapter, aiConfig, r2, logger } = deps
 
   const image = await imageRepo.findById(imageId)
   if (!image) {
@@ -184,11 +186,12 @@ export const performOCR = async (
 
 // 画像取得
 export const getImage = async (
-  deps: Pick<ImageDeps, "imageRepo">,
+  deps: Pick<ImageDeps, "imageRepo" | "logger">,
   userId: string,
   imageId: string
 ): Promise<Result<ImageResponse, AppError>> => {
-  const image = await deps.imageRepo.findById(imageId)
+  const { imageRepo, logger } = deps
+  const image = await imageRepo.findById(imageId)
 
   if (!image) {
     return err(notFound("画像が見つかりません"))
@@ -203,11 +206,11 @@ export const getImage = async (
 
 // 画像ファイル取得（バイナリ）
 export const getImageFile = async (
-  deps: Pick<ImageDeps, "imageRepo" | "r2">,
+  deps: Pick<ImageDeps, "imageRepo" | "r2" | "logger">,
   userId: string,
   imageId: string
 ): Promise<Result<{ body: ArrayBuffer; mimeType: string }, AppError>> => {
-  const { imageRepo, r2 } = deps
+  const { imageRepo, r2, logger } = deps
 
   const image = await imageRepo.findById(imageId)
   if (!image) {

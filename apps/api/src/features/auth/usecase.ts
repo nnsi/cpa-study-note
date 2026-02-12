@@ -4,6 +4,7 @@ import type { AuthRepository } from "./repository"
 import type { createProviders } from "./providers"
 import type { User as EnvUser } from "@/shared/types/env"
 import type { Db } from "@cpa-study/db"
+import type { Logger } from "@/shared/lib/logger"
 import { createSampleDataForNewUser } from "./sample-data"
 import { notFound, unauthorized, internalError, type AppError } from "@/shared/lib/errors"
 
@@ -12,11 +13,13 @@ type AuthDeps = {
   repo: AuthRepository
   providers: ReturnType<typeof createProviders>
   db: Db
+  logger: Logger
 }
 
 // リポジトリのみを使用する操作用
 type AuthRepoDeps = {
   repo: AuthRepository
+  logger: Logger
 }
 
 export const handleOAuthCallback = async (
@@ -27,19 +30,32 @@ export const handleOAuthCallback = async (
   const provider = deps.providers.get(providerName)
   if (!provider) return err(notFound("認証プロバイダーが見つかりません", { provider: providerName }))
 
+  const { logger } = deps
+
   let tokens
   try {
     tokens = await provider.exchangeCode(code)
-  } catch {
+  } catch (error) {
+    logger.error("Token exchange failed", {
+      provider: providerName,
+      error: error instanceof Error ? error.message : String(error),
+    })
     return err(unauthorized("認証コードの交換に失敗しました"))
   }
 
-  if (!tokens.access_token) return err(unauthorized("認証コードの交換に失敗しました"))
+  if (!tokens.access_token) {
+    logger.error("No access token in response", { provider: providerName })
+    return err(unauthorized("認証コードの交換に失敗しました"))
+  }
 
   let oauthUser: OAuthUserInfo
   try {
     oauthUser = await provider.getUserInfo(tokens)
-  } catch {
+  } catch (error) {
+    logger.error("Failed to get user info", {
+      provider: providerName,
+      error: error instanceof Error ? error.message : String(error),
+    })
     return err(unauthorized("ユーザー情報の取得に失敗しました"))
   }
 
@@ -88,8 +104,10 @@ export const handleOAuthCallback = async (
     await deps.repo.updateUser(newUser.id, { defaultStudyDomainId: studyDomainId })
     newUser.defaultStudyDomainId = studyDomainId
   } catch (error) {
-    // Log but don't fail - user can still use the app without sample data
-    console.error("Failed to create sample data for new user:", error)
+    logger.warn("Failed to create sample data for new user", {
+      userId: newUser.id,
+      error: error instanceof Error ? error.message : String(error),
+    })
   }
 
   return ok({ user: newUser, isNewUser: true })

@@ -12,12 +12,14 @@ import { parseCSV, parseCSV4Column, groupRowsBySubject, convertToTree, mergeTree
 import type { SimpleTransactionRunner } from "../../shared/lib/transaction"
 import { ok, err, type Result } from "@/shared/lib/result"
 import { notFound, badRequest, type AppError } from "@/shared/lib/errors"
+import type { Logger } from "@/shared/lib/logger"
 
 // Tree operations dependencies
 export type TreeDeps = {
   subjectRepo: SubjectRepository
   db: Db
   txRunner?: SimpleTransactionRunner
+  logger: Logger
 }
 
 /**
@@ -28,18 +30,19 @@ export const getSubjectTree = async (
   userId: string,
   subjectId: string
 ): Promise<Result<TreeResponse, AppError>> => {
+  const { subjectRepo, logger } = deps
   // 1. Verify subject ownership
-  const subject = await deps.subjectRepo.findSubjectByIdAndUserId(subjectId, userId)
+  const subject = await subjectRepo.findSubjectByIdAndUserId(subjectId, userId)
   if (!subject) {
     return err(notFound("科目が見つかりません"))
   }
 
   // 2. Get all categories for this subject
-  const allCategories = await deps.subjectRepo.findCategoriesBySubjectId(subjectId, userId)
+  const allCategories = await subjectRepo.findCategoriesBySubjectId(subjectId, userId)
 
   // 3. Get all topics for categories in this subject
   const categoryIds = allCategories.map((c) => c.id)
-  const allTopics = await deps.subjectRepo.findTopicsByCategoryIds(categoryIds, userId)
+  const allTopics = await subjectRepo.findTopicsByCategoryIds(categoryIds, userId)
 
   // 4. Build tree structure
   // Separate depth=1 (categories) and depth=2 (subcategories)
@@ -96,10 +99,11 @@ export const updateSubjectTree = async (
   subjectId: string,
   tree: UpdateTreeRequest
 ): Promise<Result<TreeResponse, AppError>> => {
+  const { subjectRepo, logger } = deps
   const now = new Date()
 
   // 1. Verify subject ownership
-  const subject = await deps.subjectRepo.findSubjectByIdAndUserId(subjectId, userId)
+  const subject = await subjectRepo.findSubjectByIdAndUserId(subjectId, userId)
   if (!subject) {
     return err(notFound("科目が見つかりません"))
   }
@@ -121,7 +125,7 @@ export const updateSubjectTree = async (
   // 3. Validate category IDs (must belong to user and subject)
   let validCategoryIdSet = new Set<string>()
   if (requestCategoryIds.size > 0) {
-    const validCategoryIds = await deps.subjectRepo.findCategoryIdsBySubjectIdWithSoftDeleted(
+    const validCategoryIds = await subjectRepo.findCategoryIdsBySubjectIdWithSoftDeleted(
       subjectId,
       userId,
       Array.from(requestCategoryIds)
@@ -137,7 +141,7 @@ export const updateSubjectTree = async (
   // 4. Validate topic IDs (must belong to user and be in categories of this subject)
   let validTopicIdSet = new Set<string>()
   if (requestTopicIds.size > 0) {
-    const validTopicIds = await deps.subjectRepo.findTopicIdsBySubjectWithSoftDeleted(
+    const validTopicIds = await subjectRepo.findTopicIdsBySubjectWithSoftDeleted(
       subjectId,
       userId,
       Array.from(requestTopicIds)
@@ -151,8 +155,8 @@ export const updateSubjectTree = async (
   }
 
   // 5. Get existing categories and topics
-  const existingCategoryIds = await deps.subjectRepo.findExistingCategoryIds(subjectId, userId)
-  const existingTopicIds = await deps.subjectRepo.findExistingTopicIds(subjectId, userId)
+  const existingCategoryIds = await subjectRepo.findExistingCategoryIds(subjectId, userId)
+  const existingTopicIds = await subjectRepo.findExistingTopicIds(subjectId, userId)
 
   // 6-8. Execute all mutations in a transaction for atomicity
   const runInTransaction = deps.txRunner
@@ -241,6 +245,7 @@ export const importCSVToSubject = async (
   subjectId: string,
   csvContent: string
 ): Promise<Result<CSVImportResponse, AppError>> => {
+  const { subjectRepo, logger } = deps
   // 1. Get existing tree (also validates ownership)
   const existingTreeResult = await getSubjectTree(deps, userId, subjectId)
   if (!existingTreeResult.ok) {
@@ -335,8 +340,9 @@ export const bulkImportCSVToStudyDomain = async (
   studyDomainId: string,
   csvContent: string
 ): Promise<Result<BulkCSVImportResponse, AppError>> => {
+  const { subjectRepo, logger } = deps
   // 1. Verify study domain ownership
-  const ownsStudyDomain = await deps.subjectRepo.verifyStudyDomainOwnership(studyDomainId, userId)
+  const ownsStudyDomain = await subjectRepo.verifyStudyDomainOwnership(studyDomainId, userId)
   if (!ownsStudyDomain) {
     return err(notFound("学習領域が見つかりません"))
   }
@@ -356,7 +362,7 @@ export const bulkImportCSVToStudyDomain = async (
   const groupedRows = groupRowsBySubject(rows)
 
   // 4. Get existing subjects for this study domain
-  const existingSubjects = await deps.subjectRepo.findByStudyDomainId(studyDomainId, userId)
+  const existingSubjects = await subjectRepo.findByStudyDomainId(studyDomainId, userId)
   const subjectNameToId = new Map<string, string>(
     existingSubjects.map((s) => [s.name, s.id])
   )
@@ -373,7 +379,7 @@ export const bulkImportCSVToStudyDomain = async (
     // Create subject if it doesn't exist
     if (!subjectId) {
       const maxOrder = existingSubjects.reduce((max, s) => Math.max(max, s.displayOrder), -1)
-      const createResult = await deps.subjectRepo.create({
+      const createResult = await subjectRepo.create({
         userId,
         studyDomainId,
         name: subjectName,

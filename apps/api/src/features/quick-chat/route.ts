@@ -30,9 +30,10 @@ export const quickChatRoutes = ({ env, db }: QuickChatDeps) => {
       async (c) => {
         const user = c.get("user")
         const { domainId, question } = c.req.valid("json")
+        const logger = c.get("logger").child({ feature: "quick-chat" })
 
         const result = await suggestTopicsForChat(
-          { quickChatRepo, aiAdapter, aiConfig },
+          { quickChatRepo, aiAdapter, aiConfig, logger },
           { domainId, userId: user.id, question }
         )
 

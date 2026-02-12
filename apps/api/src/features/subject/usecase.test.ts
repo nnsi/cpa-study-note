@@ -15,7 +15,7 @@ import {
   type TreeDeps,
 } from "./tree-usecase"
 import { createTestDatabase, type TestDatabase } from "@/test/mocks/db"
-import { createTestUser, createTestStudyDomain, createTestSubject, createTestCategory, createTestTopic } from "@/test/helpers"
+import { createTestUser, createTestStudyDomain, createTestSubject, createTestCategory, createTestTopic, noopLogger } from "@/test/helpers"
 import { createMockSimpleTransactionRunner } from "@/shared/lib/transaction"
 import * as schema from "@cpa-study/db/schema"
 import { eq } from "drizzle-orm"
@@ -30,6 +30,7 @@ describe("Subject UseCase", () => {
     db = result.db
     deps = {
       subjectRepo: createSubjectRepository(db),
+      logger: noopLogger,
     }
   })
 
@@ -358,7 +359,7 @@ describe("Subject UseCase - Tree Operations", () => {
     subjectRepo = createSubjectRepository(db as any)
     const txRunner = createMockSimpleTransactionRunner(db)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    treeDeps = { subjectRepo, db: db as any, txRunner }
+    treeDeps = { subjectRepo, db: db as any, txRunner, logger: noopLogger }
   })
 
   describe("getSubjectTree", () => {

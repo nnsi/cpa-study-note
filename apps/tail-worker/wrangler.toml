@@ -1,0 +1,13 @@
+name = "cpa-study-tail-worker"
+main = "src/index.ts"
+compatibility_date = "2024-12-30"
+
+[[analytics_engine_datasets]]
+binding = "LOGS"
+dataset = "api_logs"
+
+[env.staging]
+name = "cpa-study-tail-worker-stg"
+
+[env.production]
+name = "cpa-study-tail-worker-prod"

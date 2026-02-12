@@ -1,4 +1,5 @@
 import type { AIAdapter, AIMessage, StreamChunk, AIConfig } from "@/shared/lib/ai"
+import type { Logger } from "@/shared/lib/logger"
 import type { StudyPlanRepository } from "./repository"
 import type { SubjectRepository } from "../subject/repository"
 import { sanitizeForPrompt, sanitizeCustomPrompt } from "../chat/domain/sanitize"
@@ -8,6 +9,7 @@ export type PlanAssistantDeps = {
   subjectRepo: SubjectRepository
   aiAdapter: AIAdapter
   aiConfig: AIConfig
+  logger: Logger
 }
 
 type SuggestPlanItemsInput = {
@@ -120,7 +122,7 @@ export async function* suggestPlanItems(
       }
     }
   } catch (error) {
-    console.error("[plan-assistant] Stream error:", error)
+    deps.logger.error("Stream error", { error: error instanceof Error ? error.message : String(error) })
     yield { type: "error", error: "AI応答中にエラーが発生しました。再度お試しください。" }
     return
   }

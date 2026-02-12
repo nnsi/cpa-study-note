@@ -16,6 +16,7 @@ import {
   getSubjectProgressStats,
 } from "./usecase"
 import type { SubjectRepository } from "../subject/repository"
+import { noopLogger } from "../../test/helpers"
 
 // Mock data
 const mockProgress: TopicProgress = {
@@ -67,7 +68,7 @@ describe("Learning UseCase", () => {
   describe("touchTopic", () => {
     it("should update lastAccessedAt and return progress", async () => {
       const learningRepo = createMockLearningRepository()
-      const deps = { learningRepo }
+      const deps = { learningRepo, logger: noopLogger }
 
       const result = await touchTopic(deps, "user-1", "topic-1")
 
@@ -83,7 +84,7 @@ describe("Learning UseCase", () => {
       const learningRepo = createMockLearningRepository({
         verifyTopicExists: vi.fn().mockResolvedValue(false),
       })
-      const deps = { learningRepo }
+      const deps = { learningRepo, logger: noopLogger }
 
       const result = await touchTopic(deps, "user-1", "non-existent")
 
@@ -97,7 +98,7 @@ describe("Learning UseCase", () => {
   describe("getProgress", () => {
     it("should return progress when exists", async () => {
       const learningRepo = createMockLearningRepository()
-      const deps = { learningRepo }
+      const deps = { learningRepo, logger: noopLogger }
 
       const result = await getProgress(deps, "user-1", "topic-1")
 
@@ -115,7 +116,7 @@ describe("Learning UseCase", () => {
       const learningRepo = createMockLearningRepository({
         findProgress: vi.fn().mockResolvedValue(null),
       })
-      const deps = { learningRepo }
+      const deps = { learningRepo, logger: noopLogger }
 
       const result = await getProgress(deps, "user-1", "topic-1")
 
@@ -128,7 +129,7 @@ describe("Learning UseCase", () => {
       const learningRepo = createMockLearningRepository({
         verifyTopicExists: vi.fn().mockResolvedValue(false),
       })
-      const deps = { learningRepo }
+      const deps = { learningRepo, logger: noopLogger }
 
       const result = await getProgress(deps, "user-1", "non-existent")
 
@@ -140,7 +141,7 @@ describe("Learning UseCase", () => {
 
     it("should convert dates to ISO strings", async () => {
       const learningRepo = createMockLearningRepository()
-      const deps = { learningRepo }
+      const deps = { learningRepo, logger: noopLogger }
 
       const result = await getProgress(deps, "user-1", "topic-1")
 
@@ -161,7 +162,7 @@ describe("Learning UseCase", () => {
         findProgress: vi.fn().mockResolvedValue(null),
         upsertProgress: vi.fn().mockResolvedValue(newProgress),
       })
-      const deps = { learningRepo }
+      const deps = { learningRepo, logger: noopLogger }
 
       const result = await updateProgress(deps, "user-1", "topic-1", true)
 
@@ -184,7 +185,7 @@ describe("Learning UseCase", () => {
       const learningRepo = createMockLearningRepository({
         upsertProgress: vi.fn().mockResolvedValue(updatedProgress),
       })
-      const deps = { learningRepo }
+      const deps = { learningRepo, logger: noopLogger }
 
       const result = await updateProgress(deps, "user-1", "topic-1", true)
 
@@ -203,7 +204,7 @@ describe("Learning UseCase", () => {
         findProgress: vi.fn().mockResolvedValue(mockProgress), // understood: false
         upsertProgress: vi.fn().mockResolvedValue(updatedProgress),
       })
-      const deps = { learningRepo }
+      const deps = { learningRepo, logger: noopLogger }
 
       await updateProgress(deps, "user-1", "topic-1", true)
 
@@ -227,7 +228,7 @@ describe("Learning UseCase", () => {
         findProgress: vi.fn().mockResolvedValue(existingProgress),
         upsertProgress: vi.fn().mockResolvedValue(updatedProgress),
       })
-      const deps = { learningRepo }
+      const deps = { learningRepo, logger: noopLogger }
 
       await updateProgress(deps, "user-1", "topic-1", false)
 
@@ -243,7 +244,7 @@ describe("Learning UseCase", () => {
         findProgress: vi.fn().mockResolvedValue(mockProgress), // understood: false
         upsertProgress: vi.fn().mockResolvedValue(mockProgress),
       })
-      const deps = { learningRepo }
+      const deps = { learningRepo, logger: noopLogger }
 
       await updateProgress(deps, "user-1", "topic-1", false)
 
@@ -252,7 +253,7 @@ describe("Learning UseCase", () => {
 
     it("should not create history when understood is undefined", async () => {
       const learningRepo = createMockLearningRepository()
-      const deps = { learningRepo }
+      const deps = { learningRepo, logger: noopLogger }
 
       await updateProgress(deps, "user-1", "topic-1", undefined)
 
@@ -263,7 +264,7 @@ describe("Learning UseCase", () => {
       const learningRepo = createMockLearningRepository({
         verifyTopicExists: vi.fn().mockResolvedValue(false),
       })
-      const deps = { learningRepo }
+      const deps = { learningRepo, logger: noopLogger }
 
       const result = await updateProgress(deps, "user-1", "non-existent", true)
 
@@ -283,7 +284,7 @@ describe("Learning UseCase", () => {
       const learningRepo = createMockLearningRepository({
         findProgressByUser: vi.fn().mockResolvedValue(progressList),
       })
-      const deps = { learningRepo }
+      const deps = { learningRepo, logger: noopLogger }
 
       const result = await listUserProgress(deps, "user-1")
 
@@ -299,7 +300,7 @@ describe("Learning UseCase", () => {
       const learningRepo = createMockLearningRepository({
         findProgressByUser: vi.fn().mockResolvedValue([]),
       })
-      const deps = { learningRepo }
+      const deps = { learningRepo, logger: noopLogger }
 
       const result = await listUserProgress(deps, "user-1")
 
@@ -310,7 +311,7 @@ describe("Learning UseCase", () => {
 
     it("should convert dates to ISO strings", async () => {
       const learningRepo = createMockLearningRepository()
-      const deps = { learningRepo }
+      const deps = { learningRepo, logger: noopLogger }
 
       const result = await listUserProgress(deps, "user-1")
 
@@ -330,7 +331,7 @@ describe("Learning UseCase", () => {
       const learningRepo = createMockLearningRepository({
         findCheckHistoryByTopic: vi.fn().mockResolvedValue(historyList),
       })
-      const deps = { learningRepo }
+      const deps = { learningRepo, logger: noopLogger }
 
       const result = await getCheckHistory(deps, "user-1", "topic-1")
 
@@ -347,7 +348,7 @@ describe("Learning UseCase", () => {
       const learningRepo = createMockLearningRepository({
         findCheckHistoryByTopic: vi.fn().mockResolvedValue([]),
       })
-      const deps = { learningRepo }
+      const deps = { learningRepo, logger: noopLogger }
 
       const result = await getCheckHistory(deps, "user-1", "topic-1")
 
@@ -360,7 +361,7 @@ describe("Learning UseCase", () => {
       const learningRepo = createMockLearningRepository({
         verifyTopicExists: vi.fn().mockResolvedValue(false),
       })
-      const deps = { learningRepo }
+      const deps = { learningRepo, logger: noopLogger }
 
       const result = await getCheckHistory(deps, "user-1", "non-existent")
 
@@ -372,7 +373,7 @@ describe("Learning UseCase", () => {
 
     it("should convert dates to ISO strings", async () => {
       const learningRepo = createMockLearningRepository()
-      const deps = { learningRepo }
+      const deps = { learningRepo, logger: noopLogger }
 
       const result = await getCheckHistory(deps, "user-1", "topic-1")
 
@@ -396,7 +397,7 @@ describe("Learning UseCase", () => {
       const learningRepo = createMockLearningRepository({
         findRecentTopics: vi.fn().mockResolvedValue(recentTopics),
       })
-      const deps = { learningRepo }
+      const deps = { learningRepo, logger: noopLogger }
 
       const result = await listRecentTopics(deps, "user-1")
 
@@ -410,7 +411,7 @@ describe("Learning UseCase", () => {
 
     it("should respect custom limit", async () => {
       const learningRepo = createMockLearningRepository()
-      const deps = { learningRepo }
+      const deps = { learningRepo, logger: noopLogger }
 
       await listRecentTopics(deps, "user-1", 5)
 
@@ -421,7 +422,7 @@ describe("Learning UseCase", () => {
       const learningRepo = createMockLearningRepository({
         findRecentTopics: vi.fn().mockResolvedValue([]),
       })
-      const deps = { learningRepo }
+      const deps = { learningRepo, logger: noopLogger }
 
       const result = await listRecentTopics(deps, "user-1")
 
@@ -432,7 +433,7 @@ describe("Learning UseCase", () => {
 
     it("should convert dates to ISO strings", async () => {
       const learningRepo = createMockLearningRepository()
-      const deps = { learningRepo }
+      const deps = { learningRepo, logger: noopLogger }
 
       const result = await listRecentTopics(deps, "user-1")
 
@@ -463,7 +464,7 @@ describe("Learning UseCase", () => {
         getBatchSubjectStats: vi.fn().mockResolvedValue(mockBatchStats),
       } as unknown as SubjectRepository
 
-      const deps = { subjectRepo }
+      const deps = { subjectRepo, logger: noopLogger }
 
       const result = await getSubjectProgressStats(deps, "user-1")
 
@@ -501,7 +502,7 @@ describe("Learning UseCase", () => {
         getBatchSubjectStats: vi.fn().mockResolvedValue(mockBatchStats),
       } as unknown as SubjectRepository
 
-      const deps = { subjectRepo }
+      const deps = { subjectRepo, logger: noopLogger }
 
       const result = await getSubjectProgressStats(deps, "user-1")
 
@@ -522,7 +523,7 @@ describe("Learning UseCase", () => {
         getBatchSubjectStats: vi.fn().mockResolvedValue([]),
       } as unknown as SubjectRepository
 
-      const deps = { subjectRepo }
+      const deps = { subjectRepo, logger: noopLogger }
 
       const result = await getSubjectProgressStats(deps, "user-1")
 

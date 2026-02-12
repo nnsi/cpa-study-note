@@ -4,11 +4,13 @@ import type {
   UpdateStudyDomainInput,
 } from "./repository"
 import type { StudyDomainResponse } from "@cpa-study/shared/schemas"
+import type { Logger } from "@/shared/lib/logger"
 import { ok, err, type Result } from "@/shared/lib/result"
 import { notFound, type AppError } from "@/shared/lib/errors"
 
 type StudyDomainDeps = {
   repo: StudyDomainRepository
+  logger: Logger
 }
 
 // List user's study domains

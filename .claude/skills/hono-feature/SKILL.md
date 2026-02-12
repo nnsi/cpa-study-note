@@ -95,17 +95,20 @@ type SubjectDeps = {
 
 ### DIパターン（route.ts）
 ```typescript
-// ✅ 正しい: deps オブジェクトを作成
+// ✅ 正しい: deps オブジェクトを作成、logger は c.get("logger").child() で取得
 export const bookmarkRoutes = ({ db }: BookmarkDeps) => {
   const repo = createBookmarkRepository(db)
-  const deps = { repo }
 
   return new Hono()
-    .get("/", async (c) => {
-      const result = await getBookmarks(deps, userId)
+    .get("/", authMiddleware, async (c) => {
+      const logger = c.get("logger").child({ feature: "bookmark" })
+      const result = await getBookmarks({ repo, logger }, userId)
       // ...
     })
 }
+
+// ❌ 禁止: logger なしで渡す
+const result = await getBookmarks({ repo }, userId)
 
 // ❌ 禁止: インラインで渡す
 const result = await getBookmarks({ repo: createRepo(db) }, userId)
@@ -162,14 +165,20 @@ return c.json({ message: "Bookmark added" }, 201)
 
 ### UseCase の Deps型
 ```typescript
-// ✅ 正しい: XxxDeps 形式でエクスポート
+// ✅ 正しい: XxxDeps 形式でエクスポート、logger を含める
 export type BookmarkDeps = {
   repo: BookmarkRepository
+  logger: Logger
 }
 
 // ❌ 禁止: 異なる命名
 export type BookmarkUseCaseDeps = { ... }
 export type Deps = { ... }
+
+// ❌ 禁止: logger を省略
+export type BookmarkDeps = {
+  repo: BookmarkRepository
+}
 ```
 
 ## テンプレート
@@ -192,11 +201,13 @@ export type {FeatureName}Error =
 ```typescript
 import { ok, err, type Result } from "@/shared/lib/result"
 import { notFound, internalError, type AppError } from "@/shared/lib/errors"
+import type { Logger } from "@/shared/lib/logger"
 import type { {FeatureName}Repository } from "./repository"
 
-// Deps型: XxxDeps 形式で命名し、エクスポート
+// Deps型: XxxDeps 形式で命名し、エクスポート。logger は必須。
 export type {FeatureName}Deps = {
   repo: {FeatureName}Repository
+  logger: Logger
 }
 
 // 全ての関数は Result<T, AppError> を返す
@@ -212,7 +223,10 @@ export const get{FeatureName} = async (
     }
     return ok(formatResponse(item))
   } catch (e) {
-    console.error("[{FeatureName}] get{FeatureName} error:", e)
+    deps.logger.error("Failed to get {featureName}", {
+      error: e instanceof Error ? e.message : String(e),
+      id,
+    })
     return err(internalError("{featureName}の取得に失敗しました"))
   }
 }
@@ -225,7 +239,9 @@ export const list{FeatureName}s = async (
     const items = await deps.repo.findByUser(userId)
     return ok(items.map(formatResponse))
   } catch (e) {
-    console.error("[{FeatureName}] list{FeatureName}s error:", e)
+    deps.logger.error("Failed to list {featureName}s", {
+      error: e instanceof Error ? e.message : String(e),
+    })
     return err(internalError("{featureName}一覧の取得に失敗しました"))
   }
 }
@@ -239,7 +255,9 @@ export const create{FeatureName} = async (
     const item = await deps.repo.create({ ...input, userId })
     return ok(formatResponse(item))
   } catch (e) {
-    console.error("[{FeatureName}] create{FeatureName} error:", e)
+    deps.logger.error("Failed to create {featureName}", {
+      error: e instanceof Error ? e.message : String(e),
+    })
     return err(internalError("{featureName}の作成に失敗しました"))
   }
 }
@@ -289,16 +307,15 @@ type {FeatureName}Deps = {
 }
 
 export const {featureName}Routes = ({ db }: {FeatureName}Deps) => {
-  // DIパターン: deps オブジェクトを作成
   const repo = create{FeatureName}Repository(db)
-  const deps = { repo }
 
   const app = new Hono<{ Bindings: Env; Variables: Variables }>()
     // GET: handleResult でキー付きレスポンス
     .get("/:id", authMiddleware, async (c) => {
       const id = c.req.param("id")
       const user = c.get("user")
-      const result = await get{FeatureName}(deps, user.id, id)
+      const logger = c.get("logger").child({ feature: "{featureName}" })
+      const result = await get{FeatureName}({ repo, logger }, user.id, id)
       return handleResult(c, result, "{featureName}")
     })
 
@@ -310,7 +327,8 @@ export const {featureName}Routes = ({ db }: {FeatureName}Deps) => {
       async (c) => {
         const user = c.get("user")
         const input = c.req.valid("json")
-        const result = await create{FeatureName}(deps, user.id, input)
+        const logger = c.get("logger").child({ feature: "{featureName}" })
+        const result = await create{FeatureName}({ repo, logger }, user.id, input)
         return handleResult(c, result, "{featureName}", 201)
       }
     )

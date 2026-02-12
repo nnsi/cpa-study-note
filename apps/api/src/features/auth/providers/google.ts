@@ -40,8 +40,7 @@ export const createGoogleProvider = (config: GoogleConfig): OAuthProvider => ({
     })
 
     if (!res.ok) {
-      console.error(`[Google OAuth] Token exchange failed: ${res.status}`)
-      throw new Error("Authentication failed")
+      throw new Error(`Token exchange failed: ${res.status}`)
     }
 
     return res.json()
@@ -51,8 +50,7 @@ export const createGoogleProvider = (config: GoogleConfig): OAuthProvider => ({
     const { id_token } = tokens
 
     if (!id_token) {
-      console.error("[Google OAuth] No ID token received")
-      throw new Error("Failed to get user info")
+      throw new Error("No ID token received")
     }
 
     try {
@@ -71,8 +69,7 @@ export const createGoogleProvider = (config: GoogleConfig): OAuthProvider => ({
       }
 
       if (!sub || !email) {
-        console.error("[Google OAuth] Missing required claims in ID token")
-        throw new Error("Failed to get user info")
+        throw new Error("Missing required claims (sub, email) in ID token")
       }
 
       return {
@@ -82,8 +79,9 @@ export const createGoogleProvider = (config: GoogleConfig): OAuthProvider => ({
         avatarUrl: picture ?? null,
       }
     } catch (error) {
-      console.error("[Google OAuth] ID token verification failed:", error)
-      throw new Error("Failed to get user info")
+      throw new Error(
+        `ID token verification failed: ${error instanceof Error ? error.message : String(error)}`
+      )
     }
   },
 })

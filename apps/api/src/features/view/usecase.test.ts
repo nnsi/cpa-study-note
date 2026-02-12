@@ -7,6 +7,7 @@ import type { CategoryTopicsViewRepository, CategoryTopicsData } from "./reposit
 import type { SearchViewRepository } from "./repositories/searchViewRepo"
 import type { SearchTopicsResponse } from "@cpa-study/shared/schemas"
 import type { ViewDeps } from "./usecase"
+import { noopLogger } from "../../test/helpers"
 import {
   getTopicView,
   getSubjectDashboard,
@@ -174,6 +175,7 @@ const createMockDeps = (overrides: Partial<ViewDeps> = {}): ViewDeps => ({
   reviewListViewRepo: createMockReviewListViewRepository(),
   categoryTopicsViewRepo: createMockCategoryTopicsViewRepository(),
   searchViewRepo: createMockSearchViewRepository(),
+  logger: noopLogger,
   ...overrides,
 })
 

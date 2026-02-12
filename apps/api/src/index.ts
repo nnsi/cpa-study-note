@@ -1,7 +1,7 @@
 import { Hono } from "hono"
 import { cors } from "hono/cors"
 import { secureHeaders } from "hono/secure-headers"
-import { logger } from "./shared/middleware/logger"
+import { loggerMiddleware } from "./shared/middleware/logger"
 import { createDb } from "@cpa-study/db"
 import { createAuthFeature } from "./features/auth"
 import { createChatFeature } from "./features/chat"
@@ -92,13 +92,7 @@ const createApp = (env: Env) => {
   })
 
   const app = new Hono<{ Bindings: Env; Variables: Variables }>()
-    // ローカル環境のみ詳細ログを出力
-    .use("*", async (c, next) => {
-      if (env.ENVIRONMENT === "local") {
-        return logger()(c, next)
-      }
-      return next()
-    })
+    .use("*", loggerMiddleware())
     .use("*", secureHeaders())
     .use("*", corsMiddleware)
     // レート制限（より具体的なパスを先に定義）
@@ -131,26 +125,13 @@ const createApp = (env: Env) => {
     .route("/api/study-plans", createStudyPlanFeature(env, db))
     .get("/api/health", (c) => c.json({ status: "ok" }))
     .onError((error, c) => {
-      // ローカル環境では詳細なエラー情報を出力
-      if (env.ENVIRONMENT === "local") {
-        console.error(`[${new Date().toISOString()}] [UNHANDLED ERROR]`)
-        console.error(`  Path: ${c.req.path}`)
-        console.error(`  Method: ${c.req.method}`)
-        if (error instanceof Error) {
-          console.error(`  Name: ${error.name}`)
-          console.error(`  Message: ${error.message}`)
-          if (error.stack) {
-            console.error(`  Stack:`)
-            error.stack.split("\n").forEach((line) => {
-              console.error(`    ${line}`)
-            })
-          }
-          if (error.cause) {
-            console.error(`  Cause:`, error.cause)
-          }
-        } else {
-          console.error(`  Error:`, error)
-        }
+      // loggerMiddlewareで既にログ出力済み（catch→throw経由）
+      // ここでは追加のコンテキストがあれば出力
+      const logger = c.get("logger")
+      if (logger && error instanceof Error) {
+        logger.error("Error handler reached", {
+          error: error.message,
+        })
       }
       return c.json(
         {

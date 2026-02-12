@@ -23,20 +23,14 @@ export const viewRoutes = ({ db }: ViewDeps) => {
   const categoryTopicsViewRepo = createCategoryTopicsViewRepository(db)
   const searchViewRepo = createSearchViewRepository(db)
 
-  const deps = {
-    topicViewRepo,
-    subjectDashboardViewRepo,
-    reviewListViewRepo,
-    categoryTopicsViewRepo,
-    searchViewRepo,
-  }
-
   const app = new Hono<{ Bindings: Env; Variables: Variables }>()
     // Topic detail view
     .get("/topics/:topicId", authMiddleware, async (c) => {
       const topicId = c.req.param("topicId")
       const user = c.get("user")
+      const logger = c.get("logger").child({ feature: "view" })
 
+      const deps = { topicViewRepo, subjectDashboardViewRepo, reviewListViewRepo, categoryTopicsViewRepo, searchViewRepo, logger }
       const result = await getTopicView(deps, user.id, topicId)
       return handleResult(c, result)
     })
@@ -45,7 +39,9 @@ export const viewRoutes = ({ db }: ViewDeps) => {
     .get("/subjects/:subjectId/dashboard", authMiddleware, async (c) => {
       const subjectId = c.req.param("subjectId")
       const user = c.get("user")
+      const logger = c.get("logger").child({ feature: "view" })
 
+      const deps = { topicViewRepo, subjectDashboardViewRepo, reviewListViewRepo, categoryTopicsViewRepo, searchViewRepo, logger }
       const result = await getSubjectDashboard(deps, user.id, subjectId)
       return handleResult(c, result)
     })
@@ -58,7 +54,9 @@ export const viewRoutes = ({ db }: ViewDeps) => {
       async (c) => {
         const user = c.get("user")
         const { understood, daysSince, limit } = c.req.valid("query")
+        const logger = c.get("logger").child({ feature: "view" })
 
+        const deps = { topicViewRepo, subjectDashboardViewRepo, reviewListViewRepo, categoryTopicsViewRepo, searchViewRepo, logger }
         const result = await getReviewList(deps, user.id, {
           understood,
           daysSince,
@@ -72,7 +70,9 @@ export const viewRoutes = ({ db }: ViewDeps) => {
     .get("/categories/:categoryId/topics", authMiddleware, async (c) => {
       const categoryId = c.req.param("categoryId")
       const user = c.get("user")
+      const logger = c.get("logger").child({ feature: "view" })
 
+      const deps = { topicViewRepo, subjectDashboardViewRepo, reviewListViewRepo, categoryTopicsViewRepo, searchViewRepo, logger }
       const result = await getCategoryTopics(deps, user.id, categoryId)
       return handleResult(c, result)
     })
@@ -85,7 +85,9 @@ export const viewRoutes = ({ db }: ViewDeps) => {
       async (c) => {
         const user = c.get("user")
         const { q, studyDomainId, limit } = c.req.valid("query")
+        const logger = c.get("logger").child({ feature: "view" })
 
+        const deps = { topicViewRepo, subjectDashboardViewRepo, reviewListViewRepo, categoryTopicsViewRepo, searchViewRepo, logger }
         const result = await searchTopics(deps, user.id, q, studyDomainId, limit)
         return handleResult(c, result)
       }

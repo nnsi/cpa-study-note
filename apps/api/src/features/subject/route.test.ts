@@ -15,6 +15,7 @@ import {
 } from "@/test/helpers"
 import { subjectRoutes } from "./route"
 import { createMockSimpleTransactionRunner } from "@/shared/lib/transaction"
+import { loggerMiddleware } from "@/shared/middleware/logger"
 
 // Helper to create test app with proper typing
 const createTestApp = (env: Env, db: Db) => {
@@ -24,6 +25,7 @@ const createTestApp = (env: Env, db: Db) => {
       c.env = env
       return next()
     })
+    .use("*", loggerMiddleware())
     .route("/api/subjects", subjectRoutes({ db, txRunner }))
 }
 

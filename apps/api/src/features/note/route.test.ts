@@ -16,6 +16,7 @@ import {
   errorResponseSchema,
   type TestContext,
 } from "../../test/helpers"
+import { loggerMiddleware } from "../../shared/middleware/logger"
 import { mockAIPresets } from "../../test/mocks/ai"
 
 // レスポンススキーマ定義
@@ -82,6 +83,7 @@ describe("Note Routes", () => {
 
     // メインアプリにマウント（環境変数を初期化）
     app = new Hono<{ Bindings: Env; Variables: Variables }>()
+    app.use("*", loggerMiddleware())
     app.use("*", async (c, next) => {
       if (!c.env) {
         (c as any).env = {}
@@ -348,6 +350,7 @@ describe("Note Routes", () => {
       const routes = noteRoutes({ env: prodEnv, db: ctx.db as any })
 
       const prodApp = new Hono<{ Bindings: Env; Variables: Variables }>()
+      prodApp.use("*", loggerMiddleware())
       prodApp.use("*", async (c, next) => {
         if (!c.env) {
           (c as any).env = {}
@@ -371,6 +374,7 @@ describe("Note Routes", () => {
       const routes = noteRoutes({ env: prodEnv, db: ctx.db as any })
 
       const prodApp = new Hono<{ Bindings: Env; Variables: Variables }>()
+      prodApp.use("*", loggerMiddleware())
       prodApp.use("*", async (c, next) => {
         if (!c.env) {
           (c as any).env = {}
@@ -396,6 +400,7 @@ describe("Note Routes", () => {
       const routes = noteRoutes({ env: prodEnv, db: ctx.db as any })
 
       const prodApp = new Hono<{ Bindings: Env; Variables: Variables }>()
+      prodApp.use("*", loggerMiddleware())
       prodApp.use("*", async (c, next) => {
         if (!c.env) {
           (c as any).env = {}
