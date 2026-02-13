@@ -6,7 +6,7 @@ import { createLearningRepository, type LearningRepository } from "../learning/r
 import { createMockAIAdapter } from "../../test/mocks/ai"
 import type { AIAdapter, StreamChunk } from "../../shared/lib/ai"
 import { defaultAIConfig } from "../../shared/lib/ai"
-import { noopLogger } from "../../test/helpers"
+import { noopLogger, noopTracer } from "../../test/helpers"
 import {
   createSession,
   listSessionsByTopic,
@@ -281,7 +281,7 @@ describe("Chat UseCase", () => {
 
       const chunks: StreamChunk[] = []
       for await (const chunk of sendMessage(
-        { chatRepo, learningRepo, aiAdapter, aiConfig: defaultAIConfig, logger: noopLogger },
+        { chatRepo, learningRepo, aiAdapter, aiConfig: defaultAIConfig, logger: noopLogger, tracer: noopTracer },
         {
           sessionId: session.id,
           userId: testData.userId,
@@ -325,7 +325,7 @@ describe("Chat UseCase", () => {
 
       const chunks: StreamChunk[] = []
       for await (const chunk of sendMessage(
-        { chatRepo, learningRepo, aiAdapter: errorAdapter, aiConfig: defaultAIConfig, logger: noopLogger },
+        { chatRepo, learningRepo, aiAdapter: errorAdapter, aiConfig: defaultAIConfig, logger: noopLogger, tracer: noopTracer },
         {
           sessionId: session.id,
           userId: testData.userId,
@@ -350,7 +350,7 @@ describe("Chat UseCase", () => {
 
       const chunks: StreamChunk[] = []
       for await (const chunk of sendMessage(
-        { chatRepo, learningRepo, aiAdapter, aiConfig: defaultAIConfig, logger: noopLogger },
+        { chatRepo, learningRepo, aiAdapter, aiConfig: defaultAIConfig, logger: noopLogger, tracer: noopTracer },
         {
           sessionId: session.id,
           userId: "other-user-id",
@@ -373,7 +373,7 @@ describe("Chat UseCase", () => {
 
       const chunks: StreamChunk[] = []
       for await (const chunk of sendMessage(
-        { chatRepo, learningRepo, aiAdapter, aiConfig: defaultAIConfig, logger: noopLogger },
+        { chatRepo, learningRepo, aiAdapter, aiConfig: defaultAIConfig, logger: noopLogger, tracer: noopTracer },
         {
           sessionId: session.id,
           userId: testData.userId,
@@ -409,7 +409,7 @@ describe("Chat UseCase", () => {
       })
 
       for await (const _ of sendMessage(
-        { chatRepo, learningRepo, aiAdapter: trackingAdapter, aiConfig: defaultAIConfig, logger: noopLogger },
+        { chatRepo, learningRepo, aiAdapter: trackingAdapter, aiConfig: defaultAIConfig, logger: noopLogger, tracer: noopTracer },
         {
           sessionId: session.id,
           userId: testData.userId,
@@ -440,7 +440,7 @@ describe("Chat UseCase", () => {
     it("should create session and send message simultaneously", async () => {
       const chunks: (StreamChunk & { sessionId?: string })[] = []
       for await (const chunk of sendMessageWithNewSession(
-        { chatRepo, learningRepo, aiAdapter, aiConfig: defaultAIConfig, logger: noopLogger },
+        { chatRepo, learningRepo, aiAdapter, aiConfig: defaultAIConfig, logger: noopLogger, tracer: noopTracer },
         {
           topicId: testData.topicId,
           userId: testData.userId,
@@ -479,7 +479,7 @@ describe("Chat UseCase", () => {
     it("should reject for non-existent topic", async () => {
       const chunks: StreamChunk[] = []
       for await (const chunk of sendMessageWithNewSession(
-        { chatRepo, learningRepo, aiAdapter, aiConfig: defaultAIConfig, logger: noopLogger },
+        { chatRepo, learningRepo, aiAdapter, aiConfig: defaultAIConfig, logger: noopLogger, tracer: noopTracer },
         {
           topicId: "non-existent-topic",
           userId: testData.userId,
@@ -496,7 +496,7 @@ describe("Chat UseCase", () => {
 
     it("should update progress after message sent", async () => {
       for await (const _ of sendMessageWithNewSession(
-        { chatRepo, learningRepo, aiAdapter, aiConfig: defaultAIConfig, logger: noopLogger },
+        { chatRepo, learningRepo, aiAdapter, aiConfig: defaultAIConfig, logger: noopLogger, tracer: noopTracer },
         {
           topicId: testData.topicId,
           userId: testData.userId,
@@ -535,7 +535,7 @@ describe("Chat UseCase", () => {
       })
 
       const result = await evaluateQuestion(
-        { chatRepo, learningRepo, aiAdapter: goodAdapter, aiConfig: defaultAIConfig, logger: noopLogger },
+        { chatRepo, learningRepo, aiAdapter: goodAdapter, aiConfig: defaultAIConfig, logger: noopLogger, tracer: noopTracer },
         testData.userId,
         message.id,
       )
@@ -569,7 +569,7 @@ describe("Chat UseCase", () => {
       })
 
       const result = await evaluateQuestion(
-        { chatRepo, learningRepo, aiAdapter: surfaceAdapter, aiConfig: defaultAIConfig, logger: noopLogger },
+        { chatRepo, learningRepo, aiAdapter: surfaceAdapter, aiConfig: defaultAIConfig, logger: noopLogger, tracer: noopTracer },
         testData.userId,
         message.id,
       )
@@ -603,7 +603,7 @@ describe("Chat UseCase", () => {
       })
 
       const result = await evaluateQuestion(
-        { chatRepo, learningRepo, aiAdapter: ambiguousAdapter, aiConfig: defaultAIConfig, logger: noopLogger },
+        { chatRepo, learningRepo, aiAdapter: ambiguousAdapter, aiConfig: defaultAIConfig, logger: noopLogger, tracer: noopTracer },
         testData.userId,
         message.id,
       )

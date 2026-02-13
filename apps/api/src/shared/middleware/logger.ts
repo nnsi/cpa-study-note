@@ -1,9 +1,11 @@
 import type { MiddlewareHandler } from "hono"
 import { createLogger } from "../lib/logger"
+import { createTracer } from "../lib/tracer"
 
 /**
  * 構造化ロガーミドルウェア
  * - リクエストごとにrequestIdを生成し、全ログに付与
+ * - リクエストごとにTracerを生成し、パフォーマンス計測を提供
  * - JSON形式で出力（Cloudflare Workers Logs対応）
  * - 全環境で有効（localだけでなくstaging/productionでも動作）
  */
@@ -16,8 +18,10 @@ export const loggerMiddleware = (): MiddlewareHandler => {
     const logger = createLogger({
       bindings: { requestId, method, path },
     })
+    const tracer = createTracer()
 
     c.set("logger", logger)
+    c.set("tracer", tracer)
 
     logger.info("Request received")
 
@@ -34,9 +38,10 @@ export const loggerMiddleware = (): MiddlewareHandler => {
           stack: error.stack,
           ...(error.cause ? { cause: String(error.cause) } : {}),
           duration,
+          ...tracer.getSummary(),
         })
       } else {
-        logger.error("Unhandled error", { error: String(error), duration })
+        logger.error("Unhandled error", { error: String(error), duration, ...tracer.getSummary() })
       }
 
       throw error
@@ -45,6 +50,6 @@ export const loggerMiddleware = (): MiddlewareHandler => {
     const duration = Date.now() - start
     const status = c.res.status
     const level = status >= 500 ? "error" : status >= 400 ? "warn" : "info"
-    logger[level]("Response sent", { status, duration })
+    logger[level]("Response sent", { status, duration, ...tracer.getSummary() })
   }
 }

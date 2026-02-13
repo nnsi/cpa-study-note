@@ -7,7 +7,7 @@ import type { ChatRepository } from "../chat/repository"
 import type { AIAdapter } from "@/shared/lib/ai"
 import { defaultAIConfig } from "@/shared/lib/ai"
 import type { SubjectRepository } from "../subject/repository"
-import { noopLogger } from "../../test/helpers"
+import { noopLogger, noopTracer } from "../../test/helpers"
 import {
   createNoteFromSession,
   createManualNote,
@@ -174,7 +174,7 @@ describe("Note UseCase", () => {
       const aiAdapter = createMockAIAdapter()
 
       const result = await createNoteFromSession(
-        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: defaultAIConfig.noteSummary, logger: noopLogger },
+        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: defaultAIConfig.noteSummary, logger: noopLogger, tracer: noopTracer },
         { userId: "user-1", sessionId: "session-1" }
       )
 
@@ -195,7 +195,7 @@ describe("Note UseCase", () => {
       const aiAdapter = createMockAIAdapter()
 
       const result = await createNoteFromSession(
-        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: defaultAIConfig.noteSummary, logger: noopLogger },
+        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: defaultAIConfig.noteSummary, logger: noopLogger, tracer: noopTracer },
         { userId: "user-1", sessionId: "non-existent" }
       )
 
@@ -214,7 +214,7 @@ describe("Note UseCase", () => {
       const aiAdapter = createMockAIAdapter()
 
       const result = await createNoteFromSession(
-        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: defaultAIConfig.noteSummary, logger: noopLogger },
+        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: defaultAIConfig.noteSummary, logger: noopLogger, tracer: noopTracer },
         { userId: "user-1", sessionId: "session-1" }
       )
 
@@ -252,7 +252,7 @@ describe("Note UseCase", () => {
       })
 
       const result = await createNoteFromSession(
-        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: defaultAIConfig.noteSummary, logger: noopLogger },
+        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: defaultAIConfig.noteSummary, logger: noopLogger, tracer: noopTracer },
         { userId: "user-1", sessionId: "session-1" }
       )
 
@@ -283,7 +283,7 @@ describe("Note UseCase", () => {
       })
 
       const result = await createNoteFromSession(
-        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: defaultAIConfig.noteSummary, logger: noopLogger },
+        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: defaultAIConfig.noteSummary, logger: noopLogger, tracer: noopTracer },
         { userId: "user-1", sessionId: "session-1" }
       )
 
@@ -631,7 +631,7 @@ describe("Note UseCase", () => {
       const aiAdapter = createMockAIAdapter()
 
       const result = await createNoteFromSession(
-        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: defaultAIConfig.noteSummary, logger: noopLogger },
+        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: defaultAIConfig.noteSummary, logger: noopLogger, tracer: noopTracer },
         { userId: "user-1", sessionId: "session-1" }
       )
 
@@ -756,7 +756,7 @@ describe("Note UseCase", () => {
       })
 
       const result = await createNoteFromSession(
-        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: defaultAIConfig.noteSummary, logger: noopLogger },
+        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: defaultAIConfig.noteSummary, logger: noopLogger, tracer: noopTracer },
         { userId: "user-1", sessionId: "session-1" }
       )
 

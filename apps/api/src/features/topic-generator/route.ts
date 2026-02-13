@@ -33,9 +33,10 @@ export const topicGeneratorRoutes = ({ env, db }: TopicGeneratorDeps) => {
         const user = c.get("user")
         const { prompt } = c.req.valid("json")
         const logger = c.get("logger").child({ feature: "topic-generator" })
+        const tracer = c.get("tracer")
 
         const stream = suggestTopics(
-          { subjectRepo, studyDomainRepo, aiAdapter, aiConfig, logger },
+          { subjectRepo, studyDomainRepo, aiAdapter, aiConfig, logger, tracer },
           { subjectId, userId: user.id, prompt }
         )
 

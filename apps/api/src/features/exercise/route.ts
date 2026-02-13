@@ -68,9 +68,10 @@ export const exerciseRoutes = ({ env, db }: ExerciseDeps) => {
       })
 
       const logger = c.get("logger").child({ feature: "exercise" })
+      const tracer = c.get("tracer")
 
       const result = await analyzeExercise(
-        { exerciseRepo, imageRepo, aiAdapter, aiConfig, r2: env.R2, logger },
+        { exerciseRepo, imageRepo, aiAdapter, aiConfig, r2: env.R2, logger, tracer },
         user.id,
         file.name || "image",
         file.type,

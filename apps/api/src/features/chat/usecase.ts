@@ -13,6 +13,7 @@ import { z } from "zod"
 import { ok, err, type Result } from "@/shared/lib/result"
 import { notFound, forbidden, type AppError } from "@/shared/lib/errors"
 import type { Logger } from "@/shared/lib/logger"
+import type { Tracer } from "@/shared/lib/tracer"
 
 export type ChatDeps = {
   chatRepo: ChatRepository
@@ -20,6 +21,7 @@ export type ChatDeps = {
   aiAdapter: AIAdapter
   aiConfig: AIConfig
   logger: Logger
+  tracer: Tracer
 }
 
 // セッション作成
@@ -148,9 +150,12 @@ export async function* sendMessage(
   deps: ChatDeps,
   input: SendMessageInput
 ): AsyncIterable<StreamChunk> {
-  const t0 = performance.now()
+  const { tracer } = deps
+
   // Phase 1: セッション取得（階層取得に topicId が必要）
-  const session = await deps.chatRepo.findSessionById(input.sessionId)
+  const session = await tracer.span("d1.findSessionById", () =>
+    deps.chatRepo.findSessionById(input.sessionId)
+  )
   if (!session) {
     yield { type: "error", error: "Session not found" }
     return
@@ -162,29 +167,24 @@ export async function* sendMessage(
   }
 
   // Phase 2: 階層取得と履歴取得を並列実行（履歴は新メッセージ保存前に取得）
-  const t1 = performance.now()
-  deps.logger.debug("Phase1 findSession", { duration: t1 - t0 })
-
-  const [hierarchy, history] = await Promise.all([
-    deps.chatRepo.getTopicWithHierarchy(session.topicId),
-    deps.chatRepo.findRecentMessagesForContext(input.sessionId),
-  ])
-
-  const t2 = performance.now()
-  deps.logger.debug("Phase2 hierarchy+history", { duration: t2 - t1 })
+  const [hierarchy, history] = await tracer.span("d1.hierarchyAndHistory", () =>
+    Promise.all([
+      deps.chatRepo.getTopicWithHierarchy(session.topicId),
+      deps.chatRepo.findRecentMessagesForContext(input.sessionId),
+    ])
+  )
 
   // Phase 3: ユーザーメッセージを保存（履歴取得後に実行して二重送信を防ぐ）
-  const userMessage = await deps.chatRepo.createMessage({
-    sessionId: input.sessionId,
-    role: "user",
-    content: input.content,
-    imageId: input.imageId ?? null,
-    ocrResult: input.ocrResult ?? null,
-    questionQuality: null,
-  })
-
-  const t3 = performance.now()
-  deps.logger.debug("Phase3 createMessage", { duration: t3 - t2 })
+  const userMessage = await tracer.span("d1.createMessage", () =>
+    deps.chatRepo.createMessage({
+      sessionId: input.sessionId,
+      role: "user",
+      content: input.content,
+      imageId: input.imageId ?? null,
+      ocrResult: input.ocrResult ?? null,
+      questionQuality: null,
+    })
+  )
 
   if (!hierarchy) {
     yield { type: "error", error: "Topic not found" }
@@ -221,8 +221,7 @@ export async function* sendMessage(
 
   // AIからのストリーミングレスポンス
   const responseChunks: string[] = []
-  const t4 = performance.now()
-  deps.logger.debug("Prompt build", { duration: t4 - t3, totalBeforeAi: t4 - t0 })
+  const aiStart = performance.now()
   let firstChunkTime: number | null = null
 
   try {
@@ -235,7 +234,7 @@ export async function* sendMessage(
       if (chunk.type === "text" && chunk.content) {
         if (!firstChunkTime) {
           firstChunkTime = performance.now()
-          deps.logger.debug("AI TTFB", { ttfb: firstChunkTime - t4, totalTtfb: firstChunkTime - t0 })
+          tracer.addSpan("ai.ttfb", firstChunkTime - aiStart)
         }
         responseChunks.push(chunk.content)
         yield chunk
@@ -247,29 +246,32 @@ export async function* sendMessage(
     return
   }
 
-  const t5 = performance.now()
-  deps.logger.debug("AI stream complete", { duration: t5 - t4 })
+  // ai.ttfbとの二重カウントを避けるため、TTFB以降の時間のみ記録
+  tracer.addSpan("ai.stream", performance.now() - (firstChunkTime ?? aiStart))
 
   // ストリーム後の書き込みを並列実行
   const fullResponse = responseChunks.join("")
-  await Promise.all([
-    fullResponse
-      ? deps.chatRepo.createMessage({
-          sessionId: input.sessionId,
-          role: "assistant",
-          content: fullResponse,
-          imageId: null,
-          ocrResult: null,
-          questionQuality: null,
-        })
-      : Promise.resolve(),
-    deps.learningRepo.upsertProgress(input.userId, {
-      userId: input.userId,
-      topicId: session.topicId,
-      incrementQuestionCount: true,
-    }),
-  ])
+  await tracer.span("d1.postStreamWrites", () =>
+    Promise.all([
+      fullResponse
+        ? deps.chatRepo.createMessage({
+            sessionId: input.sessionId,
+            role: "assistant",
+            content: fullResponse,
+            imageId: null,
+            ocrResult: null,
+            questionQuality: null,
+          })
+        : Promise.resolve(),
+      deps.learningRepo.upsertProgress(input.userId, {
+        userId: input.userId,
+        topicId: session.topicId,
+        incrementQuestionCount: true,
+      }),
+    ])
+  )
 
+  deps.logger.info("Stream complete", tracer.getSummary())
   yield { type: "done" as const, messageId: userMessage.id }
 }
 
@@ -278,38 +280,45 @@ export async function* sendMessageWithNewSession(
   deps: ChatDeps,
   input: SendMessageWithNewSessionInput
 ): AsyncIterable<StreamChunk & { sessionId?: string }> {
+  const { tracer } = deps
+
   // トピックの存在確認 + userId所有権チェック（deletedAt含む）
-  const exists = await deps.learningRepo.verifyTopicExists(input.userId, input.topicId)
+  const exists = await tracer.span("d1.verifyTopicExists", () =>
+    deps.learningRepo.verifyTopicExists(input.userId, input.topicId)
+  )
   if (!exists) {
     yield { type: "error", error: "Topic not found" }
     return
   }
 
   // 階層取得（AI用システムプロンプト構築に必要）
-  const hierarchy = await deps.chatRepo.getTopicWithHierarchy(input.topicId)
+  const hierarchy = await tracer.span("d1.getTopicWithHierarchy", () =>
+    deps.chatRepo.getTopicWithHierarchy(input.topicId)
+  )
   if (!hierarchy) {
     yield { type: "error", error: "Topic not found" }
     return
   }
 
-  // セッション作成（hierarchy で topic 存在を確認済み）
-  const session = await deps.chatRepo.createSession({
-    userId: input.userId,
-    topicId: input.topicId,
+  // セッション作成 + ユーザーメッセージ保存
+  const [session, userMessage] = await tracer.span("d1.createSessionAndMessage", async () => {
+    const s = await deps.chatRepo.createSession({
+      userId: input.userId,
+      topicId: input.topicId,
+    })
+    const m = await deps.chatRepo.createMessage({
+      sessionId: s.id,
+      role: "user",
+      content: input.content,
+      imageId: input.imageId ?? null,
+      ocrResult: input.ocrResult ?? null,
+      questionQuality: null,
+    })
+    return [s, m] as const
   })
 
   // セッションIDを最初に通知
   yield { type: "session_created" as const, sessionId: session.id }
-
-  // ユーザーメッセージを保存
-  const userMessage = await deps.chatRepo.createMessage({
-    sessionId: session.id,
-    role: "user",
-    content: input.content,
-    imageId: input.imageId ?? null,
-    ocrResult: input.ocrResult ?? null,
-    questionQuality: null,
-  })
 
   // AI用メッセージを構築
   const systemPrompt = buildSystemPrompt({
@@ -330,6 +339,7 @@ export async function* sendMessageWithNewSession(
 
   // AIからのストリーミングレスポンス
   const responseChunks: string[] = []
+  const aiStart = performance.now()
 
   try {
     for await (const chunk of deps.aiAdapter.streamText({
@@ -349,26 +359,31 @@ export async function* sendMessageWithNewSession(
     return
   }
 
+  tracer.addSpan("ai.stream", performance.now() - aiStart)
+
   // ストリーム後の書き込みを並列実行
   const fullResponse = responseChunks.join("")
-  await Promise.all([
-    fullResponse
-      ? deps.chatRepo.createMessage({
-          sessionId: session.id,
-          role: "assistant",
-          content: fullResponse,
-          imageId: null,
-          ocrResult: null,
-          questionQuality: null,
-        })
-      : Promise.resolve(),
-    deps.learningRepo.upsertProgress(input.userId, {
-      userId: input.userId,
-      topicId: input.topicId,
-      incrementQuestionCount: true,
-    }),
-  ])
+  await tracer.span("d1.postStreamWrites", () =>
+    Promise.all([
+      fullResponse
+        ? deps.chatRepo.createMessage({
+            sessionId: session.id,
+            role: "assistant",
+            content: fullResponse,
+            imageId: null,
+            ocrResult: null,
+            questionQuality: null,
+          })
+        : Promise.resolve(),
+      deps.learningRepo.upsertProgress(input.userId, {
+        userId: input.userId,
+        topicId: input.topicId,
+        incrementQuestionCount: true,
+      }),
+    ])
+  )
 
+  deps.logger.info("Stream complete", tracer.getSummary())
   yield { type: "done" as const, messageId: userMessage.id }
 }
 
@@ -392,7 +407,7 @@ export const listGoodQuestionsByTopic = async (
 
 // 音声認識テキスト補正
 export const correctSpeechText = async (
-  deps: Pick<ChatDeps, "aiAdapter" | "aiConfig" | "logger">,
+  deps: Pick<ChatDeps, "aiAdapter" | "aiConfig" | "logger" | "tracer">,
   text: string
 ): Promise<Result<string, AppError>> => {
   const systemPrompt = [
@@ -407,15 +422,17 @@ export const correctSpeechText = async (
   ].join("\n")
 
   try {
-    const result = await deps.aiAdapter.generateText({
-      model: deps.aiConfig.speechCorrection.model,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: text },
-      ],
-      temperature: deps.aiConfig.speechCorrection.temperature,
-      maxTokens: deps.aiConfig.speechCorrection.maxTokens,
-    })
+    const result = await deps.tracer.span("ai.correctSpeech", () =>
+      deps.aiAdapter.generateText({
+        model: deps.aiConfig.speechCorrection.model,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: text },
+        ],
+        temperature: deps.aiConfig.speechCorrection.temperature,
+        maxTokens: deps.aiConfig.speechCorrection.maxTokens,
+      })
+    )
 
     const corrected = result.content.trim()
     return ok(corrected || text)
@@ -443,12 +460,14 @@ export const evaluateQuestion = async (
   const content = msgResult.value
   const evaluationPrompt = buildEvaluationPrompt(content)
 
-  const result = await deps.aiAdapter.generateText({
-    model: deps.aiConfig.evaluation.model,
-    messages: [{ role: "user", content: evaluationPrompt }],
-    temperature: deps.aiConfig.evaluation.temperature,
-    maxTokens: deps.aiConfig.evaluation.maxTokens,
-  })
+  const result = await deps.tracer.span("ai.evaluateQuestion", () =>
+    deps.aiAdapter.generateText({
+      model: deps.aiConfig.evaluation.model,
+      messages: [{ role: "user", content: evaluationPrompt }],
+      temperature: deps.aiConfig.evaluation.temperature,
+      maxTokens: deps.aiConfig.evaluation.maxTokens,
+    })
+  )
 
   const evaluationSchema = z.object({
     quality: z.string().default("surface"),

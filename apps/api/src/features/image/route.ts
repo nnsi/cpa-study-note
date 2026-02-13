@@ -84,9 +84,10 @@ export const imageRoutes = ({ env, db }: ImageDeps) => {
       })
 
       const logger = c.get("logger").child({ feature: "image" })
+      const tracer = c.get("tracer")
 
       const result = await performOCR(
-        { imageRepo, aiAdapter, aiConfig, r2: env.R2, logger },
+        { imageRepo, aiAdapter, aiConfig, r2: env.R2, logger, tracer },
         user.id,
         imageId
       )
