@@ -13,6 +13,7 @@ import { createLearningFeature } from "@/features/learning"
 import { createTestDatabase, seedTestData, type TestDatabase } from "../mocks/db"
 import { createMockR2Bucket } from "../mocks/r2"
 import type { Env, Variables } from "@/shared/types/env"
+import { loggerMiddleware } from "@/shared/middleware/logger"
 import type Database from "better-sqlite3"
 
 export type TestContext = {
@@ -49,6 +50,7 @@ export const setupTestEnv = (): TestContext => {
 
   // Create app with all features
   const app = new Hono<{ Bindings: Env; Variables: Variables }>()
+    .use("*", loggerMiddleware())
     .use("*", cors())
     .route("/api/auth", createAuthFeature(env, db as unknown as Parameters<typeof createAuthFeature>[1]))
     .route("/api/subjects", createSubjectFeature(env, db as unknown as Parameters<typeof createSubjectFeature>[1]))

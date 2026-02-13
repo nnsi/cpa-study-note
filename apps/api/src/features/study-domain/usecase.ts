@@ -4,11 +4,13 @@ import type {
   UpdateStudyDomainInput,
 } from "./repository"
 import type { StudyDomainResponse } from "@cpa-study/shared/schemas"
+import type { Logger } from "@/shared/lib/logger"
 import { ok, err, type Result } from "@/shared/lib/result"
 import { notFound, type AppError } from "@/shared/lib/errors"
 
 type StudyDomainDeps = {
   repo: StudyDomainRepository
+  logger: Logger
 }
 
 // List user's study domains
@@ -16,7 +18,7 @@ export const listStudyDomains = async (
   deps: StudyDomainDeps,
   userId: string
 ): Promise<Result<StudyDomainResponse[], AppError>> => {
-  const { repo } = deps
+  const repo = deps.repo
   const domains = await repo.findByUserId(userId)
 
   return ok(
@@ -39,7 +41,7 @@ export const getStudyDomain = async (
   id: string,
   userId: string
 ): Promise<Result<StudyDomainResponse, AppError>> => {
-  const { repo } = deps
+  const repo = deps.repo
   const domain = await repo.findById(id, userId)
 
   if (!domain) {
@@ -64,7 +66,7 @@ export const createStudyDomain = async (
   userId: string,
   data: Omit<CreateStudyDomainInput, "userId">
 ): Promise<Result<StudyDomainResponse, AppError>> => {
-  const { repo } = deps
+  const repo = deps.repo
 
   const { id } = await repo.create({
     userId,
@@ -96,7 +98,7 @@ export const updateStudyDomain = async (
   userId: string,
   data: UpdateStudyDomainInput
 ): Promise<Result<StudyDomainResponse, AppError>> => {
-  const { repo } = deps
+  const repo = deps.repo
   const domain = await repo.update(id, userId, data)
 
   if (!domain) {
@@ -121,7 +123,7 @@ export const deleteStudyDomain = async (
   id: string,
   userId: string
 ): Promise<Result<void, AppError>> => {
-  const { repo } = deps
+  const repo = deps.repo
 
   // Check if domain exists and belongs to user
   const existing = await repo.findById(id, userId)

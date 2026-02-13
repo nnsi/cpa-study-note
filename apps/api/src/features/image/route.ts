@@ -39,8 +39,10 @@ export const imageRoutes = ({ env, db }: ImageDeps) => {
         const user = c.get("user")
         const { filename, mimeType } = c.req.valid("json")
 
+        const logger = c.get("logger").child({ feature: "image" })
+
         const result = await createUploadUrl(
-          { imageRepo, apiBaseUrl: env.API_BASE_URL },
+          { imageRepo, apiBaseUrl: env.API_BASE_URL, logger },
           { userId: user.id, filename, mimeType }
         )
 
@@ -59,8 +61,10 @@ export const imageRoutes = ({ env, db }: ImageDeps) => {
         return handleResult(c, err(payloadTooLarge("ファイルサイズが大きすぎます（最大10MB）")))
       }
 
+      const logger = c.get("logger").child({ feature: "image" })
+
       const result = await uploadImage(
-        { imageRepo, r2: env.R2 },
+        { imageRepo, r2: env.R2, logger },
         user.id,
         imageId,
         body
@@ -79,8 +83,10 @@ export const imageRoutes = ({ env, db }: ImageDeps) => {
         apiKey: env.OPENROUTER_API_KEY,
       })
 
+      const logger = c.get("logger").child({ feature: "image" })
+
       const result = await performOCR(
-        { imageRepo, aiAdapter, aiConfig, r2: env.R2 },
+        { imageRepo, aiAdapter, aiConfig, r2: env.R2, logger },
         user.id,
         imageId
       )
@@ -93,7 +99,8 @@ export const imageRoutes = ({ env, db }: ImageDeps) => {
       const user = c.get("user")
       const imageId = c.req.param("imageId")
 
-      const result = await getImage({ imageRepo }, user.id, imageId)
+      const logger = c.get("logger").child({ feature: "image" })
+      const result = await getImage({ imageRepo, logger }, user.id, imageId)
       return handleResult(c, result, "image")
     })
 
@@ -102,8 +109,10 @@ export const imageRoutes = ({ env, db }: ImageDeps) => {
       const user = c.get("user")
       const imageId = c.req.param("imageId")
 
+      const logger = c.get("logger").child({ feature: "image" })
+
       const result = await getImageFile(
-        { imageRepo, r2: env.R2 },
+        { imageRepo, r2: env.R2, logger },
         user.id,
         imageId
       )

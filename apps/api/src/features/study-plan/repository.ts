@@ -115,7 +115,8 @@ export const createStudyPlanRepository = (db: Db): StudyPlanRepository => ({
       .leftJoin(subjects, eq(studyPlans.subjectId, subjects.id))
       .where(eq(studyPlans.id, planId))
       .limit(1)
-    return result.length > 0 ? { ...result[0], subjectName: result[0].subjectName ?? null } : null
+    const row = result[0]
+    return row ? { ...row, subjectName: row.subjectName ?? null } : null
   },
 
   createPlan: async ({ id, userId, title, intent, scope, subjectId, now }) => {
@@ -167,7 +168,8 @@ export const createStudyPlanRepository = (db: Db): StudyPlanRepository => ({
       .leftJoin(subjects, eq(studyPlans.subjectId, subjects.id))
       .where(eq(studyPlans.id, planId))
       .limit(1)
-    return result.length > 0 ? { ...result[0], subjectName: result[0].subjectName ?? null } : null
+    const row = result[0]
+    return row ? { ...row, subjectName: row.subjectName ?? null } : null
   },
 
   archivePlan: async (planId) => {
@@ -227,7 +229,8 @@ export const createStudyPlanRepository = (db: Db): StudyPlanRepository => ({
       .leftJoin(subjects, eq(studyPlans.subjectId, subjects.id))
       .where(eq(studyPlans.id, newPlanId))
       .limit(1)
-    return result.length > 0 ? { ...result[0], subjectName: result[0].subjectName ?? null } : null
+    const row = result[0]
+    return row ? { ...row, subjectName: row.subjectName ?? null } : null
   },
 
   findItemsByPlan: async (planId) => {
@@ -310,7 +313,8 @@ export const createStudyPlanRepository = (db: Db): StudyPlanRepository => ({
       .leftJoin(topics, eq(studyPlanItems.topicId, topics.id))
       .where(eq(studyPlanItems.id, itemId))
       .limit(1)
-    return items.length > 0 ? { ...items[0], topicName: items[0].topicName ?? null } : null
+    const row = items[0]
+    return row ? { ...row, topicName: row.topicName ?? null } : null
   },
 
   deleteItem: async (itemId) => {
@@ -345,7 +349,8 @@ export const createStudyPlanRepository = (db: Db): StudyPlanRepository => ({
       .leftJoin(topics, eq(studyPlanItems.topicId, topics.id))
       .where(eq(studyPlanItems.id, itemId))
       .limit(1)
-    return items.length > 0 ? { ...items[0], topicName: items[0].topicName ?? null } : null
+    const row = items[0]
+    return row ? { ...row, topicName: row.topicName ?? null } : null
   },
 
   findRevisionsByPlan: async (planId) => {
@@ -374,7 +379,7 @@ export const createStudyPlanRepository = (db: Db): StudyPlanRepository => ({
     }
 
     const result = await db.select().from(studyPlanRevisions).where(eq(studyPlanRevisions.id, revisionId)).limit(1)
-    return result.length > 0 ? result[0] : null
+    return result[0] ?? null
   },
 
   isPlanOwnedByUser: async (planId, userId) => {

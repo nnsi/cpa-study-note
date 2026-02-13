@@ -35,3 +35,10 @@ resource "cloudflare_r2_bucket" "images_prod" {
   name       = "cpa-study-images-prod"
   location   = "APAC"
 }
+
+# ===========================================
+# Workers Analytics Engine (WAE)
+# ===========================================
+# WAE datasets are auto-provisioned via wrangler.toml bindings.
+# Dataset: "api_logs" — used by Tail Worker for structured log aggregation.
+# No Terraform resource needed; managed through wrangler deploy.

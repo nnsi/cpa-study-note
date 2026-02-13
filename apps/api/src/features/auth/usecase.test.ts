@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest"
 import { createTestDatabase, seedTestData } from "../../test/mocks/db"
+import { noopLogger } from "../../test/helpers"
 import { createAuthRepository, type AuthRepository } from "./repository"
 import { handleOAuthCallback, refreshAccessToken } from "./usecase"
 import type { OAuthProvider, OAuthTokens, OAuthUserInfo } from "./domain"
@@ -71,7 +72,7 @@ describe("Auth UseCase", () => {
       const providers = createProvidersMap(mockProvider)
 
       const result = await handleOAuthCallback(
-        { repo, providers, db },
+        { repo, providers, db, logger: noopLogger },
         "google",
         "auth-code-123"
       )
@@ -105,7 +106,7 @@ describe("Auth UseCase", () => {
       const providers = createProvidersMap(mockProvider)
 
       const result = await handleOAuthCallback(
-        { repo, providers, db },
+        { repo, providers, db, logger: noopLogger },
         "google",
         "auth-code-123"
       )
@@ -131,7 +132,7 @@ describe("Auth UseCase", () => {
       const providers = createProvidersMap(mockProvider)
 
       const result = await handleOAuthCallback(
-        { repo, providers, db },
+        { repo, providers, db, logger: noopLogger },
         "google",
         "auth-code-123"
       )
@@ -157,7 +158,7 @@ describe("Auth UseCase", () => {
       const providers = createProvidersMap(mockProvider)
 
       const result = await handleOAuthCallback(
-        { repo, providers, db },
+        { repo, providers, db, logger: noopLogger },
         "invalid-provider",
         "auth-code-123"
       )
@@ -172,7 +173,7 @@ describe("Auth UseCase", () => {
       const providers = createProvidersMap(mockProvider)
 
       const result = await handleOAuthCallback(
-        { repo, providers, db },
+        { repo, providers, db, logger: noopLogger },
         "google",
         "invalid-code"
       )
@@ -189,7 +190,7 @@ describe("Auth UseCase", () => {
       const providers = createProvidersMap(mockProvider)
 
       const result = await handleOAuthCallback(
-        { repo, providers, db },
+        { repo, providers, db, logger: noopLogger },
         "google",
         "auth-code"
       )
@@ -204,7 +205,7 @@ describe("Auth UseCase", () => {
       const providers = createProvidersMap(mockProvider)
 
       const result = await handleOAuthCallback(
-        { repo, providers, db },
+        { repo, providers, db, logger: noopLogger },
         "google",
         "auth-code"
       )
@@ -247,7 +248,7 @@ describe("Auth UseCase", () => {
       })
 
       const result = await refreshAccessToken(
-        { repo },
+        { repo, logger: noopLogger },
         rawToken,
         mockJwtSecret,
         mockGenerateAccessToken
@@ -276,7 +277,7 @@ describe("Auth UseCase", () => {
       })
 
       const result = await refreshAccessToken(
-        { repo },
+        { repo, logger: noopLogger },
         rawToken,
         mockJwtSecret,
         mockGenerateAccessToken
@@ -295,7 +296,7 @@ describe("Auth UseCase", () => {
 
     it("should reject invalid refresh token", async () => {
       const result = await refreshAccessToken(
-        { repo },
+        { repo, logger: noopLogger },
         "non-existent-token",
         mockJwtSecret,
         mockGenerateAccessToken
@@ -334,7 +335,7 @@ describe("Auth UseCase", () => {
       // For now, we just verify the flow works with existing user
 
       const result = await refreshAccessToken(
-        { repo },
+        { repo, logger: noopLogger },
         rawToken,
         mockJwtSecret,
         mockGenerateAccessToken

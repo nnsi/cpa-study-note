@@ -14,6 +14,7 @@ import {
   errorResponseSchema,
   type TestContext,
 } from "../../test/helpers"
+import { loggerMiddleware } from "../../shared/middleware/logger"
 import * as schema from "@cpa-study/db/schema"
 
 // Response schemas
@@ -48,6 +49,7 @@ describe("Study Domain Routes", () => {
 
     // Mount on main app with environment setup
     app = new Hono<{ Bindings: Env; Variables: Variables }>()
+    app.use("*", loggerMiddleware())
     app.use("*", async (c, next) => {
       if (!c.env) {
         (c as any).env = {}

@@ -18,6 +18,7 @@ import {
   errorResponseSchema,
   type TestContext,
 } from "../../test/helpers"
+import { loggerMiddleware } from "../../shared/middleware/logger"
 import * as schema from "@cpa-study/db/schema"
 
 // AI Adapterをモック
@@ -101,6 +102,7 @@ describe("Exercise Routes", () => {
       Object.assign(c.env, ctx.env)
       await next()
     })
+    app.use("*", loggerMiddleware())
     app.route("/exercises", routes)
   })
 
@@ -244,6 +246,7 @@ describe("Exercise Routes", () => {
         Object.assign(c.env, prodEnv)
         await next()
       })
+      prodApp.use("*", loggerMiddleware())
       prodApp.route("/exercises", routes)
 
       const res = await prodApp.request("/exercises/topics/some-topic", {

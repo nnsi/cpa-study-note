@@ -457,7 +457,7 @@ describe("E2E: Multi-user boundary tests", () => {
         body: { targetType: "subject", targetId: userASubjectId },
       })
 
-      expect(res.status).toBe(200)
+      expect(res.status).toBe(201)
       const data = await res.json() as { bookmark: unknown }
       expect(data.bookmark).toBeDefined()
     })
@@ -563,7 +563,7 @@ describe("E2E: Multi-user boundary tests", () => {
         userId: userAId,
         body: { targetType: "subject", targetId: testSubjectId },
       })
-      expect(addRes.status).toBe(200)
+      expect(addRes.status).toBe(201)
 
       // 科目を論理削除
       ctx.db.update(schema.subjects)

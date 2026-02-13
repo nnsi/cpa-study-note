@@ -1,10 +1,11 @@
 import { ok, err, type Result } from "@/shared/lib/result"
 import { notFound, type AppError } from "@/shared/lib/errors"
-import type { TopicViewRepo, TopicViewData } from "./repositories/topicViewRepo"
-import type { SubjectDashboardViewRepo, SubjectDashboardData } from "./repositories/subjectDashboardViewRepo"
-import type { ReviewListViewRepo, ReviewListData, ReviewListFilters } from "./repositories/reviewListViewRepo"
-import type { CategoryTopicsViewRepo, CategoryTopicsData } from "./repositories/categoryTopicsViewRepo"
-import type { SearchViewRepo } from "./repositories/searchViewRepo"
+import type { Logger } from "@/shared/lib/logger"
+import type { TopicViewRepository, TopicViewData } from "./repositories/topicViewRepo"
+import type { SubjectDashboardViewRepository, SubjectDashboardData } from "./repositories/subjectDashboardViewRepo"
+import type { ReviewListViewRepository, ReviewListData, ReviewListFilters } from "./repositories/reviewListViewRepo"
+import type { CategoryTopicsViewRepository, CategoryTopicsData } from "./repositories/categoryTopicsViewRepo"
+import type { SearchViewRepository } from "./repositories/searchViewRepo"
 import type {
   TopicViewResponse,
   SubjectDashboardResponse,
@@ -15,11 +16,12 @@ import type {
 
 // Dependencies
 export type ViewDeps = {
-  topicViewRepo: TopicViewRepo
-  subjectDashboardViewRepo: SubjectDashboardViewRepo
-  reviewListViewRepo: ReviewListViewRepo
-  categoryTopicsViewRepo?: CategoryTopicsViewRepo
-  searchViewRepo?: SearchViewRepo
+  topicViewRepo: TopicViewRepository
+  subjectDashboardViewRepo: SubjectDashboardViewRepository
+  reviewListViewRepo: ReviewListViewRepository
+  categoryTopicsViewRepo?: CategoryTopicsViewRepository
+  searchViewRepo?: SearchViewRepository
+  logger: Logger
 }
 
 /**
@@ -30,7 +32,8 @@ export const getTopicView = async (
   userId: string,
   topicId: string
 ): Promise<Result<TopicViewResponse, AppError>> => {
-  const data = await deps.topicViewRepo.getTopicView(topicId, userId)
+  const { topicViewRepo, logger } = deps
+  const data = await topicViewRepo.getTopicView(topicId, userId)
 
   if (!data) {
     return err(notFound("論点が見つかりません"))
@@ -47,7 +50,8 @@ export const getSubjectDashboard = async (
   userId: string,
   subjectId: string
 ): Promise<Result<SubjectDashboardResponse, AppError>> => {
-  const data = await deps.subjectDashboardViewRepo.getSubjectDashboard(subjectId, userId)
+  const { subjectDashboardViewRepo, logger } = deps
+  const data = await subjectDashboardViewRepo.getSubjectDashboard(subjectId, userId)
 
   if (!data) {
     return err(notFound("科目が見つかりません"))
@@ -64,7 +68,8 @@ export const getReviewList = async (
   userId: string,
   filters?: ReviewListFilters
 ): Promise<Result<ReviewListResponse, AppError>> => {
-  const data = await deps.reviewListViewRepo.getReviewList(userId, filters)
+  const { reviewListViewRepo, logger } = deps
+  const data = await reviewListViewRepo.getReviewList(userId, filters)
 
   return ok(formatReviewList(data))
 }
@@ -77,11 +82,12 @@ export const getCategoryTopics = async (
   userId: string,
   categoryId: string
 ): Promise<Result<CategoryTopicsResponse, AppError>> => {
-  if (!deps.categoryTopicsViewRepo) {
-    return err(notFound("CategoryTopicsViewRepo not configured"))
+  const { categoryTopicsViewRepo, logger } = deps
+  if (!categoryTopicsViewRepo) {
+    return err(notFound("CategoryTopicsViewRepository not configured"))
   }
 
-  const data = await deps.categoryTopicsViewRepo.getCategoryTopics(categoryId, userId)
+  const data = await categoryTopicsViewRepo.getCategoryTopics(categoryId, userId)
 
   if (!data) {
     return err(notFound("単元が見つかりません"))
@@ -100,11 +106,12 @@ export const searchTopics = async (
   studyDomainId?: string,
   limit?: number
 ): Promise<Result<SearchTopicsResponse, AppError>> => {
-  if (!deps.searchViewRepo) {
-    return err(notFound("SearchViewRepo not configured"))
+  const { searchViewRepo, logger } = deps
+  if (!searchViewRepo) {
+    return err(notFound("SearchViewRepository not configured"))
   }
 
-  const data = await deps.searchViewRepo.searchTopics(userId, query, studyDomainId, limit)
+  const data = await searchViewRepo.searchTopics(userId, query, studyDomainId, limit)
 
   return ok(data)
 }

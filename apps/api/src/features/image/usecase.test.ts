@@ -11,6 +11,7 @@ import {
   getImage,
 } from "./usecase"
 import { createMockR2Bucket } from "@/test/mocks/r2"
+import { noopLogger } from "../../test/helpers"
 
 // テストデータ生成ヘルパー
 const createMockDate = (offset = 0) => new Date(Date.now() + offset)
@@ -83,7 +84,7 @@ describe("Image UseCase", () => {
       const apiBaseUrl = "https://api.example.com"
 
       const result = await createUploadUrl(
-        { imageRepo, apiBaseUrl },
+        { imageRepo, apiBaseUrl, logger: noopLogger },
         { userId: "user-1", filename: "test.png", mimeType: "image/png" }
       )
 
@@ -109,7 +110,7 @@ describe("Image UseCase", () => {
       const apiBaseUrl = "https://api.example.com"
 
       await createUploadUrl(
-        { imageRepo, apiBaseUrl },
+        { imageRepo, apiBaseUrl, logger: noopLogger },
         { userId: "user-1", filename: "../../../etc/passwd", mimeType: "image/png" }
       )
 
@@ -139,7 +140,7 @@ describe("Image UseCase", () => {
       const pngBuffer = createPngBuffer()
 
       const result = await uploadImage(
-        { imageRepo, r2 },
+        { imageRepo, r2, logger: noopLogger },
         "user-1",
         "image-1",
         pngBuffer
@@ -158,7 +159,7 @@ describe("Image UseCase", () => {
       const r2 = createMockR2Bucket()
 
       const result = await uploadImage(
-        { imageRepo, r2 },
+        { imageRepo, r2, logger: noopLogger },
         "user-1",
         "non-existent",
         createPngBuffer()
@@ -178,7 +179,7 @@ describe("Image UseCase", () => {
       const r2 = createMockR2Bucket()
 
       const result = await uploadImage(
-        { imageRepo, r2 },
+        { imageRepo, r2, logger: noopLogger },
         "user-1",
         "image-1",
         createPngBuffer()
@@ -199,7 +200,7 @@ describe("Image UseCase", () => {
       const invalidBuffer = createInvalidBuffer()
 
       const result = await uploadImage(
-        { imageRepo, r2 },
+        { imageRepo, r2, logger: noopLogger },
         "user-1",
         "image-1",
         invalidBuffer
@@ -221,7 +222,7 @@ describe("Image UseCase", () => {
       const jpegBuffer = createJpegBuffer()
 
       const result = await uploadImage(
-        { imageRepo, r2 },
+        { imageRepo, r2, logger: noopLogger },
         "user-1",
         "image-1",
         jpegBuffer
@@ -254,7 +255,7 @@ describe("Image UseCase", () => {
       })
 
       const result = await performOCR(
-        { imageRepo, aiAdapter, aiConfig: createMockAIConfig(), r2 },
+        { imageRepo, aiAdapter, aiConfig: createMockAIConfig(), r2, logger: noopLogger },
         "user-1",
         "image-1"
       )
@@ -278,7 +279,7 @@ describe("Image UseCase", () => {
       const r2 = createMockR2Bucket()
 
       const result = await performOCR(
-        { imageRepo, aiAdapter, aiConfig: createMockAIConfig(), r2 },
+        { imageRepo, aiAdapter, aiConfig: createMockAIConfig(), r2, logger: noopLogger },
         "user-1",
         "non-existent"
       )
@@ -298,7 +299,7 @@ describe("Image UseCase", () => {
       const r2 = createMockR2Bucket()
 
       const result = await performOCR(
-        { imageRepo, aiAdapter, aiConfig: createMockAIConfig(), r2 },
+        { imageRepo, aiAdapter, aiConfig: createMockAIConfig(), r2, logger: noopLogger },
         "user-1",
         "image-1"
       )
@@ -318,7 +319,7 @@ describe("Image UseCase", () => {
       const r2 = createMockR2Bucket() // 空のR2
 
       const result = await performOCR(
-        { imageRepo, aiAdapter, aiConfig: createMockAIConfig(), r2 },
+        { imageRepo, aiAdapter, aiConfig: createMockAIConfig(), r2, logger: noopLogger },
         "user-1",
         "image-1"
       )
@@ -337,7 +338,7 @@ describe("Image UseCase", () => {
         findById: vi.fn().mockResolvedValue(image),
       })
 
-      const result = await getImage({ imageRepo }, "user-1", "image-1")
+      const result = await getImage({ imageRepo, logger: noopLogger }, "user-1", "image-1")
 
       expect(result.ok).toBe(true)
       if (result.ok) {
@@ -353,7 +354,7 @@ describe("Image UseCase", () => {
         findById: vi.fn().mockResolvedValue(null),
       })
 
-      const result = await getImage({ imageRepo }, "user-1", "non-existent")
+      const result = await getImage({ imageRepo, logger: noopLogger }, "user-1", "non-existent")
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
@@ -367,7 +368,7 @@ describe("Image UseCase", () => {
         findById: vi.fn().mockResolvedValue(image),
       })
 
-      const result = await getImage({ imageRepo }, "user-1", "image-1")
+      const result = await getImage({ imageRepo, logger: noopLogger }, "user-1", "image-1")
 
       expect(result.ok).toBe(false)
       if (!result.ok) {

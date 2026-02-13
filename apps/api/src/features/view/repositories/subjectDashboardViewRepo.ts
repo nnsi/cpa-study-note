@@ -28,11 +28,11 @@ export type SubjectDashboardData = {
   }>
 }
 
-export type SubjectDashboardViewRepo = {
+export type SubjectDashboardViewRepository = {
   getSubjectDashboard: (subjectId: string, userId: string) => Promise<SubjectDashboardData | null>
 }
 
-export const createSubjectDashboardViewRepo = (db: Db): SubjectDashboardViewRepo => ({
+export const createSubjectDashboardViewRepository = (db: Db): SubjectDashboardViewRepository => ({
   getSubjectDashboard: async (subjectId, userId) => {
     // 1. Get subject (userId + deleted_at check)
     const subjectResult = await db

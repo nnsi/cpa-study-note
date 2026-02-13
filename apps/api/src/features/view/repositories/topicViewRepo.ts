@@ -47,11 +47,11 @@ export type TopicViewData = {
   }>
 }
 
-export type TopicViewRepo = {
+export type TopicViewRepository = {
   getTopicView: (topicId: string, userId: string) => Promise<TopicViewData | null>
 }
 
-export const createTopicViewRepo = (db: Db): TopicViewRepo => ({
+export const createTopicViewRepository = (db: Db): TopicViewRepository => ({
   getTopicView: async (topicId, userId) => {
     // 1. Get topic with hierarchy (userId + deleted_at check)
     const topicResult = await db

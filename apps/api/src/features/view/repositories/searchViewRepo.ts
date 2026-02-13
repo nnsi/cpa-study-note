@@ -8,7 +8,7 @@ import {
 } from "@cpa-study/db/schema"
 import type { SearchTopicsResponse } from "@cpa-study/shared/schemas"
 
-export type SearchViewRepo = {
+export type SearchViewRepository = {
   searchTopics: (
     userId: string,
     query: string,
@@ -17,7 +17,7 @@ export type SearchViewRepo = {
   ) => Promise<SearchTopicsResponse>
 }
 
-export const createSearchViewRepo = (db: Db): SearchViewRepo => ({
+export const createSearchViewRepository = (db: Db): SearchViewRepository => ({
   searchTopics: async (userId, query, studyDomainId, limit = 20) => {
     // Build conditions
     const conditions = [

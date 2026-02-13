@@ -1,53 +1,50 @@
 import type { MiddlewareHandler } from "hono"
+import { createLogger } from "../lib/logger"
 
 /**
- * ロガーミドルウェア
- * - リクエスト/レスポンスのログ出力
- * - エラー時はスタックトレースを含む詳細出力
- * - ログはconsoleに出力され、wranglerのログファイルに記録される
+ * 構造化ロガーミドルウェア
+ * - リクエストごとにrequestIdを生成し、全ログに付与
+ * - JSON形式で出力（Cloudflare Workers Logs対応）
+ * - 全環境で有効（localだけでなくstaging/productionでも動作）
  */
-export const logger = (): MiddlewareHandler => {
+export const loggerMiddleware = (): MiddlewareHandler => {
   return async (c, next) => {
-    const start = Date.now()
+    const requestId = crypto.randomUUID().slice(0, 8)
     const method = c.req.method
     const path = c.req.path
 
-    // リクエストログ
-    console.log(`[${new Date().toISOString()}] --> ${method} ${path}`)
+    const logger = createLogger({
+      bindings: { requestId, method, path },
+    })
+
+    c.set("logger", logger)
+
+    logger.info("Request received")
+
+    const start = Date.now()
 
     try {
       await next()
     } catch (error) {
-      // エラーログ（詳細）
       const duration = Date.now() - start
-      console.error(`[${new Date().toISOString()}] <-- ${method} ${path} ERROR ${duration}ms`)
-      console.error("[ERROR DETAILS]")
 
       if (error instanceof Error) {
-        console.error(`  Name: ${error.name}`)
-        console.error(`  Message: ${error.message}`)
-        if (error.stack) {
-          console.error(`  Stack:`)
-          error.stack.split("\n").forEach((line) => {
-            console.error(`    ${line}`)
-          })
-        }
-        if (error.cause) {
-          console.error(`  Cause:`, error.cause)
-        }
+        logger.error("Unhandled error", {
+          error: error.message,
+          stack: error.stack,
+          ...(error.cause ? { cause: String(error.cause) } : {}),
+          duration,
+        })
       } else {
-        console.error(`  Error:`, error)
+        logger.error("Unhandled error", { error: String(error), duration })
       }
 
       throw error
     }
 
-    // レスポンスログ
     const duration = Date.now() - start
     const status = c.res.status
-    const logLevel = status >= 500 ? "error" : status >= 400 ? "warn" : "log"
-    console[logLevel](
-      `[${new Date().toISOString()}] <-- ${method} ${path} ${status} ${duration}ms`
-    )
+    const level = status >= 500 ? "error" : status >= 400 ? "warn" : "info"
+    logger[level]("Response sent", { status, duration })
   }
 }

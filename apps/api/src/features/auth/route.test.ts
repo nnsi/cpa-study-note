@@ -12,6 +12,7 @@ import {
 } from "../../test/mocks/db"
 import { parseJson, errorResponseSchema } from "../../test/helpers"
 import type { Env, Variables } from "../../shared/types/env"
+import { loggerMiddleware } from "../../shared/middleware/logger"
 import Database from "better-sqlite3"
 
 // Response schemas for type-safe json parsing
@@ -98,6 +99,7 @@ describe("Auth Routes", () => {
 
     // Create Hono app with auth routes
     app = new Hono<{ Bindings: Env; Variables: Variables }>()
+    app.use("*", loggerMiddleware())
     app.route("/auth", authRoutes({ env: testEnv, db: db as any }))
   })
 

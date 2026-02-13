@@ -34,8 +34,6 @@ type SubjectRouteDeps = {
 
 export const subjectRoutes = ({ db, txRunner }: SubjectRouteDeps) => {
   const subjectRepo = createSubjectRepository(db)
-  const deps = { subjectRepo }
-  const treeDeps = { subjectRepo, db, txRunner }
 
   const app = new Hono<{ Bindings: Env; Variables: Variables }>()
     // ======== 科目一覧（:id より前に定義） ========
@@ -48,8 +46,9 @@ export const subjectRoutes = ({ db, txRunner }: SubjectRouteDeps) => {
       async (c) => {
         const { studyDomainId: explicitStudyDomainId } = c.req.valid("query")
         const user = c.get("user")
+        const logger = c.get("logger").child({ feature: "subject" })
         const studyDomainId = resolveStudyDomainId(explicitStudyDomainId, user)
-        const result = await listSubjects(deps, user.id, studyDomainId)
+        const result = await listSubjects({ subjectRepo, logger }, user.id, studyDomainId)
         return handleResult(c, result, "subjects")
       }
     )
@@ -58,7 +57,8 @@ export const subjectRoutes = ({ db, txRunner }: SubjectRouteDeps) => {
     .get("/:id", authMiddleware, async (c) => {
       const user = c.get("user")
       const id = c.req.param("id")
-      const result = await getSubject(deps, user.id, id)
+      const logger = c.get("logger").child({ feature: "subject" })
+      const result = await getSubject({ subjectRepo, logger }, user.id, id)
       return handleResult(c, result, "subject")
     })
 
@@ -71,7 +71,8 @@ export const subjectRoutes = ({ db, txRunner }: SubjectRouteDeps) => {
         const user = c.get("user")
         const domainId = c.req.param("domainId")
         const data = c.req.valid("json")
-        const result = await createSubject(deps, user.id, {
+        const logger = c.get("logger").child({ feature: "subject" })
+        const result = await createSubject({ subjectRepo, logger }, user.id, {
           studyDomainId: domainId,
           ...data,
         })
@@ -88,7 +89,8 @@ export const subjectRoutes = ({ db, txRunner }: SubjectRouteDeps) => {
         const user = c.get("user")
         const id = c.req.param("id")
         const data = c.req.valid("json")
-        const result = await updateSubject(deps, user.id, id, data)
+        const logger = c.get("logger").child({ feature: "subject" })
+        const result = await updateSubject({ subjectRepo, logger }, user.id, id, data)
         return handleResult(c, result, "subject")
       }
     )
@@ -97,15 +99,17 @@ export const subjectRoutes = ({ db, txRunner }: SubjectRouteDeps) => {
     .delete("/:id", authMiddleware, async (c) => {
       const user = c.get("user")
       const id = c.req.param("id")
-      const result = await deleteSubject(deps, user.id, id)
-      return handleResult(c, result)
+      const logger = c.get("logger").child({ feature: "subject" })
+      const result = await deleteSubject({ subjectRepo, logger }, user.id, id)
+      return handleResult(c, result, 204)
     })
 
     // Get subject tree
     .get("/:id/tree", authMiddleware, async (c) => {
       const user = c.get("user")
       const id = c.req.param("id")
-      const result = await getSubjectTree(treeDeps, user.id, id)
+      const logger = c.get("logger").child({ feature: "subject" })
+      const result = await getSubjectTree({ subjectRepo, db, txRunner, logger }, user.id, id)
       return handleResult(c, result, "tree")
     })
 
@@ -118,7 +122,8 @@ export const subjectRoutes = ({ db, txRunner }: SubjectRouteDeps) => {
         const user = c.get("user")
         const id = c.req.param("id")
         const data = c.req.valid("json")
-        const result = await updateSubjectTree(treeDeps, user.id, id, data)
+        const logger = c.get("logger").child({ feature: "subject" })
+        const result = await updateSubjectTree({ subjectRepo, db, txRunner, logger }, user.id, id, data)
         return handleResult(c, result, "tree")
       }
     )
@@ -132,8 +137,9 @@ export const subjectRoutes = ({ db, txRunner }: SubjectRouteDeps) => {
         const user = c.get("user")
         const id = c.req.param("id")
         const { csvContent } = c.req.valid("json")
+        const logger = c.get("logger").child({ feature: "subject" })
 
-        const result = await importCSVToSubject(treeDeps, user.id, id, csvContent)
+        const result = await importCSVToSubject({ subjectRepo, db, txRunner, logger }, user.id, id, csvContent)
         return handleResult(c, result)
       }
     )

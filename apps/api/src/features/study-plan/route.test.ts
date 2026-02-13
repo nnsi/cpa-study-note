@@ -14,6 +14,7 @@ import {
   errorResponseSchema,
   type TestContext,
 } from "../../test/helpers"
+import { loggerMiddleware } from "../../shared/middleware/logger"
 
 // レスポンススキーマ定義
 const planSchema = z.object({
@@ -114,6 +115,7 @@ describe("StudyPlan Routes", () => {
     const routes = studyPlanRoutes({ db: ctx.db as any })
 
     app = new Hono<{ Bindings: Env; Variables: Variables }>()
+    app.use("*", loggerMiddleware())
     app.use("*", async (c, next) => {
       if (!c.env) {
         (c as any).env = {}

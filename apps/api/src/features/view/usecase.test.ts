@@ -1,12 +1,13 @@
 /// <reference types="@cloudflare/workers-types" />
 import { describe, it, expect, vi } from "vitest"
-import type { TopicViewRepo, TopicViewData } from "./repositories/topicViewRepo"
-import type { SubjectDashboardViewRepo, SubjectDashboardData } from "./repositories/subjectDashboardViewRepo"
-import type { ReviewListViewRepo, ReviewListData, ReviewListFilters } from "./repositories/reviewListViewRepo"
-import type { CategoryTopicsViewRepo, CategoryTopicsData } from "./repositories/categoryTopicsViewRepo"
-import type { SearchViewRepo } from "./repositories/searchViewRepo"
+import type { TopicViewRepository, TopicViewData } from "./repositories/topicViewRepo"
+import type { SubjectDashboardViewRepository, SubjectDashboardData } from "./repositories/subjectDashboardViewRepo"
+import type { ReviewListViewRepository, ReviewListData, ReviewListFilters } from "./repositories/reviewListViewRepo"
+import type { CategoryTopicsViewRepository, CategoryTopicsData } from "./repositories/categoryTopicsViewRepo"
+import type { SearchViewRepository } from "./repositories/searchViewRepo"
 import type { SearchTopicsResponse } from "@cpa-study/shared/schemas"
 import type { ViewDeps } from "./usecase"
+import { noopLogger } from "../../test/helpers"
 import {
   getTopicView,
   getSubjectDashboard,
@@ -133,47 +134,48 @@ const mockSearchResults: SearchTopicsResponse = {
 }
 
 // Helper to create mock repositories
-const createMockTopicViewRepo = (
-  overrides: Partial<TopicViewRepo> = {}
-): TopicViewRepo => ({
+const createMockTopicViewRepository = (
+  overrides: Partial<TopicViewRepository> = {}
+): TopicViewRepository => ({
   getTopicView: vi.fn().mockResolvedValue(mockTopicViewData),
   ...overrides,
 })
 
-const createMockSubjectDashboardViewRepo = (
-  overrides: Partial<SubjectDashboardViewRepo> = {}
-): SubjectDashboardViewRepo => ({
+const createMockSubjectDashboardViewRepository = (
+  overrides: Partial<SubjectDashboardViewRepository> = {}
+): SubjectDashboardViewRepository => ({
   getSubjectDashboard: vi.fn().mockResolvedValue(mockSubjectDashboardData),
   ...overrides,
 })
 
-const createMockReviewListViewRepo = (
-  overrides: Partial<ReviewListViewRepo> = {}
-): ReviewListViewRepo => ({
+const createMockReviewListViewRepository = (
+  overrides: Partial<ReviewListViewRepository> = {}
+): ReviewListViewRepository => ({
   getReviewList: vi.fn().mockResolvedValue(mockReviewListData),
   ...overrides,
 })
 
-const createMockCategoryTopicsViewRepo = (
-  overrides: Partial<CategoryTopicsViewRepo> = {}
-): CategoryTopicsViewRepo => ({
+const createMockCategoryTopicsViewRepository = (
+  overrides: Partial<CategoryTopicsViewRepository> = {}
+): CategoryTopicsViewRepository => ({
   getCategoryTopics: vi.fn().mockResolvedValue(mockCategoryTopicsData),
   ...overrides,
 })
 
-const createMockSearchViewRepo = (
-  overrides: Partial<SearchViewRepo> = {}
-): SearchViewRepo => ({
+const createMockSearchViewRepository = (
+  overrides: Partial<SearchViewRepository> = {}
+): SearchViewRepository => ({
   searchTopics: vi.fn().mockResolvedValue(mockSearchResults),
   ...overrides,
 })
 
 const createMockDeps = (overrides: Partial<ViewDeps> = {}): ViewDeps => ({
-  topicViewRepo: createMockTopicViewRepo(),
-  subjectDashboardViewRepo: createMockSubjectDashboardViewRepo(),
-  reviewListViewRepo: createMockReviewListViewRepo(),
-  categoryTopicsViewRepo: createMockCategoryTopicsViewRepo(),
-  searchViewRepo: createMockSearchViewRepo(),
+  topicViewRepo: createMockTopicViewRepository(),
+  subjectDashboardViewRepo: createMockSubjectDashboardViewRepository(),
+  reviewListViewRepo: createMockReviewListViewRepository(),
+  categoryTopicsViewRepo: createMockCategoryTopicsViewRepository(),
+  searchViewRepo: createMockSearchViewRepository(),
+  logger: noopLogger,
   ...overrides,
 })
 
@@ -214,7 +216,7 @@ describe("View UseCase", () => {
 
     it("should return NOT_FOUND error when topic does not exist", async () => {
       const deps = createMockDeps({
-        topicViewRepo: createMockTopicViewRepo({
+        topicViewRepo: createMockTopicViewRepository({
           getTopicView: vi.fn().mockResolvedValue(null),
         }),
       })
@@ -234,7 +236,7 @@ describe("View UseCase", () => {
         progress: null,
       }
       const deps = createMockDeps({
-        topicViewRepo: createMockTopicViewRepo({
+        topicViewRepo: createMockTopicViewRepository({
           getTopicView: vi.fn().mockResolvedValue(dataWithoutProgress),
         }),
       })
@@ -280,7 +282,7 @@ describe("View UseCase", () => {
 
     it("should return NOT_FOUND error when subject does not exist", async () => {
       const deps = createMockDeps({
-        subjectDashboardViewRepo: createMockSubjectDashboardViewRepo({
+        subjectDashboardViewRepo: createMockSubjectDashboardViewRepository({
           getSubjectDashboard: vi.fn().mockResolvedValue(null),
         }),
       })
@@ -356,7 +358,7 @@ describe("View UseCase", () => {
 
     it("should return NOT_FOUND error when category does not exist", async () => {
       const deps = createMockDeps({
-        categoryTopicsViewRepo: createMockCategoryTopicsViewRepo({
+        categoryTopicsViewRepo: createMockCategoryTopicsViewRepository({
           getCategoryTopics: vi.fn().mockResolvedValue(null),
         }),
       })
@@ -381,7 +383,7 @@ describe("View UseCase", () => {
       if (result.ok) return
 
       expect(result.error.code).toBe("NOT_FOUND")
-      expect(result.error.message).toBe("CategoryTopicsViewRepo not configured")
+      expect(result.error.message).toBe("CategoryTopicsViewRepository not configured")
     })
   })
 
@@ -420,7 +422,7 @@ describe("View UseCase", () => {
       if (result.ok) return
 
       expect(result.error.code).toBe("NOT_FOUND")
-      expect(result.error.message).toBe("SearchViewRepo not configured")
+      expect(result.error.message).toBe("SearchViewRepository not configured")
     })
   })
 })

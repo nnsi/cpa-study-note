@@ -1,11 +1,13 @@
 import type { BookmarkTargetType } from "@cpa-study/db/schema"
 import type { BookmarkRepository } from "./repository"
 import type { BookmarkWithDetails } from "@cpa-study/shared/schemas"
+import type { Logger } from "@/shared/lib/logger"
 import { ok, err, type Result } from "@/shared/lib/result"
 import { notFound, type AppError } from "@/shared/lib/errors"
 
 export type BookmarkDeps = {
   repo: BookmarkRepository
+  logger: Logger
 }
 
 // ブックマーク一覧を詳細情報付きで取得
@@ -13,7 +15,7 @@ export const getBookmarks = async (
   deps: BookmarkDeps,
   userId: string
 ): Promise<Result<BookmarkWithDetails[], AppError>> => {
-  const { repo } = deps
+  const { repo, logger } = deps
   const bookmarks = await repo.findBookmarksByUser(userId)
 
   // ブックマークの詳細情報を取得（ユーザー境界と削除フラグを考慮）
@@ -47,8 +49,7 @@ export const addBookmark = async (
   targetType: BookmarkTargetType,
   targetId: string
 ): Promise<Result<BookmarkWithDetails | null, AppError>> => {
-  const { repo } = deps
-
+  const { repo, logger } = deps
   // 対象が存在するか確認（ユーザー境界と削除フラグを考慮）
   const exists = await repo.targetExists(targetType, targetId, userId)
   if (!exists) {
@@ -85,7 +86,7 @@ export const removeBookmark = async (
   targetType: BookmarkTargetType,
   targetId: string
 ): Promise<Result<void, AppError>> => {
-  const { repo } = deps
+  const { repo, logger } = deps
   const removed = await repo.removeBookmark(userId, targetType, targetId)
 
   if (!removed) {

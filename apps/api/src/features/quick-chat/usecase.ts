@@ -1,4 +1,5 @@
 import type { AIAdapter, AIConfig } from "@/shared/lib/ai"
+import type { Logger } from "@/shared/lib/logger"
 import type { QuickChatRepository, TopicForSuggest } from "./repository"
 import type { QuickChatSuggestion } from "@cpa-study/shared/schemas"
 import { parseLLMJson } from "@cpa-study/shared"
@@ -11,6 +12,7 @@ export type QuickChatDeps = {
   quickChatRepo: QuickChatRepository
   aiAdapter: AIAdapter
   aiConfig: AIConfig
+  logger: Logger
 }
 
 type SuggestInput = {
@@ -112,7 +114,7 @@ export const suggestTopicsForChat = async (
     })
     aiResponse = result.content
   } catch (error) {
-    console.error("[quick-chat] AI error:", error)
+    deps.logger.error("AI error", { error: error instanceof Error ? error.message : String(error) })
     return err(notFound("AI応答の取得に失敗しました"))
   }
 

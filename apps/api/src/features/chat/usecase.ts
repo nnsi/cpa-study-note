@@ -12,17 +12,19 @@ import type {
 import { z } from "zod"
 import { ok, err, type Result } from "@/shared/lib/result"
 import { notFound, forbidden, type AppError } from "@/shared/lib/errors"
+import type { Logger } from "@/shared/lib/logger"
 
 export type ChatDeps = {
   chatRepo: ChatRepository
   learningRepo: LearningRepository
   aiAdapter: AIAdapter
   aiConfig: AIConfig
+  logger: Logger
 }
 
 // セッション作成
 export const createSession = async (
-  deps: Pick<ChatDeps, "chatRepo" | "learningRepo">,
+  deps: Pick<ChatDeps, "chatRepo" | "learningRepo" | "logger">,
   userId: string,
   topicId: string
 ): Promise<Result<ChatSession, AppError>> => {
@@ -46,7 +48,7 @@ export const createSession = async (
 // セッション一覧取得（メッセージが1件以上あるセッションのみ）
 // N+1問題を解消: 1クエリでセッションと統計を取得
 export const listSessionsByTopic = async (
-  deps: Pick<ChatDeps, "chatRepo">,
+  deps: Pick<ChatDeps, "chatRepo" | "logger">,
   userId: string,
   topicId: string
 ): Promise<Result<SessionWithStats[], AppError>> => {
@@ -63,7 +65,7 @@ export const listSessionsByTopic = async (
 
 // セッション取得
 export const getSession = async (
-  deps: Pick<ChatDeps, "chatRepo">,
+  deps: Pick<ChatDeps, "chatRepo" | "logger">,
   userId: string,
   sessionId: string
 ): Promise<Result<ChatSession, AppError>> => {
@@ -85,7 +87,7 @@ export const getSession = async (
 
 // メッセージ一覧取得
 export const listMessages = async (
-  deps: Pick<ChatDeps, "chatRepo">,
+  deps: Pick<ChatDeps, "chatRepo" | "logger">,
   userId: string,
   sessionId: string
 ): Promise<Result<ChatMessage[], AppError>> => {
@@ -108,7 +110,7 @@ export const listMessages = async (
 
 // メッセージ取得（評価用）- 所有権チェック付き
 export const getMessageForEvaluation = async (
-  deps: Pick<ChatDeps, "chatRepo">,
+  deps: Pick<ChatDeps, "chatRepo" | "logger">,
   userId: string,
   messageId: string
 ): Promise<Result<string, AppError>> => {
@@ -161,7 +163,7 @@ export async function* sendMessage(
 
   // Phase 2: 階層取得と履歴取得を並列実行（履歴は新メッセージ保存前に取得）
   const t1 = performance.now()
-  console.log(`[chat-perf] Phase1 findSession: ${(t1 - t0).toFixed(0)}ms`)
+  deps.logger.debug("Phase1 findSession", { duration: t1 - t0 })
 
   const [hierarchy, history] = await Promise.all([
     deps.chatRepo.getTopicWithHierarchy(session.topicId),
@@ -169,7 +171,7 @@ export async function* sendMessage(
   ])
 
   const t2 = performance.now()
-  console.log(`[chat-perf] Phase2 hierarchy+history: ${(t2 - t1).toFixed(0)}ms`)
+  deps.logger.debug("Phase2 hierarchy+history", { duration: t2 - t1 })
 
   // Phase 3: ユーザーメッセージを保存（履歴取得後に実行して二重送信を防ぐ）
   const userMessage = await deps.chatRepo.createMessage({
@@ -182,7 +184,7 @@ export async function* sendMessage(
   })
 
   const t3 = performance.now()
-  console.log(`[chat-perf] Phase3 createMessage: ${(t3 - t2).toFixed(0)}ms`)
+  deps.logger.debug("Phase3 createMessage", { duration: t3 - t2 })
 
   if (!hierarchy) {
     yield { type: "error", error: "Topic not found" }
@@ -220,7 +222,7 @@ export async function* sendMessage(
   // AIからのストリーミングレスポンス
   const responseChunks: string[] = []
   const t4 = performance.now()
-  console.log(`[chat-perf] Prompt build: ${(t4 - t3).toFixed(0)}ms | Total before AI: ${(t4 - t0).toFixed(0)}ms`)
+  deps.logger.debug("Prompt build", { duration: t4 - t3, totalBeforeAi: t4 - t0 })
   let firstChunkTime: number | null = null
 
   try {
@@ -233,20 +235,20 @@ export async function* sendMessage(
       if (chunk.type === "text" && chunk.content) {
         if (!firstChunkTime) {
           firstChunkTime = performance.now()
-          console.log(`[chat-perf] AI TTFB (first chunk): ${(firstChunkTime - t4).toFixed(0)}ms | Total TTFB: ${(firstChunkTime - t0).toFixed(0)}ms`)
+          deps.logger.debug("AI TTFB", { ttfb: firstChunkTime - t4, totalTtfb: firstChunkTime - t0 })
         }
         responseChunks.push(chunk.content)
         yield chunk
       }
     }
   } catch (error) {
-    console.error("[AI] Stream error:", error)
+    deps.logger.error("AI stream failed", { error: error instanceof Error ? error.message : String(error) })
     yield { type: "error", error: "AI応答中にエラーが発生しました。再度お試しください。" }
     return
   }
 
   const t5 = performance.now()
-  console.log(`[chat-perf] AI stream complete: ${(t5 - t4).toFixed(0)}ms`)
+  deps.logger.debug("AI stream complete", { duration: t5 - t4 })
 
   // ストリーム後の書き込みを並列実行
   const fullResponse = responseChunks.join("")
@@ -342,7 +344,7 @@ export async function* sendMessageWithNewSession(
       }
     }
   } catch (error) {
-    console.error("[AI] Stream error:", error)
+    deps.logger.error("AI stream failed", { error: error instanceof Error ? error.message : String(error) })
     yield { type: "error", error: "AI応答中にエラーが発生しました。再度お試しください。" }
     return
   }
@@ -372,7 +374,7 @@ export async function* sendMessageWithNewSession(
 
 // トピックに紐づくgood質問を一括取得（N+1解消用）
 export const listGoodQuestionsByTopic = async (
-  deps: Pick<ChatDeps, "chatRepo">,
+  deps: Pick<ChatDeps, "chatRepo" | "logger">,
   userId: string,
   topicId: string
 ): Promise<Result<GoodQuestionResponse[], AppError>> => {
@@ -390,7 +392,7 @@ export const listGoodQuestionsByTopic = async (
 
 // 音声認識テキスト補正
 export const correctSpeechText = async (
-  deps: Pick<ChatDeps, "aiAdapter" | "aiConfig">,
+  deps: Pick<ChatDeps, "aiAdapter" | "aiConfig" | "logger">,
   text: string
 ): Promise<Result<string, AppError>> => {
   const systemPrompt = [
@@ -418,7 +420,7 @@ export const correctSpeechText = async (
     const corrected = result.content.trim()
     return ok(corrected || text)
   } catch (error) {
-    console.error("[AI] Speech correction error:", error)
+    deps.logger.error("Speech correction failed", { error: error instanceof Error ? error.message : String(error) })
     return ok(text)
   }
 }
@@ -433,7 +435,7 @@ export const evaluateQuestion = async (
   userId: string,
   messageId: string,
 ): Promise<Result<QuestionEvaluation, AppError>> => {
-  const msgResult = await getMessageForEvaluation({ chatRepo: deps.chatRepo }, userId, messageId)
+  const msgResult = await getMessageForEvaluation({ chatRepo: deps.chatRepo, logger: deps.logger }, userId, messageId)
   if (!msgResult.ok) {
     return msgResult
   }

@@ -45,6 +45,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
       async (c) => {
         const user = c.get("user")
         const { sessionId } = c.req.valid("json")
+        const logger = c.get("logger").child({ feature: "note" })
 
         const aiAdapter = createAIAdapter({
           provider: env.AI_PROVIDER,
@@ -52,7 +53,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
         })
 
         const result = await createNoteFromSession(
-          { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: aiConfig.noteSummary },
+          { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: aiConfig.noteSummary, logger },
           { userId: user.id, sessionId }
         )
 
@@ -68,9 +69,10 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
       async (c) => {
         const user = c.get("user")
         const body = c.req.valid("json")
+        const logger = c.get("logger").child({ feature: "note" })
 
         const result = await createManualNote(
-          { noteRepo, subjectRepo },
+          { noteRepo, subjectRepo, logger },
           {
             userId: user.id,
             topicId: body.topicId,
@@ -87,7 +89,8 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
     // ノート一覧
     .get("/", authMiddleware, async (c) => {
       const user = c.get("user")
-      const result = await listNotes({ noteRepo }, user.id)
+      const logger = c.get("logger").child({ feature: "note" })
+      const result = await listNotes({ noteRepo, logger }, user.id)
       return handleResult(c, result, "notes")
     })
 
@@ -95,7 +98,8 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
     .get("/topic/:topicId", authMiddleware, async (c) => {
       const user = c.get("user")
       const topicId = c.req.param("topicId")
-      const result = await listNotesByTopic({ noteRepo }, user.id, topicId)
+      const logger = c.get("logger").child({ feature: "note" })
+      const result = await listNotesByTopic({ noteRepo, logger }, user.id, topicId)
       return handleResult(c, result, "notes")
     })
 
@@ -103,7 +107,8 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
     .get("/session/:sessionId", authMiddleware, async (c) => {
       const user = c.get("user")
       const sessionId = c.req.param("sessionId")
-      const result = await getNoteBySession({ noteRepo }, user.id, sessionId)
+      const logger = c.get("logger").child({ feature: "note" })
+      const result = await getNoteBySession({ noteRepo, logger }, user.id, sessionId)
       return handleResult(c, result, "note")
     })
 
@@ -111,8 +116,9 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
     .get("/:noteId", authMiddleware, async (c) => {
       const user = c.get("user")
       const noteId = c.req.param("noteId")
+      const logger = c.get("logger").child({ feature: "note" })
 
-      const result = await getNote({ noteRepo }, user.id, noteId)
+      const result = await getNote({ noteRepo, logger }, user.id, noteId)
       return handleResult(c, result, "note")
     })
 
@@ -125,8 +131,9 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
         const user = c.get("user")
         const noteId = c.req.param("noteId")
         const body = c.req.valid("json")
+        const logger = c.get("logger").child({ feature: "note" })
 
-        const result = await updateNote({ noteRepo }, user.id, noteId, body)
+        const result = await updateNote({ noteRepo, logger }, user.id, noteId, body)
         return handleResult(c, result, "note")
       }
     )
@@ -135,6 +142,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
     .post("/:noteId/refresh", authMiddleware, async (c) => {
       const user = c.get("user")
       const noteId = c.req.param("noteId")
+      const logger = c.get("logger").child({ feature: "note" })
 
       const aiAdapter = createAIAdapter({
         provider: env.AI_PROVIDER,
@@ -142,7 +150,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
       })
 
       const result = await refreshNoteFromSession(
-        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: aiConfig.noteSummary },
+        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: aiConfig.noteSummary, logger },
         user.id,
         noteId
       )
@@ -154,9 +162,10 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
     .delete("/:noteId", authMiddleware, async (c) => {
       const user = c.get("user")
       const noteId = c.req.param("noteId")
+      const logger = c.get("logger").child({ feature: "note" })
 
-      const result = await deleteNote({ noteRepo }, user.id, noteId)
-      return handleResult(c, result)
+      const result = await deleteNote({ noteRepo, logger }, user.id, noteId)
+      return handleResult(c, result, 204)
     })
 
   return app

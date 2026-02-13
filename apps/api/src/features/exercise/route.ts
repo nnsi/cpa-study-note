@@ -67,8 +67,10 @@ export const exerciseRoutes = ({ env, db }: ExerciseDeps) => {
         apiKey: env.OPENROUTER_API_KEY,
       })
 
+      const logger = c.get("logger").child({ feature: "exercise" })
+
       const result = await analyzeExercise(
-        { exerciseRepo, imageRepo, aiAdapter, aiConfig, r2: env.R2 },
+        { exerciseRepo, imageRepo, aiAdapter, aiConfig, r2: env.R2, logger },
         user.id,
         file.name || "image",
         file.type,
@@ -88,8 +90,10 @@ export const exerciseRoutes = ({ env, db }: ExerciseDeps) => {
         const exerciseId = c.req.param("exerciseId")
         const { topicId, markAsUnderstood } = c.req.valid("json")
 
+        const logger = c.get("logger").child({ feature: "exercise" })
+
         const result = await confirmExercise(
-          { exerciseRepo },
+          { exerciseRepo, logger },
           user.id,
           exerciseId,
           topicId,
@@ -105,7 +109,9 @@ export const exerciseRoutes = ({ env, db }: ExerciseDeps) => {
       const user = c.get("user")
       const topicId = c.req.param("topicId")
 
-      const result = await getTopicExercises({ exerciseRepo }, user.id, topicId)
+      const logger = c.get("logger").child({ feature: "exercise" })
+
+      const result = await getTopicExercises({ exerciseRepo, logger }, user.id, topicId)
 
       return handleResult(c, result)
     })

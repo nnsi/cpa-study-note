@@ -17,6 +17,7 @@ import {
   type TestContext,
 } from "../../test/helpers"
 import { mockAIPresets } from "../../test/mocks/ai"
+import { loggerMiddleware } from "../../shared/middleware/logger"
 
 // レスポンススキーマ定義
 const uploadUrlResponseSchema = z.object({
@@ -77,6 +78,7 @@ describe("Image Routes", () => {
       Object.assign(c.env, ctx.env)
       await next()
     })
+    app.use("*", loggerMiddleware())
     app.route("/images", routes)
   })
 
@@ -392,6 +394,7 @@ describe("Image Routes", () => {
         Object.assign(c.env, prodEnv)
         await next()
       })
+      prodApp.use("*", loggerMiddleware())
       prodApp.route("/images", routes)
 
       const res = await prodApp.request("/images/upload-url", {
@@ -420,6 +423,7 @@ describe("Image Routes", () => {
         Object.assign(c.env, prodEnv)
         await next()
       })
+      prodApp.use("*", loggerMiddleware())
       prodApp.route("/images", routes)
 
       const res = await prodApp.request("/images/some-image-id", {
@@ -443,6 +447,7 @@ describe("Image Routes", () => {
         Object.assign(c.env, prodEnv)
         await next()
       })
+      prodApp.use("*", loggerMiddleware())
       prodApp.route("/images", routes)
 
       const pngBuffer = new ArrayBuffer(100)
@@ -475,6 +480,7 @@ describe("Image Routes", () => {
         Object.assign(c.env, prodEnv)
         await next()
       })
+      prodApp.use("*", loggerMiddleware())
       prodApp.route("/images", routes)
 
       const res = await prodApp.request("/images/some-image-id/ocr", {

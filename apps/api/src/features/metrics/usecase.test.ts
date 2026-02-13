@@ -8,6 +8,7 @@ import type {
   DailyMetric,
 } from "./repository"
 import { getDailyMetrics, createSnapshot, getTodayMetrics } from "./usecase"
+import { noopLogger } from "../../test/helpers"
 
 // Mock data
 const mockMetricSnapshot: MetricSnapshot = {
@@ -68,7 +69,7 @@ describe("Metrics UseCase", () => {
   describe("getDailyMetrics", () => {
     it("should return daily metrics for date range", async () => {
       const metricsRepo = createMockRepository()
-      const deps = { metricsRepo }
+      const deps = { metricsRepo, logger: noopLogger }
 
       const result = await getDailyMetrics(
         deps,
@@ -100,7 +101,7 @@ describe("Metrics UseCase", () => {
       const metricsRepo = createMockRepository({
         aggregateDateRange: vi.fn().mockResolvedValue([]),
       })
-      const deps = { metricsRepo }
+      const deps = { metricsRepo, logger: noopLogger }
 
       const result = await getDailyMetrics(
         deps,
@@ -118,7 +119,7 @@ describe("Metrics UseCase", () => {
 
     it("should return error for invalid from date format", async () => {
       const metricsRepo = createMockRepository()
-      const deps = { metricsRepo }
+      const deps = { metricsRepo, logger: noopLogger }
 
       const result = await getDailyMetrics(
         deps,
@@ -138,7 +139,7 @@ describe("Metrics UseCase", () => {
 
     it("should return error for invalid to date format", async () => {
       const metricsRepo = createMockRepository()
-      const deps = { metricsRepo }
+      const deps = { metricsRepo, logger: noopLogger }
 
       const result = await getDailyMetrics(
         deps,
@@ -158,7 +159,7 @@ describe("Metrics UseCase", () => {
 
     it("should return error when from date is after to date", async () => {
       const metricsRepo = createMockRepository()
-      const deps = { metricsRepo }
+      const deps = { metricsRepo, logger: noopLogger }
 
       const result = await getDailyMetrics(
         deps,
@@ -189,7 +190,7 @@ describe("Metrics UseCase", () => {
       const metricsRepo = createMockRepository({
         aggregateDateRange: vi.fn().mockResolvedValue(singleDayMetric),
       })
-      const deps = { metricsRepo }
+      const deps = { metricsRepo, logger: noopLogger }
 
       const result = await getDailyMetrics(
         deps,
@@ -215,7 +216,7 @@ describe("Metrics UseCase", () => {
   describe("createSnapshot", () => {
     it("should create snapshot for today when no date provided", async () => {
       const metricsRepo = createMockRepository()
-      const deps = { metricsRepo }
+      const deps = { metricsRepo, logger: noopLogger }
 
       const result = await createSnapshot(deps, "user-1")
 
@@ -240,7 +241,7 @@ describe("Metrics UseCase", () => {
       const metricsRepo = createMockRepository({
         upsert: vi.fn().mockResolvedValue(specificDateSnapshot),
       })
-      const deps = { metricsRepo }
+      const deps = { metricsRepo, logger: noopLogger }
 
       const result = await createSnapshot(deps, "user-1", "2024-01-10")
 
@@ -261,7 +262,7 @@ describe("Metrics UseCase", () => {
 
     it("should return error for invalid date format", async () => {
       const metricsRepo = createMockRepository()
-      const deps = { metricsRepo }
+      const deps = { metricsRepo, logger: noopLogger }
 
       const result = await createSnapshot(deps, "user-1", "2024/01/15")
 
@@ -276,7 +277,7 @@ describe("Metrics UseCase", () => {
 
     it("should return error for invalid date format with partial match", async () => {
       const metricsRepo = createMockRepository()
-      const deps = { metricsRepo }
+      const deps = { metricsRepo, logger: noopLogger }
 
       const result = await createSnapshot(deps, "user-1", "2024-1-15")
 
@@ -289,7 +290,7 @@ describe("Metrics UseCase", () => {
 
     it("should convert createdAt to ISO string in response", async () => {
       const metricsRepo = createMockRepository()
-      const deps = { metricsRepo }
+      const deps = { metricsRepo, logger: noopLogger }
 
       const result = await createSnapshot(deps, "user-1", "2024-01-15")
 
@@ -309,7 +310,7 @@ describe("Metrics UseCase", () => {
       const metricsRepo = createMockRepository({
         aggregateForDate: vi.fn().mockResolvedValue(customAggregation),
       })
-      const deps = { metricsRepo }
+      const deps = { metricsRepo, logger: noopLogger }
 
       await createSnapshot(deps, "user-1", "2024-01-15")
 
@@ -324,7 +325,7 @@ describe("Metrics UseCase", () => {
   describe("getTodayMetrics", () => {
     it("should return today's metrics", async () => {
       const metricsRepo = createMockRepository()
-      const deps = { metricsRepo }
+      const deps = { metricsRepo, logger: noopLogger }
 
       const result = await getTodayMetrics(deps, "user-1", "Asia/Tokyo")
 
@@ -349,7 +350,7 @@ describe("Metrics UseCase", () => {
       const metricsRepo = createMockRepository({
         aggregateToday: vi.fn().mockResolvedValue(emptyMetrics),
       })
-      const deps = { metricsRepo }
+      const deps = { metricsRepo, logger: noopLogger }
 
       const result = await getTodayMetrics(deps, "user-1", "UTC")
 
@@ -363,7 +364,7 @@ describe("Metrics UseCase", () => {
 
     it("should pass different timezones correctly", async () => {
       const metricsRepo = createMockRepository()
-      const deps = { metricsRepo }
+      const deps = { metricsRepo, logger: noopLogger }
 
       await getTodayMetrics(deps, "user-1", "America/New_York")
 

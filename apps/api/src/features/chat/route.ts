@@ -45,7 +45,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         const { topicId } = c.req.valid("json")
 
         const result = await createSession(
-          { chatRepo, learningRepo },
+          { chatRepo, learningRepo, logger: c.get("logger").child({ feature: "chat" }) },
           user.id,
           topicId
         )
@@ -62,7 +62,8 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         const topicId = c.req.param("topicId")
         const user = c.get("user")
 
-        const result = await listSessionsByTopic({ chatRepo }, user.id, topicId)
+        const logger = c.get("logger").child({ feature: "chat" })
+        const result = await listSessionsByTopic({ chatRepo, logger }, user.id, topicId)
         return handleResult(c, result, "sessions")
       }
     )
@@ -75,7 +76,8 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         const topicId = c.req.param("topicId")
         const user = c.get("user")
 
-        const result = await listGoodQuestionsByTopic({ chatRepo }, user.id, topicId)
+        const logger = c.get("logger").child({ feature: "chat" })
+        const result = await listGoodQuestionsByTopic({ chatRepo, logger }, user.id, topicId)
         return handleResult(c, result, "questions")
       }
     )
@@ -84,8 +86,9 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
     .get("/sessions/:sessionId", authMiddleware, async (c) => {
       const sessionId = c.req.param("sessionId")
       const user = c.get("user")
+      const logger = c.get("logger").child({ feature: "chat" })
 
-      const result = await getSession({ chatRepo }, user.id, sessionId)
+      const result = await getSession({ chatRepo, logger }, user.id, sessionId)
       return handleResult(c, result, "session")
     })
 
@@ -93,8 +96,9 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
     .get("/sessions/:sessionId/messages", authMiddleware, async (c) => {
       const sessionId = c.req.param("sessionId")
       const user = c.get("user")
+      const logger = c.get("logger").child({ feature: "chat" })
 
-      const result = await listMessages({ chatRepo }, user.id, sessionId)
+      const result = await listMessages({ chatRepo, logger }, user.id, sessionId)
       return handleResult(c, result, "messages")
     })
 
@@ -108,8 +112,9 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         const user = c.get("user")
         const { content, imageId, ocrResult } = c.req.valid("json")
 
+        const logger = c.get("logger").child({ feature: "chat" })
         const stream = sendMessage(
-          { chatRepo, learningRepo, aiAdapter, aiConfig },
+          { chatRepo, learningRepo, aiAdapter, aiConfig, logger },
           {
             sessionId,
             userId: user.id,
@@ -133,8 +138,9 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         const user = c.get("user")
         const { content, imageId, ocrResult } = c.req.valid("json")
 
+        const logger = c.get("logger").child({ feature: "chat" })
         const stream = sendMessageWithNewSession(
-          { chatRepo, learningRepo, aiAdapter, aiConfig },
+          { chatRepo, learningRepo, aiAdapter, aiConfig, logger },
           {
             topicId,
             userId: user.id,
@@ -155,9 +161,10 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
       zValidator("json", correctSpeechRequestSchema),
       async (c) => {
         const { text } = c.req.valid("json")
+        const logger = c.get("logger").child({ feature: "chat" })
 
         const result = await correctSpeechText(
-          { aiAdapter, aiConfig },
+          { aiAdapter, aiConfig, logger },
           text
         )
 
@@ -169,9 +176,10 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
     .post("/messages/:messageId/evaluate", authMiddleware, async (c) => {
       const messageId = c.req.param("messageId")
       const user = c.get("user")
+      const logger = c.get("logger").child({ feature: "chat" })
 
       const evalResult = await evaluateQuestion(
-        { chatRepo, learningRepo, aiAdapter, aiConfig },
+        { chatRepo, learningRepo, aiAdapter, aiConfig, logger },
         user.id,
         messageId,
       )

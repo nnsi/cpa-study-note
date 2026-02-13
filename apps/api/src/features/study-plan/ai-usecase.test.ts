@@ -6,6 +6,7 @@ import type { StudyPlanRepository, StudyPlan, StudyPlanItem } from "./repository
 import type { SubjectRepository } from "../subject/repository"
 import type { AIAdapter, AIConfig } from "@/shared/lib/ai"
 import type { StreamChunk } from "@/shared/lib/ai"
+import { noopLogger } from "../../test/helpers"
 import { suggestPlanItems } from "./ai-usecase"
 
 // テストデータ
@@ -137,7 +138,7 @@ describe("StudyPlan AI UseCase", () => {
       const aiConfig = createMockAIConfig()
 
       const stream = suggestPlanItems(
-        { repo, subjectRepo, aiAdapter, aiConfig },
+        { repo, subjectRepo, aiAdapter, aiConfig, logger: noopLogger },
         { planId: "plan-1", userId: "user-1", prompt: "連結会計も追加すべきですか？" }
       )
 
@@ -172,7 +173,7 @@ describe("StudyPlan AI UseCase", () => {
       const aiConfig = createMockAIConfig()
 
       const stream = suggestPlanItems(
-        { repo, subjectRepo, aiAdapter, aiConfig },
+        { repo, subjectRepo, aiAdapter, aiConfig, logger: noopLogger },
         { planId: "plan-1", userId: "other-user", prompt: "テスト" }
       )
 
@@ -195,7 +196,7 @@ describe("StudyPlan AI UseCase", () => {
       const aiConfig = createMockAIConfig()
 
       const stream = suggestPlanItems(
-        { repo, subjectRepo, aiAdapter, aiConfig },
+        { repo, subjectRepo, aiAdapter, aiConfig, logger: noopLogger },
         { planId: "non-existent", userId: "user-1", prompt: "テスト" }
       )
 
@@ -222,7 +223,7 @@ describe("StudyPlan AI UseCase", () => {
       const aiConfig = createMockAIConfig()
 
       const stream = suggestPlanItems(
-        { repo, subjectRepo, aiAdapter, aiConfig },
+        { repo, subjectRepo, aiAdapter, aiConfig, logger: noopLogger },
         { planId: "plan-1", userId: "user-1", prompt: "テスト" }
       )
 
@@ -244,7 +245,7 @@ describe("StudyPlan AI UseCase", () => {
       const aiConfig = createMockAIConfig()
 
       const stream = suggestPlanItems(
-        { repo, subjectRepo, aiAdapter, aiConfig },
+        { repo, subjectRepo, aiAdapter, aiConfig, logger: noopLogger },
         { planId: "plan-1", userId: "user-1", prompt: "何から始めるべきですか？" }
       )
 

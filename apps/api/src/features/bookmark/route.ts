@@ -17,23 +17,24 @@ type BookmarkDeps = {
 
 export const bookmarkRoutes = ({ db }: BookmarkDeps) => {
   const repo = createBookmarkRepository(db)
-  const deps = { repo }
 
   const app = new Hono<{ Bindings: Env; Variables: Variables }>()
     // ブックマーク一覧取得
     .get("/", authMiddleware, async (c) => {
       const user = c.get("user")
-      const result = await getBookmarks(deps, user.id)
+      const logger = c.get("logger").child({ feature: "bookmark" })
+      const result = await getBookmarks({ repo, logger }, user.id)
       return handleResult(c, result, "bookmarks")
     })
 
     // ブックマーク追加
     .post("/", authMiddleware, zValidator("json", addBookmarkRequestSchema), async (c) => {
       const user = c.get("user")
+      const logger = c.get("logger").child({ feature: "bookmark" })
       const { targetType, targetId } = c.req.valid("json")
 
-      const result = await addBookmark(deps, user.id, targetType, targetId)
-      return handleResult(c, result, "bookmark")
+      const result = await addBookmark({ repo, logger }, user.id, targetType, targetId)
+      return handleResult(c, result, "bookmark", 201)
     })
 
     // ブックマーク削除
@@ -43,9 +44,10 @@ export const bookmarkRoutes = ({ db }: BookmarkDeps) => {
       zValidator("param", deleteBookmarkParamsSchema),
       async (c) => {
         const user = c.get("user")
+        const logger = c.get("logger").child({ feature: "bookmark" })
         const { targetType, targetId } = c.req.valid("param")
 
-        const result = await removeBookmark(deps, user.id, targetType, targetId)
+        const result = await removeBookmark({ repo, logger }, user.id, targetType, targetId)
         return handleResult(c, result, 204)
       }
     )

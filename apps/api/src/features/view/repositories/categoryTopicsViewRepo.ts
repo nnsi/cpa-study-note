@@ -20,11 +20,11 @@ export type CategoryTopicsData = {
   }>
 }
 
-export type CategoryTopicsViewRepo = {
+export type CategoryTopicsViewRepository = {
   getCategoryTopics: (categoryId: string, userId: string) => Promise<CategoryTopicsData | null>
 }
 
-export const createCategoryTopicsViewRepo = (db: Db): CategoryTopicsViewRepo => ({
+export const createCategoryTopicsViewRepository = (db: Db): CategoryTopicsViewRepository => ({
   getCategoryTopics: async (categoryId, userId) => {
     // 1. Get category (userId + deleted_at check)
     const categoryResult = await db

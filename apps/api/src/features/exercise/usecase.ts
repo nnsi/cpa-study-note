@@ -1,6 +1,7 @@
 import type { ExerciseRepository } from "./repository"
 import type { ImageRepository } from "../image/repository"
 import type { AIAdapter, AIConfig } from "@/shared/lib/ai"
+import type { Logger } from "@/shared/lib/logger"
 import type {
   AnalyzeExerciseResponse,
   ConfirmExerciseResponse,
@@ -18,6 +19,7 @@ type ExerciseDeps = {
   aiAdapter: AIAdapter
   aiConfig: AIConfig
   r2: R2Bucket
+  logger: Logger
 }
 
 // ArrayBufferをBase64に変換（チャンク処理でスタックオーバーフロー防止）
@@ -81,7 +83,7 @@ export const analyzeExercise = async (
   mimeType: string,
   imageData: ArrayBuffer
 ): Promise<Result<AnalyzeExerciseResponse, AppError>> => {
-  const { exerciseRepo, imageRepo, aiAdapter, aiConfig, r2 } = deps
+  const { exerciseRepo, imageRepo, aiAdapter, aiConfig, r2, logger } = deps
 
   // 1. マジックバイト検証
   if (!validateMagicBytes(imageData, mimeType)) {
@@ -205,13 +207,13 @@ JSON形式で出力してください:
 
 // 論点確定
 export const confirmExercise = async (
-  deps: Pick<ExerciseDeps, "exerciseRepo">,
+  deps: Pick<ExerciseDeps, "exerciseRepo" | "logger">,
   userId: string,
   exerciseId: string,
   topicId: string,
   markAsUnderstood: boolean
 ): Promise<Result<ConfirmExerciseResponse, AppError>> => {
-  const { exerciseRepo } = deps
+  const { exerciseRepo, logger } = deps
 
   const exercise = await exerciseRepo.findByIdWithOwnerCheck(exerciseId, userId)
   if (!exercise) {
@@ -237,11 +239,11 @@ export const confirmExercise = async (
 
 // 論点に紐づく問題一覧取得
 export const getTopicExercises = async (
-  deps: Pick<ExerciseDeps, "exerciseRepo">,
+  deps: Pick<ExerciseDeps, "exerciseRepo" | "logger">,
   userId: string,
   topicId: string
 ): Promise<Result<TopicExercisesResponse, AppError>> => {
-  const { exerciseRepo } = deps
+  const { exerciseRepo, logger } = deps
 
   const exercises = await exerciseRepo.findByTopicId(topicId, userId)
 

@@ -12,6 +12,7 @@ import { parseLLMJson, stripCodeBlock } from "@cpa-study/shared"
 import { z } from "zod"
 import { ok, err, type Result } from "@/shared/lib/result"
 import { notFound, forbidden, badRequest, internalError, type AppError } from "@/shared/lib/errors"
+import type { Logger } from "@/shared/lib/logger"
 
 // LLM output parsing schema for note summary
 const noteSummaryParseSchema = z.object({
@@ -25,6 +26,7 @@ export type NoteDeps = {
   chatRepo: ChatRepository
   aiAdapter: AIAdapter
   noteSummaryConfig: AIModelConfig
+  logger: Logger
 }
 
 type CreateNoteFromSessionInput = {
@@ -129,7 +131,7 @@ ${conversationText}${goodQuestionsSection}
       maxTokens: noteSummaryConfig.maxTokens,
     })
   } catch (error) {
-    console.error("[AI] generateText error:", error)
+    deps.logger.error("AI generateText failed", { error: error instanceof Error ? error.message : String(error), sessionId })
     return err(internalError("AI要約の生成に失敗しました。再度お試しください。"))
   }
 
@@ -160,7 +162,7 @@ ${conversationText}${goodQuestionsSection}
 
 // 独立ノート作成（手動）
 export const createManualNote = async (
-  deps: { noteRepo: NoteRepository; subjectRepo: SubjectRepository },
+  deps: { noteRepo: NoteRepository; subjectRepo: SubjectRepository; logger: Logger },
   input: CreateManualNoteInput
 ): Promise<Result<NoteWithSource, AppError>> => {
   const { noteRepo, subjectRepo } = deps
@@ -188,7 +190,7 @@ export const createManualNote = async (
 
 // ノート一覧取得
 export const listNotes = async (
-  deps: Pick<NoteDeps, "noteRepo">,
+  deps: Pick<NoteDeps, "noteRepo" | "logger">,
   userId: string
 ): Promise<Result<NoteListItem[], AppError>> => {
   try {
@@ -199,14 +201,14 @@ export const listNotes = async (
       subjectName: note.subjectName,
     })))
   } catch (e) {
-    console.error("[Note] listNotes error:", e)
+    deps.logger.error("Failed to list notes", { error: e instanceof Error ? e.message : String(e) })
     return err(internalError("ノート一覧の取得に失敗しました"))
   }
 }
 
 // 論点別ノート一覧取得
 export const listNotesByTopic = async (
-  deps: Pick<NoteDeps, "noteRepo">,
+  deps: Pick<NoteDeps, "noteRepo" | "logger">,
   userId: string,
   topicId: string
 ): Promise<Result<NoteWithSource[], AppError>> => {
@@ -214,14 +216,14 @@ export const listNotesByTopic = async (
     const notes = await deps.noteRepo.findByTopic(userId, topicId)
     return ok(notes.map(toNoteWithSource))
   } catch (e) {
-    console.error("[Note] listNotesByTopic error:", e)
+    deps.logger.error("Failed to list notes by topic", { error: e instanceof Error ? e.message : String(e), topicId })
     return err(internalError("論点別ノート一覧の取得に失敗しました"))
   }
 }
 
 // ノート詳細取得
 export const getNote = async (
-  deps: Pick<NoteDeps, "noteRepo">,
+  deps: Pick<NoteDeps, "noteRepo" | "logger">,
   userId: string,
   noteId: string
 ): Promise<Result<NoteDetailResponse, AppError>> => {
@@ -246,7 +248,7 @@ export const getNote = async (
 
 // ノート更新
 export const updateNote = async (
-  deps: Pick<NoteDeps, "noteRepo">,
+  deps: Pick<NoteDeps, "noteRepo" | "logger">,
   userId: string,
   noteId: string,
   input: UpdateNoteInput
@@ -268,7 +270,7 @@ export const updateNote = async (
 
 // ノート削除
 export const deleteNote = async (
-  deps: Pick<NoteDeps, "noteRepo">,
+  deps: Pick<NoteDeps, "noteRepo" | "logger">,
   userId: string,
   noteId: string
 ): Promise<Result<void, AppError>> => {
@@ -288,7 +290,7 @@ export const deleteNote = async (
 
 // セッションIDからノート取得
 export const getNoteBySession = async (
-  deps: Pick<NoteDeps, "noteRepo">,
+  deps: Pick<NoteDeps, "noteRepo" | "logger">,
   userId: string,
   sessionId: string
 ): Promise<Result<NoteWithSource | null, AppError>> => {
@@ -301,7 +303,7 @@ export const getNoteBySession = async (
 
     return ok(toNoteWithSource(note))
   } catch (e) {
-    console.error("[Note] getNoteBySession error:", e)
+    deps.logger.error("Failed to get note by session", { error: e instanceof Error ? e.message : String(e), sessionId })
     return err(internalError("ノートの取得に失敗しました"))
   }
 }
@@ -370,7 +372,7 @@ ${conversationText}${goodQuestionsSection}
       maxTokens: noteSummaryConfig.maxTokens,
     })
   } catch (error) {
-    console.error("[AI] generateText error:", error)
+    deps.logger.error("AI generateText failed", { error: error instanceof Error ? error.message : String(error), noteId })
     return err(internalError("AI要約の生成に失敗しました。再度お試しください。"))
   }
 

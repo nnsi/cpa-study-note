@@ -12,6 +12,7 @@ import {
 } from "../../test/mocks/db"
 import type { Env, Variables } from "../../shared/types/env"
 import { parseJson, errorResponseSchema } from "../../test/helpers"
+import { loggerMiddleware } from "../../shared/middleware/logger"
 import Database from "better-sqlite3"
 
 // Response schemas for test assertions using Zod
@@ -136,6 +137,7 @@ describe("Chat Routes", () => {
 
     // Create Hono app with chat routes
     app = new Hono<{ Bindings: Env; Variables: Variables }>()
+    app.use("*", loggerMiddleware())
     app.route("/chat", chatRoutes({ env: testEnv, db: db as any }))
   })
 
@@ -181,6 +183,7 @@ describe("Chat Routes", () => {
     it("should return 401 when unauthenticated in production mode", async () => {
       const prodEnv = { ...testEnv, ENVIRONMENT: "production" as const }
       const prodApp = new Hono<{ Bindings: Env; Variables: Variables }>()
+      prodApp.use("*", loggerMiddleware())
       prodApp.route("/chat", chatRoutes({ env: prodEnv, db: db as any }))
 
       const res = await prodApp.request(
@@ -736,6 +739,7 @@ describe("Chat Routes", () => {
     beforeEach(() => {
       prodEnv = { ...testEnv, ENVIRONMENT: "production" as const }
       prodApp = new Hono<{ Bindings: Env; Variables: Variables }>()
+      prodApp.use("*", loggerMiddleware())
       prodApp.route("/chat", chatRoutes({ env: prodEnv, db: db as any }))
     })
 

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { Hono } from "hono"
 import type { Env, Variables } from "@/shared/types/env"
 import { setupTestContext, createAuthHeaders, type TestContext } from "@/test/helpers"
+import { loggerMiddleware } from "../../shared/middleware/logger"
 import { topicGeneratorRoutes } from "./route"
 import type { TestDatabase } from "@/test/mocks/db"
 
@@ -49,7 +50,9 @@ describe("topic-generator route", () => {
 
   beforeEach(() => {
     ctx = setupTestContext()
-    app = new Hono<{ Bindings: Env; Variables: Variables }>().route(
+    app = new Hono<{ Bindings: Env; Variables: Variables }>()
+      .use("*", loggerMiddleware())
+      .route(
       "/api/topic-generator",
       topicGeneratorRoutes({
         env: ctx.env,
