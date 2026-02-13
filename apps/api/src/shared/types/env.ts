@@ -1,5 +1,6 @@
 import type { EnvVars } from "../lib/env"
 import type { Logger } from "../lib/logger"
+import type { Tracer } from "../lib/tracer"
 
 export type Env = EnvVars & {
   DB: D1Database
@@ -20,4 +21,5 @@ export type Variables = {
   user: User
   rateLimitApplied?: boolean
   logger: Logger
+  tracer: Tracer
 }

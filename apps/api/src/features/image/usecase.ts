@@ -1,6 +1,7 @@
 import type { ImageRepository } from "./repository"
 import type { AIAdapter, AIConfig } from "@/shared/lib/ai"
 import type { Logger } from "@/shared/lib/logger"
+import type { Tracer } from "@/shared/lib/tracer"
 import type { Image as ImageResponse } from "@cpa-study/shared/schemas"
 import { ok, err, type Result } from "@/shared/lib/result"
 import { notFound, forbidden, badRequest, type AppError } from "@/shared/lib/errors"
@@ -48,6 +49,7 @@ type ImageDeps = {
   r2: R2Bucket
   apiBaseUrl: string
   logger: Logger
+  tracer: Tracer
 }
 
 type CreateUploadInput = {
@@ -136,7 +138,7 @@ export const uploadImage = async (
 
 // OCR実行
 export const performOCR = async (
-  deps: Pick<ImageDeps, "imageRepo" | "aiAdapter" | "aiConfig" | "r2" | "logger">,
+  deps: Pick<ImageDeps, "imageRepo" | "aiAdapter" | "aiConfig" | "r2" | "logger" | "tracer">,
   userId: string,
   imageId: string
 ): Promise<Result<{ imageId: string; ocrText: string }, AppError>> => {
@@ -152,7 +154,7 @@ export const performOCR = async (
   }
 
   // R2から画像を取得
-  const object = await r2.get(image.r2Key)
+  const object = await deps.tracer.span("r2.get", () => r2.get(image.r2Key))
   if (!object) {
     return err(notFound("画像ファイルが見つかりません"))
   }
@@ -166,18 +168,20 @@ export const performOCR = async (
 表や数式がある場合は、構造を保持してテキスト形式で出力してください。
 数値や計算式は正確に抽出してください。`
 
-  const result = await aiAdapter.generateText({
-    model: aiConfig.ocr.model,
-    messages: [
-      {
-        role: "user",
-        content: ocrPrompt,
-        imageUrl,
-      },
-    ],
-    temperature: aiConfig.ocr.temperature,
-    maxTokens: aiConfig.ocr.maxTokens,
-  })
+  const result = await deps.tracer.span("ai.ocr", () =>
+    aiAdapter.generateText({
+      model: aiConfig.ocr.model,
+      messages: [
+        {
+          role: "user",
+          content: ocrPrompt,
+          imageUrl,
+        },
+      ],
+      temperature: aiConfig.ocr.temperature,
+      maxTokens: aiConfig.ocr.maxTokens,
+    })
+  )
 
   await imageRepo.updateOcrText(imageId, result.content)
 

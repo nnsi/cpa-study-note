@@ -11,7 +11,7 @@ import {
   getImage,
 } from "./usecase"
 import { createMockR2Bucket } from "@/test/mocks/r2"
-import { noopLogger } from "../../test/helpers"
+import { noopLogger, noopTracer } from "../../test/helpers"
 
 // テストデータ生成ヘルパー
 const createMockDate = (offset = 0) => new Date(Date.now() + offset)
@@ -255,7 +255,7 @@ describe("Image UseCase", () => {
       })
 
       const result = await performOCR(
-        { imageRepo, aiAdapter, aiConfig: createMockAIConfig(), r2, logger: noopLogger },
+        { imageRepo, aiAdapter, aiConfig: createMockAIConfig(), r2, logger: noopLogger, tracer: noopTracer },
         "user-1",
         "image-1"
       )
@@ -279,7 +279,7 @@ describe("Image UseCase", () => {
       const r2 = createMockR2Bucket()
 
       const result = await performOCR(
-        { imageRepo, aiAdapter, aiConfig: createMockAIConfig(), r2, logger: noopLogger },
+        { imageRepo, aiAdapter, aiConfig: createMockAIConfig(), r2, logger: noopLogger, tracer: noopTracer },
         "user-1",
         "non-existent"
       )
@@ -299,7 +299,7 @@ describe("Image UseCase", () => {
       const r2 = createMockR2Bucket()
 
       const result = await performOCR(
-        { imageRepo, aiAdapter, aiConfig: createMockAIConfig(), r2, logger: noopLogger },
+        { imageRepo, aiAdapter, aiConfig: createMockAIConfig(), r2, logger: noopLogger, tracer: noopTracer },
         "user-1",
         "image-1"
       )
@@ -319,7 +319,7 @@ describe("Image UseCase", () => {
       const r2 = createMockR2Bucket() // 空のR2
 
       const result = await performOCR(
-        { imageRepo, aiAdapter, aiConfig: createMockAIConfig(), r2, logger: noopLogger },
+        { imageRepo, aiAdapter, aiConfig: createMockAIConfig(), r2, logger: noopLogger, tracer: noopTracer },
         "user-1",
         "image-1"
       )

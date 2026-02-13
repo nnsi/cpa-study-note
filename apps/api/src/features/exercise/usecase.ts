@@ -2,6 +2,7 @@ import type { ExerciseRepository } from "./repository"
 import type { ImageRepository } from "../image/repository"
 import type { AIAdapter, AIConfig } from "@/shared/lib/ai"
 import type { Logger } from "@/shared/lib/logger"
+import type { Tracer } from "@/shared/lib/tracer"
 import type {
   AnalyzeExerciseResponse,
   ConfirmExerciseResponse,
@@ -20,6 +21,7 @@ type ExerciseDeps = {
   aiConfig: AIConfig
   r2: R2Bucket
   logger: Logger
+  tracer: Tracer
 }
 
 // ArrayBufferをBase64に変換（チャンク処理でスタックオーバーフロー防止）
@@ -95,21 +97,25 @@ export const analyzeExercise = async (
   const safeFilename = sanitizeFilename(filename)
   const r2Key = `images/${imageId}/${safeFilename}`
 
-  await imageRepo.create({
-    id: imageId,
-    userId,
-    filename,
-    mimeType,
-    size: imageData.byteLength,
-    r2Key,
-    ocrText: null,
-  })
+  await deps.tracer.span("d1.createImage", () =>
+    imageRepo.create({
+      id: imageId,
+      userId,
+      filename,
+      mimeType,
+      size: imageData.byteLength,
+      r2Key,
+      ocrText: null,
+    })
+  )
 
-  await r2.put(r2Key, imageData, {
-    httpMetadata: {
-      contentType: mimeType,
-    },
-  })
+  await deps.tracer.span("r2.put", () =>
+    r2.put(r2Key, imageData, {
+      httpMetadata: {
+        contentType: mimeType,
+      },
+    })
+  )
 
   // 3. OCR実行
   const base64 = arrayBufferToBase64(imageData)
@@ -119,18 +125,20 @@ export const analyzeExercise = async (
 表や数式がある場合は、構造を保持してテキスト形式で出力してください。
 数値や計算式は正確に抽出してください。`
 
-  const ocrResult = await aiAdapter.generateText({
-    model: aiConfig.ocr.model,
-    messages: [
-      {
-        role: "user",
-        content: ocrPrompt,
-        imageUrl,
-      },
-    ],
-    temperature: aiConfig.ocr.temperature,
-    maxTokens: aiConfig.ocr.maxTokens,
-  })
+  const ocrResult = await deps.tracer.span("ai.ocr", () =>
+    aiAdapter.generateText({
+      model: aiConfig.ocr.model,
+      messages: [
+        {
+          role: "user",
+          content: ocrPrompt,
+          imageUrl,
+        },
+      ],
+      temperature: aiConfig.ocr.temperature,
+      maxTokens: aiConfig.ocr.maxTokens,
+    })
+  )
 
   const ocrText = ocrResult.content
   await imageRepo.updateOcrText(imageId, ocrText)
@@ -171,17 +179,19 @@ JSON形式で出力してください:
 
   let suggestedTopics: SuggestedTopic[] = []
   try {
-    const suggestionResult = await aiAdapter.generateText({
-      model: aiConfig.chat.model,
-      messages: [
-        {
-          role: "user",
-          content: suggestionPrompt,
-        },
-      ],
-      temperature: 0.3,
-      maxTokens: 1000,
-    })
+    const suggestionResult = await deps.tracer.span("ai.topicSuggestion", () =>
+      aiAdapter.generateText({
+        model: aiConfig.chat.model,
+        messages: [
+          {
+            role: "user",
+            content: suggestionPrompt,
+          },
+        ],
+        temperature: 0.3,
+        maxTokens: 1000,
+      })
+    )
 
     suggestedTopics = parseTopicSuggestions(suggestionResult.content, topicMap)
   } catch {

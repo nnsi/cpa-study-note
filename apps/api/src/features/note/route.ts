@@ -46,6 +46,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
         const user = c.get("user")
         const { sessionId } = c.req.valid("json")
         const logger = c.get("logger").child({ feature: "note" })
+        const tracer = c.get("tracer")
 
         const aiAdapter = createAIAdapter({
           provider: env.AI_PROVIDER,
@@ -53,7 +54,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
         })
 
         const result = await createNoteFromSession(
-          { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: aiConfig.noteSummary, logger },
+          { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: aiConfig.noteSummary, logger, tracer },
           { userId: user.id, sessionId }
         )
 
@@ -143,6 +144,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
       const user = c.get("user")
       const noteId = c.req.param("noteId")
       const logger = c.get("logger").child({ feature: "note" })
+      const tracer = c.get("tracer")
 
       const aiAdapter = createAIAdapter({
         provider: env.AI_PROVIDER,
@@ -150,7 +152,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
       })
 
       const result = await refreshNoteFromSession(
-        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: aiConfig.noteSummary, logger },
+        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: aiConfig.noteSummary, logger, tracer },
         user.id,
         noteId
       )

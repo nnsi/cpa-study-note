@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest"
 import { suggestTopics, type TopicGeneratorDeps } from "./usecase"
 import { createMockAIAdapter } from "@/test/mocks/ai"
-import { noopLogger } from "../../test/helpers"
+import { noopLogger, noopTracer } from "../../test/helpers"
 import { resolveAIConfig } from "@/shared/lib/ai/config"
 import type { StreamChunk } from "@/shared/lib/ai"
 
@@ -60,6 +60,7 @@ const createTestDeps = (overrides: Partial<TopicGeneratorDeps> = {}): TopicGener
     }),
     aiConfig: resolveAIConfig("local"),
     logger: noopLogger,
+    tracer: noopTracer,
     ...overrides,
   }
 }

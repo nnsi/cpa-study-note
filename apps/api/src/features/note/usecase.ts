@@ -13,6 +13,7 @@ import { z } from "zod"
 import { ok, err, type Result } from "@/shared/lib/result"
 import { notFound, forbidden, badRequest, internalError, type AppError } from "@/shared/lib/errors"
 import type { Logger } from "@/shared/lib/logger"
+import type { Tracer } from "@/shared/lib/tracer"
 
 // LLM output parsing schema for note summary
 const noteSummaryParseSchema = z.object({
@@ -27,6 +28,7 @@ export type NoteDeps = {
   aiAdapter: AIAdapter
   noteSummaryConfig: AIModelConfig
   logger: Logger
+  tracer: Tracer
 }
 
 type CreateNoteFromSessionInput = {
@@ -124,12 +126,14 @@ ${conversationText}${goodQuestionsSection}
 
   let aiResult
   try {
-    aiResult = await aiAdapter.generateText({
-      model: noteSummaryConfig.model,
-      messages: [{ role: "user", content: summaryPrompt }],
-      temperature: noteSummaryConfig.temperature,
-      maxTokens: noteSummaryConfig.maxTokens,
-    })
+    aiResult = await deps.tracer.span("ai.noteSummary", () =>
+      aiAdapter.generateText({
+        model: noteSummaryConfig.model,
+        messages: [{ role: "user", content: summaryPrompt }],
+        temperature: noteSummaryConfig.temperature,
+        maxTokens: noteSummaryConfig.maxTokens,
+      })
+    )
   } catch (error) {
     deps.logger.error("AI generateText failed", { error: error instanceof Error ? error.message : String(error), sessionId })
     return err(internalError("AI要約の生成に失敗しました。再度お試しください。"))
@@ -147,15 +151,17 @@ ${conversationText}${goodQuestionsSection}
   const keyPoints = parsed.keyPoints
   const stumbledPoints = parsed.stumbledPoints
 
-  const note = await noteRepo.create({
-    userId,
-    topicId: session.topicId,
-    sessionId,
-    aiSummary,
-    userMemo: null,
-    keyPoints,
-    stumbledPoints,
-  })
+  const note = await deps.tracer.span("d1.createNote", () =>
+    noteRepo.create({
+      userId,
+      topicId: session.topicId,
+      sessionId,
+      aiSummary,
+      userMemo: null,
+      keyPoints,
+      stumbledPoints,
+    })
+  )
 
   return ok(toNoteWithSource(note))
 }
@@ -365,12 +371,14 @@ ${conversationText}${goodQuestionsSection}
 
   let aiResult
   try {
-    aiResult = await aiAdapter.generateText({
-      model: noteSummaryConfig.model,
-      messages: [{ role: "user", content: summaryPrompt }],
-      temperature: noteSummaryConfig.temperature,
-      maxTokens: noteSummaryConfig.maxTokens,
-    })
+    aiResult = await deps.tracer.span("ai.noteSummary", () =>
+      aiAdapter.generateText({
+        model: noteSummaryConfig.model,
+        messages: [{ role: "user", content: summaryPrompt }],
+        temperature: noteSummaryConfig.temperature,
+        maxTokens: noteSummaryConfig.maxTokens,
+      })
+    )
   } catch (error) {
     deps.logger.error("AI generateText failed", { error: error instanceof Error ? error.message : String(error), noteId })
     return err(internalError("AI要約の生成に失敗しました。再度お試しください。"))
@@ -388,11 +396,13 @@ ${conversationText}${goodQuestionsSection}
   const keyPoints = parsed.keyPoints
   const stumbledPoints = parsed.stumbledPoints
 
-  const note = await noteRepo.update(noteId, {
-    aiSummary,
-    keyPoints,
-    stumbledPoints,
-  })
+  const note = await deps.tracer.span("d1.updateNote", () =>
+    noteRepo.update(noteId, {
+      aiSummary,
+      keyPoints,
+      stumbledPoints,
+    })
+  )
 
   return ok(toNoteWithSource(note!))
 }

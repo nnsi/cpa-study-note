@@ -1,5 +1,6 @@
 import type { AIAdapter, AIMessage, StreamChunk, AIConfig } from "@/shared/lib/ai"
 import type { Logger } from "@/shared/lib/logger"
+import type { Tracer } from "@/shared/lib/tracer"
 import type { SubjectRepository } from "../subject/repository"
 import type { StudyDomainRepository } from "../study-domain/repository"
 import { sanitizeForPrompt, sanitizeCustomPrompt } from "../chat/domain/sanitize"
@@ -10,6 +11,7 @@ export type TopicGeneratorDeps = {
   aiAdapter: AIAdapter
   aiConfig: AIConfig
   logger: Logger
+  tracer: Tracer
 }
 
 type SuggestTopicsInput = {
@@ -69,18 +71,24 @@ export async function* suggestTopics(
   deps: TopicGeneratorDeps,
   input: SuggestTopicsInput
 ): AsyncIterable<StreamChunk> {
+  const { tracer } = deps
+
   // 1. 科目の存在確認
-  const subject = await deps.subjectRepo.findById(input.subjectId, input.userId)
+  const subject = await tracer.span("d1.findSubject", () =>
+    deps.subjectRepo.findById(input.subjectId, input.userId)
+  )
   if (!subject) {
     yield { type: "error", error: "科目が見つかりません" }
     return
   }
 
   // 2. 既存カテゴリ一覧と学習領域情報を並列取得
-  const [categoryRecords, studyDomain] = await Promise.all([
-    deps.subjectRepo.findCategoriesBySubjectId(input.subjectId, input.userId),
-    deps.studyDomainRepo.findById(subject.studyDomainId, input.userId),
-  ])
+  const [categoryRecords, studyDomain] = await tracer.span("d1.categoriesAndDomain", () =>
+    Promise.all([
+      deps.subjectRepo.findCategoriesBySubjectId(input.subjectId, input.userId),
+      deps.studyDomainRepo.findById(subject.studyDomainId, input.userId),
+    ])
+  )
 
   const existingCategoryNames = categoryRecords.map((c) => c.name)
 
@@ -97,6 +105,7 @@ export async function* suggestTopics(
   ]
 
   // 4. AIストリーミング（text/done/errorのみyield、フロントエンドがJSONパースを担当）
+  const aiStart = performance.now()
   try {
     for await (const chunk of deps.aiAdapter.streamText({
       model: deps.aiConfig.topicGenerator.model,
@@ -114,5 +123,7 @@ export async function* suggestTopics(
     return
   }
 
+  tracer.addSpan("ai.stream", performance.now() - aiStart)
+  deps.logger.info("Stream complete", tracer.getSummary())
   yield { type: "done" }
 }

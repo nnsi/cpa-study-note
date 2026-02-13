@@ -113,8 +113,9 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         const { content, imageId, ocrResult } = c.req.valid("json")
 
         const logger = c.get("logger").child({ feature: "chat" })
+        const tracer = c.get("tracer")
         const stream = sendMessage(
-          { chatRepo, learningRepo, aiAdapter, aiConfig, logger },
+          { chatRepo, learningRepo, aiAdapter, aiConfig, logger, tracer },
           {
             sessionId,
             userId: user.id,
@@ -139,8 +140,9 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         const { content, imageId, ocrResult } = c.req.valid("json")
 
         const logger = c.get("logger").child({ feature: "chat" })
+        const tracer = c.get("tracer")
         const stream = sendMessageWithNewSession(
-          { chatRepo, learningRepo, aiAdapter, aiConfig, logger },
+          { chatRepo, learningRepo, aiAdapter, aiConfig, logger, tracer },
           {
             topicId,
             userId: user.id,
@@ -162,9 +164,10 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
       async (c) => {
         const { text } = c.req.valid("json")
         const logger = c.get("logger").child({ feature: "chat" })
+        const tracer = c.get("tracer")
 
         const result = await correctSpeechText(
-          { aiAdapter, aiConfig, logger },
+          { aiAdapter, aiConfig, logger, tracer },
           text
         )
 
@@ -177,9 +180,10 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
       const messageId = c.req.param("messageId")
       const user = c.get("user")
       const logger = c.get("logger").child({ feature: "chat" })
+      const tracer = c.get("tracer")
 
       const evalResult = await evaluateQuestion(
-        { chatRepo, learningRepo, aiAdapter, aiConfig, logger },
+        { chatRepo, learningRepo, aiAdapter, aiConfig, logger, tracer },
         user.id,
         messageId,
       )
