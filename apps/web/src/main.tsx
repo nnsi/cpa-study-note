@@ -1,16 +1,23 @@
 import { StrictMode, Suspense } from "react"
 import { createRoot } from "react-dom/client"
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { QueryClient, QueryClientProvider, MutationCache } from "@tanstack/react-query"
 import { RouterProvider, createRouter } from "@tanstack/react-router"
 import { routeTree } from "./routeTree.gen"
 import { ErrorBoundary } from "./components/ErrorBoundary"
-import { ToastContainer } from "./lib/toast"
+import { ToastContainer, toast } from "./lib/toast"
 import { initializeAuth } from "./lib/auth"
 import "./index.css"
 import "katex/dist/katex.min.css"
 
 // QueryClient設定（パフォーマンス最適化）
 const queryClient = new QueryClient({
+  mutationCache: new MutationCache({
+    onError: (error, _variables, _context, mutation) => {
+      // 個別の onError ハンドラがある mutation はそちらに任せる
+      if (mutation.options.onError) return
+      toast.error(error.message || "エラーが発生しました")
+    },
+  }),
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5, // 5分間キャッシュ有効
