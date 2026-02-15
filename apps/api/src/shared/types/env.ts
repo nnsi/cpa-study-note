@@ -6,6 +6,7 @@ export type Env = EnvVars & {
   DB: D1Database
   R2: R2Bucket
   RATE_LIMITER: DurableObjectNamespace
+  LOGS?: AnalyticsEngineDataset
 }
 
 export type User = {

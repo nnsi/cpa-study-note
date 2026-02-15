@@ -73,39 +73,10 @@ jobs:
       - name: Run tests
         run: pnpm test
 
-  # Tail Workerデプロイ（ログ収集）
-  deploy-tail-worker:
-    name: Deploy Tail Worker
-    needs: [setup, ci]
-    runs-on: ubuntu-latest
-    environment: ${{ needs.setup.outputs.environment }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Deploy Tail Worker
-        working-directory: apps/tail-worker
-        run: pnpm exec wrangler deploy --env ${{ needs.setup.outputs.wrangler_env }}
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
   # バックエンドデプロイ
   deploy-api:
     name: Deploy API
-    needs: [setup, ci, deploy-tail-worker]
+    needs: [setup, ci]
     runs-on: ubuntu-latest
     environment: ${{ needs.setup.outputs.environment }}
     steps:
