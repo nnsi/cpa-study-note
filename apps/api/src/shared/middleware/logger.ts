@@ -1,12 +1,14 @@
 import type { MiddlewareHandler } from "hono"
 import { createLogger } from "../lib/logger"
 import { createTracer } from "../lib/tracer"
+import { shouldWriteToWAE, writeToWAE } from "../lib/wae"
 
 /**
  * 構造化ロガーミドルウェア
  * - リクエストごとにrequestIdを生成し、全ログに付与
  * - リクエストごとにTracerを生成し、パフォーマンス計測を提供
  * - JSON形式で出力（Cloudflare Workers Logs対応）
+ * - WAE書き込み: LOGS bindingがあればonWriteコールバック経由で直接書き込み
  * - 全環境で有効（localだけでなくstaging/productionでも動作）
  */
 export const loggerMiddleware = (): MiddlewareHandler => {
@@ -15,8 +17,19 @@ export const loggerMiddleware = (): MiddlewareHandler => {
     const method = c.req.method
     const path = c.req.path
 
+    const logs = (c.env as Record<string, unknown> | undefined)?.LOGS as
+      | AnalyticsEngineDataset
+      | undefined
+
     const logger = createLogger({
       bindings: { requestId, method, path },
+      onWrite: logs
+        ? (entry) => {
+            if (shouldWriteToWAE(entry)) {
+              writeToWAE(logs, entry)
+            }
+          }
+        : undefined,
     })
     const tracer = createTracer()
 

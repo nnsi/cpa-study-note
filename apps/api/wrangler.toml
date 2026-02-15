@@ -22,10 +22,11 @@ tag = "v1"
 new_sqlite_classes = ["RateLimiterDO"]
 
 # ===========================================
-# Tail Worker (Log Collection)
+# Workers Analytics Engine (Log Collection)
 # ===========================================
-[[tail_consumers]]
-service = "cpa-study-tail-worker"
+[[analytics_engine_datasets]]
+binding = "LOGS"
+dataset = "api_logs"
 
 # ============================================
 # ステージング環境設定 (masterブランチ → stg)
@@ -47,8 +48,9 @@ bucket_name = "YOUR_STAGING_R2_BUCKET"
 name = "RATE_LIMITER"
 class_name = "RateLimiterDO"
 
-[[env.staging.tail_consumers]]
-service = "cpa-study-tail-worker-stg"
+[[env.staging.analytics_engine_datasets]]
+binding = "LOGS"
+dataset = "api_logs"
 
 [env.staging.vars]
 ENVIRONMENT = "staging"
@@ -80,8 +82,9 @@ bucket_name = "YOUR_PRODUCTION_R2_BUCKET"
 name = "RATE_LIMITER"
 class_name = "RateLimiterDO"
 
-[[env.production.tail_consumers]]
-service = "cpa-study-tail-worker-prod"
+[[env.production.analytics_engine_datasets]]
+binding = "LOGS"
+dataset = "api_logs"
 
 [env.production.vars]
 ENVIRONMENT = "production"

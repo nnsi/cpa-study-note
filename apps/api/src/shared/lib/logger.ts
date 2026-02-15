@@ -18,11 +18,13 @@ export type Logger = {
 type LoggerOptions = {
   level?: LogLevel
   bindings?: Record<string, unknown>
+  onWrite?: (entry: Record<string, unknown>) => void
 }
 
 export const createLogger = (options: LoggerOptions = {}): Logger => {
   const minLevel = LOG_LEVEL_PRIORITY[options.level ?? "debug"]
   const bindings = options.bindings ?? {}
+  const onWrite = options.onWrite
 
   const write = (level: LogLevel, msg: string, data?: Record<string, unknown>) => {
     if (LOG_LEVEL_PRIORITY[level] < minLevel) return
@@ -37,6 +39,8 @@ export const createLogger = (options: LoggerOptions = {}): Logger => {
 
     const fn = level === "error" ? console.error : level === "warn" ? console.warn : console.log
     fn(JSON.stringify(entry))
+
+    onWrite?.(entry)
   }
 
   return {
@@ -48,6 +52,7 @@ export const createLogger = (options: LoggerOptions = {}): Logger => {
       createLogger({
         level: options.level,
         bindings: { ...bindings, ...childBindings },
+        onWrite,
       }),
   }
 }
