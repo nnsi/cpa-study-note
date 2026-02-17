@@ -71,9 +71,10 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
         const user = c.get("user")
         const body = c.req.valid("json")
         const logger = c.get("logger").child({ feature: "note" })
+        const tracer = c.get("tracer")
 
         const result = await createManualNote(
-          { noteRepo, subjectRepo, logger },
+          { noteRepo, subjectRepo, logger, tracer },
           {
             userId: user.id,
             topicId: body.topicId,
@@ -91,7 +92,8 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
     .get("/", authMiddleware, async (c) => {
       const user = c.get("user")
       const logger = c.get("logger").child({ feature: "note" })
-      const result = await listNotes({ noteRepo, logger }, user.id)
+      const tracer = c.get("tracer")
+      const result = await listNotes({ noteRepo, logger, tracer }, user.id)
       return handleResult(c, result, "notes")
     })
 
@@ -100,7 +102,8 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
       const user = c.get("user")
       const topicId = c.req.param("topicId")
       const logger = c.get("logger").child({ feature: "note" })
-      const result = await listNotesByTopic({ noteRepo, logger }, user.id, topicId)
+      const tracer = c.get("tracer")
+      const result = await listNotesByTopic({ noteRepo, logger, tracer }, user.id, topicId)
       return handleResult(c, result, "notes")
     })
 
@@ -109,7 +112,8 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
       const user = c.get("user")
       const sessionId = c.req.param("sessionId")
       const logger = c.get("logger").child({ feature: "note" })
-      const result = await getNoteBySession({ noteRepo, logger }, user.id, sessionId)
+      const tracer = c.get("tracer")
+      const result = await getNoteBySession({ noteRepo, logger, tracer }, user.id, sessionId)
       return handleResult(c, result, "note")
     })
 
@@ -118,8 +122,9 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
       const user = c.get("user")
       const noteId = c.req.param("noteId")
       const logger = c.get("logger").child({ feature: "note" })
+      const tracer = c.get("tracer")
 
-      const result = await getNote({ noteRepo, logger }, user.id, noteId)
+      const result = await getNote({ noteRepo, logger, tracer }, user.id, noteId)
       return handleResult(c, result, "note")
     })
 
@@ -133,8 +138,9 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
         const noteId = c.req.param("noteId")
         const body = c.req.valid("json")
         const logger = c.get("logger").child({ feature: "note" })
+        const tracer = c.get("tracer")
 
-        const result = await updateNote({ noteRepo, logger }, user.id, noteId, body)
+        const result = await updateNote({ noteRepo, logger, tracer }, user.id, noteId, body)
         return handleResult(c, result, "note")
       }
     )
@@ -165,8 +171,9 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
       const user = c.get("user")
       const noteId = c.req.param("noteId")
       const logger = c.get("logger").child({ feature: "note" })
+      const tracer = c.get("tracer")
 
-      const result = await deleteNote({ noteRepo, logger }, user.id, noteId)
+      const result = await deleteNote({ noteRepo, logger, tracer }, user.id, noteId)
       return handleResult(c, result, 204)
     })
 

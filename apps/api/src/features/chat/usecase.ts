@@ -26,19 +26,23 @@ export type ChatDeps = {
 
 // セッション作成
 export const createSession = async (
-  deps: Pick<ChatDeps, "chatRepo" | "learningRepo" | "logger">,
+  deps: Pick<ChatDeps, "chatRepo" | "learningRepo" | "logger" | "tracer">,
   userId: string,
   topicId: string
 ): Promise<Result<ChatSession, AppError>> => {
-  const exists = await deps.learningRepo.verifyTopicExists(userId, topicId)
+  const exists = await deps.tracer.span("d1.verifyTopicExists", () =>
+    deps.learningRepo.verifyTopicExists(userId, topicId)
+  )
   if (!exists) {
     return err(notFound("論点が見つかりません"))
   }
 
-  const session = await deps.chatRepo.createSession({
-    userId,
-    topicId,
-  })
+  const session = await deps.tracer.span("d1.createSession", () =>
+    deps.chatRepo.createSession({
+      userId,
+      topicId,
+    })
+  )
 
   return ok({
     ...session,
@@ -50,11 +54,13 @@ export const createSession = async (
 // セッション一覧取得（メッセージが1件以上あるセッションのみ）
 // N+1問題を解消: 1クエリでセッションと統計を取得
 export const listSessionsByTopic = async (
-  deps: Pick<ChatDeps, "chatRepo" | "logger">,
+  deps: Pick<ChatDeps, "chatRepo" | "logger" | "tracer">,
   userId: string,
   topicId: string
 ): Promise<Result<SessionWithStats[], AppError>> => {
-  const sessions = await deps.chatRepo.findSessionsWithStatsByTopic(userId, topicId)
+  const sessions = await deps.tracer.span("d1.findSessionsWithStatsByTopic", () =>
+    deps.chatRepo.findSessionsWithStatsByTopic(userId, topicId)
+  )
 
   return ok(
     sessions.map((session) => ({
@@ -67,11 +73,13 @@ export const listSessionsByTopic = async (
 
 // セッション取得
 export const getSession = async (
-  deps: Pick<ChatDeps, "chatRepo" | "logger">,
+  deps: Pick<ChatDeps, "chatRepo" | "logger" | "tracer">,
   userId: string,
   sessionId: string
 ): Promise<Result<ChatSession, AppError>> => {
-  const session = await deps.chatRepo.findSessionById(sessionId)
+  const session = await deps.tracer.span("d1.findSessionById", () =>
+    deps.chatRepo.findSessionById(sessionId)
+  )
   if (!session) {
     return err(notFound("セッションが見つかりません"))
   }
@@ -89,11 +97,13 @@ export const getSession = async (
 
 // メッセージ一覧取得
 export const listMessages = async (
-  deps: Pick<ChatDeps, "chatRepo" | "logger">,
+  deps: Pick<ChatDeps, "chatRepo" | "logger" | "tracer">,
   userId: string,
   sessionId: string
 ): Promise<Result<ChatMessage[], AppError>> => {
-  const session = await deps.chatRepo.findSessionById(sessionId)
+  const session = await deps.tracer.span("d1.findSessionById", () =>
+    deps.chatRepo.findSessionById(sessionId)
+  )
   if (!session) {
     return err(notFound("セッションが見つかりません"))
   }
@@ -102,7 +112,9 @@ export const listMessages = async (
     return err(forbidden("このセッションへのアクセス権限がありません"))
   }
 
-  const messages = await deps.chatRepo.findMessagesBySession(sessionId)
+  const messages = await deps.tracer.span("d1.findMessagesBySession", () =>
+    deps.chatRepo.findMessagesBySession(sessionId)
+  )
 
   return ok(messages.map((m) => ({
     ...m,
@@ -389,11 +401,13 @@ export async function* sendMessageWithNewSession(
 
 // トピックに紐づくgood質問を一括取得（N+1解消用）
 export const listGoodQuestionsByTopic = async (
-  deps: Pick<ChatDeps, "chatRepo" | "logger">,
+  deps: Pick<ChatDeps, "chatRepo" | "logger" | "tracer">,
   userId: string,
   topicId: string
 ): Promise<Result<GoodQuestionResponse[], AppError>> => {
-  const questions = await deps.chatRepo.findGoodQuestionsByTopic(userId, topicId)
+  const questions = await deps.tracer.span("d1.findGoodQuestionsByTopic", () =>
+    deps.chatRepo.findGoodQuestionsByTopic(userId, topicId)
+  )
 
   return ok(
     questions.map((q) => ({

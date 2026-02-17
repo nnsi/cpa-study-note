@@ -36,7 +36,7 @@ describe("Chat UseCase", () => {
   describe("createSession", () => {
     it("should create a new chat session", async () => {
       const result = await createSession(
-        { chatRepo, learningRepo, logger: noopLogger },
+        { chatRepo, learningRepo, logger: noopLogger, tracer: noopTracer },
         testData.userId,
         testData.topicId
       )
@@ -53,7 +53,7 @@ describe("Chat UseCase", () => {
 
     it("should reject session creation for non-existent topic", async () => {
       const result = await createSession(
-        { chatRepo, learningRepo, logger: noopLogger },
+        { chatRepo, learningRepo, logger: noopLogger, tracer: noopTracer },
         testData.userId,
         "non-existent-topic-id"
       )
@@ -108,7 +108,7 @@ describe("Chat UseCase", () => {
       })
 
       const result = await listSessionsByTopic(
-        { chatRepo, logger: noopLogger },
+        { chatRepo, logger: noopLogger, tracer: noopTracer },
         testData.userId,
         testData.topicId
       )
@@ -137,7 +137,7 @@ describe("Chat UseCase", () => {
       })
 
       const result = await listSessionsByTopic(
-        { chatRepo, logger: noopLogger },
+        { chatRepo, logger: noopLogger, tracer: noopTracer },
         testData.userId,
         testData.topicId
       )
@@ -155,7 +155,7 @@ describe("Chat UseCase", () => {
         topicId: testData.topicId,
       })
 
-      const result = await getSession({ chatRepo, logger: noopLogger }, testData.userId, session.id)
+      const result = await getSession({ chatRepo, logger: noopLogger, tracer: noopTracer }, testData.userId, session.id)
 
       expect(result.ok).toBe(true)
       if (!result.ok) return
@@ -170,7 +170,7 @@ describe("Chat UseCase", () => {
         topicId: testData.topicId,
       })
 
-      const result = await getSession({ chatRepo, logger: noopLogger }, "other-user-id", session.id)
+      const result = await getSession({ chatRepo, logger: noopLogger, tracer: noopTracer }, "other-user-id", session.id)
 
       expect(result.ok).toBe(false)
       if (result.ok) return
@@ -180,7 +180,7 @@ describe("Chat UseCase", () => {
 
     it("should return 404 for non-existent session", async () => {
       const result = await getSession(
-        { chatRepo, logger: noopLogger },
+        { chatRepo, logger: noopLogger, tracer: noopTracer },
         testData.userId,
         "non-existent-session"
       )
@@ -217,7 +217,7 @@ describe("Chat UseCase", () => {
       })
 
       const result = await listMessages(
-        { chatRepo, logger: noopLogger },
+        { chatRepo, logger: noopLogger, tracer: noopTracer },
         testData.userId,
         session.id
       )
@@ -239,7 +239,7 @@ describe("Chat UseCase", () => {
       })
 
       const result = await listMessages(
-        { chatRepo, logger: noopLogger },
+        { chatRepo, logger: noopLogger, tracer: noopTracer },
         "other-user-id",
         session.id
       )
@@ -252,7 +252,7 @@ describe("Chat UseCase", () => {
 
     it("should return 404 for non-existent session", async () => {
       const result = await listMessages(
-        { chatRepo, logger: noopLogger },
+        { chatRepo, logger: noopLogger, tracer: noopTracer },
         testData.userId,
         "non-existent-session"
       )

@@ -92,9 +92,10 @@ export const exerciseRoutes = ({ env, db }: ExerciseDeps) => {
         const { topicId, markAsUnderstood } = c.req.valid("json")
 
         const logger = c.get("logger").child({ feature: "exercise" })
+        const tracer = c.get("tracer")
 
         const result = await confirmExercise(
-          { exerciseRepo, logger },
+          { exerciseRepo, logger, tracer },
           user.id,
           exerciseId,
           topicId,
@@ -111,8 +112,9 @@ export const exerciseRoutes = ({ env, db }: ExerciseDeps) => {
       const topicId = c.req.param("topicId")
 
       const logger = c.get("logger").child({ feature: "exercise" })
+      const tracer = c.get("tracer")
 
-      const result = await getTopicExercises({ exerciseRepo, logger }, user.id, topicId)
+      const result = await getTopicExercises({ exerciseRepo, logger, tracer }, user.id, topicId)
 
       return handleResult(c, result)
     })

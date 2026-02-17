@@ -6,10 +6,12 @@ import type {
 import { ok, err, type Result } from "@/shared/lib/result"
 import { badRequest, type AppError } from "@/shared/lib/errors"
 import type { Logger } from "@/shared/lib/logger"
+import type { Tracer } from "@/shared/lib/tracer"
 
 export type MetricsDeps = {
   metricsRepo: MetricsRepository
   logger: Logger
+  tracer: Tracer
 }
 
 const toResponse = (snapshot: MetricSnapshot): MetricSnapshotResponse => ({
@@ -39,7 +41,7 @@ export const getDailyMetrics = async (
   to: string,
   timezone: string
 ): Promise<Result<DailyMetricResponse[], AppError>> => {
-  const { metricsRepo, logger } = deps
+  const { metricsRepo, logger, tracer } = deps
   if (!isValidDateFormat(from) || !isValidDateFormat(to)) {
     return err(badRequest("日付形式が不正です。YYYY-MM-DD形式で指定してください"))
   }
@@ -49,7 +51,9 @@ export const getDailyMetrics = async (
   }
 
   // オンザフライで集計（タイムゾーン考慮）
-  const metrics = await metricsRepo.aggregateDateRange(userId, from, to, timezone)
+  const metrics = await tracer.span("d1.aggregateDateRange", () =>
+    metricsRepo.aggregateDateRange(userId, from, to, timezone)
+  )
 
   return ok(metrics.map(toDailyMetricResponse))
 }
@@ -69,7 +73,7 @@ export const createSnapshot = async (
   userId: string,
   date?: string
 ): Promise<Result<MetricSnapshotResponse, AppError>> => {
-  const { metricsRepo, logger } = deps
+  const { metricsRepo, logger, tracer } = deps
   const targetDate = date ?? getTodayDateString()
 
   if (!isValidDateFormat(targetDate)) {
@@ -77,10 +81,14 @@ export const createSnapshot = async (
   }
 
   // 集計を実行
-  const aggregation = await metricsRepo.aggregateForDate(userId, targetDate)
+  const aggregation = await tracer.span("d1.aggregateForDate", () =>
+    metricsRepo.aggregateForDate(userId, targetDate)
+  )
 
   // upsert で保存
-  const snapshot = await metricsRepo.upsert(userId, targetDate, aggregation)
+  const snapshot = await tracer.span("d1.upsert", () =>
+    metricsRepo.upsert(userId, targetDate, aggregation)
+  )
 
   return ok(toResponse(snapshot))
 }
@@ -91,7 +99,9 @@ export const getTodayMetrics = async (
   userId: string,
   timezone: string
 ): Promise<Result<TodayMetrics, AppError>> => {
-  const { metricsRepo, logger } = deps
-  const metrics = await metricsRepo.aggregateToday(userId, timezone)
+  const { metricsRepo, logger, tracer } = deps
+  const metrics = await tracer.span("d1.aggregateToday", () =>
+    metricsRepo.aggregateToday(userId, timezone)
+  )
   return ok(metrics)
 }

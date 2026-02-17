@@ -36,7 +36,8 @@ export const studyDomainRoutes = ({ db }: StudyDomainDeps) => {
     .get("/", authMiddleware, async (c) => {
       const user = c.get("user")
       const logger = c.get("logger").child({ feature: "study-domain" })
-      const result = await listStudyDomains({ ...deps, logger }, user.id)
+      const tracer = c.get("tracer")
+      const result = await listStudyDomains({ ...deps, logger, tracer }, user.id)
       return handleResult(c, result, "studyDomains")
     })
 
@@ -44,8 +45,9 @@ export const studyDomainRoutes = ({ db }: StudyDomainDeps) => {
     .get("/:id", authMiddleware, async (c) => {
       const user = c.get("user")
       const logger = c.get("logger").child({ feature: "study-domain" })
+      const tracer = c.get("tracer")
       const id = c.req.param("id")
-      const result = await getStudyDomain({ ...deps, logger }, id, user.id)
+      const result = await getStudyDomain({ ...deps, logger, tracer }, id, user.id)
       return handleResult(c, result, "studyDomain")
     })
 
@@ -57,8 +59,9 @@ export const studyDomainRoutes = ({ db }: StudyDomainDeps) => {
       async (c) => {
         const user = c.get("user")
         const logger = c.get("logger").child({ feature: "study-domain" })
+        const tracer = c.get("tracer")
         const data = c.req.valid("json")
-        const result = await createStudyDomain({ ...deps, logger }, user.id, data)
+        const result = await createStudyDomain({ ...deps, logger, tracer }, user.id, data)
 
         return handleResult(c, result, "studyDomain", 201)
       }
@@ -72,9 +75,10 @@ export const studyDomainRoutes = ({ db }: StudyDomainDeps) => {
       async (c) => {
         const user = c.get("user")
         const logger = c.get("logger").child({ feature: "study-domain" })
+        const tracer = c.get("tracer")
         const id = c.req.param("id")
         const data = c.req.valid("json")
-        const result = await updateStudyDomain({ ...deps, logger }, id, user.id, data)
+        const result = await updateStudyDomain({ ...deps, logger, tracer }, id, user.id, data)
         return handleResult(c, result, "studyDomain")
       }
     )
@@ -83,8 +87,9 @@ export const studyDomainRoutes = ({ db }: StudyDomainDeps) => {
     .delete("/:id", authMiddleware, async (c) => {
       const user = c.get("user")
       const logger = c.get("logger").child({ feature: "study-domain" })
+      const tracer = c.get("tracer")
       const id = c.req.param("id")
-      const result = await deleteStudyDomain({ ...deps, logger }, id, user.id)
+      const result = await deleteStudyDomain({ ...deps, logger, tracer }, id, user.id)
 
       return handleResult(c, result, 204)
     })
@@ -103,7 +108,8 @@ export const studyDomainRoutes = ({ db }: StudyDomainDeps) => {
         try {
           const subjectRepo = createSubjectRepository(db)
           const txRunner = createNoTransactionRunner(db)
-          const treeDeps = { subjectRepo, db, txRunner, logger }
+          const tracer = c.get("tracer")
+          const treeDeps = { subjectRepo, db, txRunner, logger, tracer }
 
           const result = await bulkImportCSVToStudyDomain(treeDeps, user.id, id, csvContent)
           return handleResult(c, result)
