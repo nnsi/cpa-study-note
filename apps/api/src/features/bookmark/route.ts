@@ -23,7 +23,8 @@ export const bookmarkRoutes = ({ db }: BookmarkDeps) => {
     .get("/", authMiddleware, async (c) => {
       const user = c.get("user")
       const logger = c.get("logger").child({ feature: "bookmark" })
-      const result = await getBookmarks({ repo, logger }, user.id)
+      const tracer = c.get("tracer")
+      const result = await getBookmarks({ repo, logger, tracer }, user.id)
       return handleResult(c, result, "bookmarks")
     })
 
@@ -31,9 +32,10 @@ export const bookmarkRoutes = ({ db }: BookmarkDeps) => {
     .post("/", authMiddleware, zValidator("json", addBookmarkRequestSchema), async (c) => {
       const user = c.get("user")
       const logger = c.get("logger").child({ feature: "bookmark" })
+      const tracer = c.get("tracer")
       const { targetType, targetId } = c.req.valid("json")
 
-      const result = await addBookmark({ repo, logger }, user.id, targetType, targetId)
+      const result = await addBookmark({ repo, logger, tracer }, user.id, targetType, targetId)
       return handleResult(c, result, "bookmark", 201)
     })
 
@@ -45,9 +47,10 @@ export const bookmarkRoutes = ({ db }: BookmarkDeps) => {
       async (c) => {
         const user = c.get("user")
         const logger = c.get("logger").child({ feature: "bookmark" })
+        const tracer = c.get("tracer")
         const { targetType, targetId } = c.req.valid("param")
 
-        const result = await removeBookmark({ repo, logger }, user.id, targetType, targetId)
+        const result = await removeBookmark({ repo, logger, tracer }, user.id, targetType, targetId)
         return handleResult(c, result, 204)
       }
     )

@@ -6,7 +6,7 @@ import type { ExerciseRepository, Exercise, ExerciseWithImage, TopicForSuggestio
 import type { ImageRepository, Image } from "../image/repository"
 import type { AIAdapter, AIConfig } from "@/shared/lib/ai"
 import { confirmExercise, getTopicExercises } from "./usecase"
-import { noopLogger } from "../../test/helpers"
+import { noopLogger, noopTracer } from "../../test/helpers"
 
 // テストデータ
 const createMockDate = (offset = 0) => new Date(Date.now() + offset)
@@ -57,7 +57,7 @@ describe("Exercise UseCase", () => {
       })
 
       const result = await confirmExercise(
-        { exerciseRepo, logger: noopLogger },
+        { exerciseRepo, logger: noopLogger, tracer: noopTracer },
         "user-1",
         "exercise-1",
         "topic-1",
@@ -85,7 +85,7 @@ describe("Exercise UseCase", () => {
       })
 
       const result = await confirmExercise(
-        { exerciseRepo, logger: noopLogger },
+        { exerciseRepo, logger: noopLogger, tracer: noopTracer },
         "user-1",
         "exercise-1",
         "topic-1",
@@ -103,7 +103,7 @@ describe("Exercise UseCase", () => {
       })
 
       const result = await confirmExercise(
-        { exerciseRepo, logger: noopLogger },
+        { exerciseRepo, logger: noopLogger, tracer: noopTracer },
         "user-1",
         "non-existent",
         "topic-1",
@@ -125,7 +125,7 @@ describe("Exercise UseCase", () => {
       })
 
       const result = await confirmExercise(
-        { exerciseRepo, logger: noopLogger },
+        { exerciseRepo, logger: noopLogger, tracer: noopTracer },
         "user-1",
         "exercise-1",
         "topic-2",
@@ -146,7 +146,7 @@ describe("Exercise UseCase", () => {
       })
 
       const result = await confirmExercise(
-        { exerciseRepo, logger: noopLogger },
+        { exerciseRepo, logger: noopLogger, tracer: noopTracer },
         "user-1",
         "exercise-1",
         "invalid-topic",
@@ -174,7 +174,7 @@ describe("Exercise UseCase", () => {
       })
 
       const result = await getTopicExercises(
-        { exerciseRepo, logger: noopLogger },
+        { exerciseRepo, logger: noopLogger, tracer: noopTracer },
         "user-1",
         "topic-1"
       )
@@ -193,7 +193,7 @@ describe("Exercise UseCase", () => {
       })
 
       const result = await getTopicExercises(
-        { exerciseRepo, logger: noopLogger },
+        { exerciseRepo, logger: noopLogger, tracer: noopTracer },
         "user-1",
         "topic-1"
       )

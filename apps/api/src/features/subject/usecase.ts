@@ -9,6 +9,7 @@ import type {
 import { ok, err, type Result } from "@/shared/lib/result"
 import { notFound, type AppError } from "@/shared/lib/errors"
 import type { Logger } from "@/shared/lib/logger"
+import type { Tracer } from "@/shared/lib/tracer"
 
 // User type for resolving studyDomainId
 type User = {
@@ -30,6 +31,7 @@ export const resolveStudyDomainId = (
 export type SubjectDeps = {
   subjectRepo: SubjectRepository
   logger: Logger
+  tracer: Tracer
 }
 
 type SubjectWithStats = Subject & {
@@ -43,19 +45,23 @@ export const listSubjects = async (
   userId: string,
   studyDomainId: string
 ): Promise<Result<SubjectWithStats[], AppError>> => {
-  const { subjectRepo, logger } = deps
+  const { subjectRepo, logger, tracer } = deps
   // Verify the study domain belongs to the user
-  const ownsStudyDomain = await subjectRepo.verifyStudyDomainOwnership(studyDomainId, userId)
+  const ownsStudyDomain = await tracer.span("d1.verifyDomainOwnership", () =>
+    subjectRepo.verifyStudyDomainOwnership(studyDomainId, userId)
+  )
   if (!ownsStudyDomain) {
     return err(notFound("学習領域が見つかりません"))
   }
 
-  const subjects = await subjectRepo.findByStudyDomainId(studyDomainId, userId)
+  const subjects = await tracer.span("d1.findSubjects", () =>
+    subjectRepo.findByStudyDomainId(studyDomainId, userId)
+  )
 
   // 統計情報を一括取得してマージ
   const subjectIds = subjects.map((s) => s.id)
   const stats = subjectIds.length > 0
-    ? await subjectRepo.getBatchSubjectStats(subjectIds, userId)
+    ? await tracer.span("d1.getBatchStats", () => subjectRepo.getBatchSubjectStats(subjectIds, userId))
     : []
   const statsMap = new Map(stats.map((s) => [s.subjectId, s]))
 
@@ -76,8 +82,8 @@ export const getSubject = async (
   userId: string,
   subjectId: string
 ): Promise<Result<Subject, AppError>> => {
-  const { subjectRepo, logger } = deps
-  const subject = await subjectRepo.findById(subjectId, userId)
+  const { subjectRepo, logger, tracer } = deps
+  const subject = await tracer.span("d1.findSubject", () => subjectRepo.findById(subjectId, userId))
   if (!subject) {
     return err(notFound("科目が見つかりません"))
   }
@@ -98,9 +104,11 @@ export const createSubject = async (
   userId: string,
   data: CreateSubjectData
 ): Promise<Result<Subject, AppError>> => {
-  const { subjectRepo, logger } = deps
+  const { subjectRepo, logger, tracer } = deps
   // Verify the study domain belongs to the user
-  const ownsStudyDomain = await subjectRepo.verifyStudyDomainOwnership(data.studyDomainId, userId)
+  const ownsStudyDomain = await tracer.span("d1.verifyDomainOwnership", () =>
+    subjectRepo.verifyStudyDomainOwnership(data.studyDomainId, userId)
+  )
   if (!ownsStudyDomain) {
     return err(notFound("学習領域が見つかりません"))
   }
@@ -115,10 +123,10 @@ export const createSubject = async (
     displayOrder: data.displayOrder,
   }
 
-  const result = await subjectRepo.create(input)
+  const result = await tracer.span("d1.createSubject", () => subjectRepo.create(input))
 
   // Return full subject data
-  const subject = await subjectRepo.findById(result.id, userId)
+  const subject = await tracer.span("d1.findSubject", () => subjectRepo.findById(result.id, userId))
   if (!subject) {
     return err(notFound("作成した科目が見つかりません"))
   }
@@ -139,7 +147,7 @@ export const updateSubject = async (
   subjectId: string,
   data: UpdateSubjectData
 ): Promise<Result<Subject, AppError>> => {
-  const { subjectRepo, logger } = deps
+  const { subjectRepo, logger, tracer } = deps
   const input: UpdateSubjectInput = {}
   if (data.name !== undefined) input.name = data.name
   if (data.description !== undefined) input.description = data.description
@@ -147,7 +155,7 @@ export const updateSubject = async (
   if (data.color !== undefined) input.color = data.color
   if (data.displayOrder !== undefined) input.displayOrder = data.displayOrder
 
-  const result = await subjectRepo.update(subjectId, userId, input)
+  const result = await tracer.span("d1.updateSubject", () => subjectRepo.update(subjectId, userId, input))
   if (!result) {
     return err(notFound("科目が見つかりません"))
   }
@@ -159,8 +167,8 @@ export const deleteSubject = async (
   userId: string,
   subjectId: string
 ): Promise<Result<void, AppError>> => {
-  const { subjectRepo, logger } = deps
-  const result = await subjectRepo.softDelete(subjectId, userId)
+  const { subjectRepo, logger, tracer } = deps
+  const result = await tracer.span("d1.softDeleteSubject", () => subjectRepo.softDelete(subjectId, userId))
   if (!result) {
     return err(notFound("科目が見つかりません"))
   }

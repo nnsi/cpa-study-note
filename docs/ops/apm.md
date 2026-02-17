@@ -5,7 +5,7 @@
 リクエストごとの D1 / AI / R2 の処理時間内訳を自動計測し、Workers Analytics Engine (WAE) に蓄積している。
 
 - **計測**: `tracer.span("d1.xxx", fn)` でラップされた処理の所要時間を自動記録
-- **蓄積**: Tail Worker が "Response sent" / "Stream complete" / error ログを WAE に書き込む
+- **蓄積**: Logger の onWrite コールバックで "Response sent" / "Stream complete" / error ログを WAE に書き込む
 - **参照**: WAE SQL API (curl) または Cloudflare Dashboard
 
 ## WAE スキーマ

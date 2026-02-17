@@ -217,15 +217,17 @@ JSON形式で出力してください:
 
 // 論点確定
 export const confirmExercise = async (
-  deps: Pick<ExerciseDeps, "exerciseRepo" | "logger">,
+  deps: Pick<ExerciseDeps, "exerciseRepo" | "logger" | "tracer">,
   userId: string,
   exerciseId: string,
   topicId: string,
   markAsUnderstood: boolean
 ): Promise<Result<ConfirmExerciseResponse, AppError>> => {
-  const { exerciseRepo, logger } = deps
+  const { exerciseRepo, logger, tracer } = deps
 
-  const exercise = await exerciseRepo.findByIdWithOwnerCheck(exerciseId, userId)
+  const exercise = await tracer.span("d1.findExercise", () =>
+    exerciseRepo.findByIdWithOwnerCheck(exerciseId, userId)
+  )
   if (!exercise) {
     return err(notFound("問題が見つかりません"))
   }
@@ -234,7 +236,9 @@ export const confirmExercise = async (
     return err(badRequest("この問題は既に確定されています"))
   }
 
-  const updated = await exerciseRepo.confirm(exerciseId, topicId, markAsUnderstood)
+  const updated = await tracer.span("d1.confirmExercise", () =>
+    exerciseRepo.confirm(exerciseId, topicId, markAsUnderstood)
+  )
   if (!updated) {
     return err(badRequest("指定された論点が存在しないか、問題の更新に失敗しました"))
   }
@@ -249,13 +253,15 @@ export const confirmExercise = async (
 
 // 論点に紐づく問題一覧取得
 export const getTopicExercises = async (
-  deps: Pick<ExerciseDeps, "exerciseRepo" | "logger">,
+  deps: Pick<ExerciseDeps, "exerciseRepo" | "logger" | "tracer">,
   userId: string,
   topicId: string
 ): Promise<Result<TopicExercisesResponse, AppError>> => {
-  const { exerciseRepo, logger } = deps
+  const { exerciseRepo, logger, tracer } = deps
 
-  const exercises = await exerciseRepo.findByTopicId(topicId, userId)
+  const exercises = await tracer.span("d1.findByTopicId", () =>
+    exerciseRepo.findByTopicId(topicId, userId)
+  )
 
   return ok({
     exercises: exercises.map((e) => ({

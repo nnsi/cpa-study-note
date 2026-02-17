@@ -5,12 +5,14 @@ import type {
 } from "./repository"
 import type { StudyDomainResponse } from "@cpa-study/shared/schemas"
 import type { Logger } from "@/shared/lib/logger"
+import type { Tracer } from "@/shared/lib/tracer"
 import { ok, err, type Result } from "@/shared/lib/result"
 import { notFound, type AppError } from "@/shared/lib/errors"
 
 type StudyDomainDeps = {
   repo: StudyDomainRepository
   logger: Logger
+  tracer: Tracer
 }
 
 // List user's study domains
@@ -19,7 +21,7 @@ export const listStudyDomains = async (
   userId: string
 ): Promise<Result<StudyDomainResponse[], AppError>> => {
   const repo = deps.repo
-  const domains = await repo.findByUserId(userId)
+  const domains = await deps.tracer.span("d1.findByUserId", () => repo.findByUserId(userId))
 
   return ok(
     domains.map((d) => ({
@@ -42,7 +44,7 @@ export const getStudyDomain = async (
   userId: string
 ): Promise<Result<StudyDomainResponse, AppError>> => {
   const repo = deps.repo
-  const domain = await repo.findById(id, userId)
+  const domain = await deps.tracer.span("d1.findById", () => repo.findById(id, userId))
 
   if (!domain) {
     return err(notFound("学習領域が見つかりません"))
@@ -68,13 +70,13 @@ export const createStudyDomain = async (
 ): Promise<Result<StudyDomainResponse, AppError>> => {
   const repo = deps.repo
 
-  const { id } = await repo.create({
+  const { id } = await deps.tracer.span("d1.create", () => repo.create({
     userId,
     ...data,
-  })
+  }))
 
   // Fetch the created domain to return
-  const domain = await repo.findById(id, userId)
+  const domain = await deps.tracer.span("d1.findById", () => repo.findById(id, userId))
   if (!domain) {
     return err(notFound("学習領域の作成に失敗しました"))
   }
@@ -99,7 +101,7 @@ export const updateStudyDomain = async (
   data: UpdateStudyDomainInput
 ): Promise<Result<StudyDomainResponse, AppError>> => {
   const repo = deps.repo
-  const domain = await repo.update(id, userId, data)
+  const domain = await deps.tracer.span("d1.update", () => repo.update(id, userId, data))
 
   if (!domain) {
     return err(notFound("学習領域が見つかりません"))
@@ -126,11 +128,11 @@ export const deleteStudyDomain = async (
   const repo = deps.repo
 
   // Check if domain exists and belongs to user
-  const existing = await repo.findById(id, userId)
+  const existing = await deps.tracer.span("d1.findById", () => repo.findById(id, userId))
   if (!existing) {
     return err(notFound("学習領域が見つかりません"))
   }
 
-  await repo.softDelete(id, userId)
+  await deps.tracer.span("d1.softDelete", () => repo.softDelete(id, userId))
   return ok(undefined)
 }

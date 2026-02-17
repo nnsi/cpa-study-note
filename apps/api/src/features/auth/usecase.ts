@@ -5,6 +5,7 @@ import type { createProviders } from "./providers"
 import type { User as EnvUser } from "@/shared/types/env"
 import type { Db } from "@cpa-study/db"
 import type { Logger } from "@/shared/lib/logger"
+import type { Tracer } from "@/shared/lib/tracer"
 import { createSampleDataForNewUser } from "./sample-data"
 import { notFound, unauthorized, internalError, type AppError } from "@/shared/lib/errors"
 
@@ -14,12 +15,14 @@ type AuthDeps = {
   providers: ReturnType<typeof createProviders>
   db: Db
   logger: Logger
+  tracer: Tracer
 }
 
 // リポジトリのみを使用する操作用
 type AuthRepoDeps = {
   repo: AuthRepository
   logger: Logger
+  tracer: Tracer
 }
 
 export const handleOAuthCallback = async (
@@ -30,7 +33,7 @@ export const handleOAuthCallback = async (
   const provider = deps.providers.get(providerName)
   if (!provider) return err(notFound("認証プロバイダーが見つかりません", { provider: providerName }))
 
-  const { logger } = deps
+  const { logger, tracer } = deps
 
   let tokens
   try {
@@ -60,48 +63,64 @@ export const handleOAuthCallback = async (
   }
 
   // 既存接続を確認
-  const existingConnection = await deps.repo.findConnectionByProviderAndId(
-    providerName,
-    oauthUser.providerId
+  const existingConnection = await tracer.span("d1.findConnection", () =>
+    deps.repo.findConnectionByProviderAndId(
+      providerName,
+      oauthUser.providerId
+    )
   )
 
   if (existingConnection) {
-    const user = await deps.repo.findUserById(existingConnection.userId)
+    const user = await tracer.span("d1.findUserById", () =>
+      deps.repo.findUserById(existingConnection.userId)
+    )
     if (!user) return err(internalError("データベースエラーが発生しました"))
     return ok({ user, isNewUser: false })
   }
 
   // 同じメールの既存ユーザーに接続追加、または新規作成
-  const existingUserByEmail = await deps.repo.findUserByEmail(oauthUser.email)
+  const existingUserByEmail = await tracer.span("d1.findUserByEmail", () =>
+    deps.repo.findUserByEmail(oauthUser.email)
+  )
 
   if (existingUserByEmail) {
-    await deps.repo.createConnection({
-      userId: existingUserByEmail.id,
-      provider: providerName,
-      providerId: oauthUser.providerId,
-    })
+    await tracer.span("d1.createConnection", () =>
+      deps.repo.createConnection({
+        userId: existingUserByEmail.id,
+        provider: providerName,
+        providerId: oauthUser.providerId,
+      })
+    )
     return ok({ user: existingUserByEmail, isNewUser: false })
   }
 
   // 新規ユーザー作成（タイムゾーンはデフォルト Asia/Tokyo）
-  const newUser = await deps.repo.createUser({
-    email: oauthUser.email,
-    name: oauthUser.name,
-    avatarUrl: oauthUser.avatarUrl,
-    timezone: "Asia/Tokyo",
-  })
+  const newUser = await tracer.span("d1.createUser", () =>
+    deps.repo.createUser({
+      email: oauthUser.email,
+      name: oauthUser.name,
+      avatarUrl: oauthUser.avatarUrl,
+      timezone: "Asia/Tokyo",
+    })
+  )
 
-  await deps.repo.createConnection({
-    userId: newUser.id,
-    provider: providerName,
-    providerId: oauthUser.providerId,
-  })
+  await tracer.span("d1.createConnection", () =>
+    deps.repo.createConnection({
+      userId: newUser.id,
+      provider: providerName,
+      providerId: oauthUser.providerId,
+    })
+  )
 
   // Create sample data for new user
   try {
-    const { studyDomainId } = await createSampleDataForNewUser(deps.db, newUser.id)
+    const { studyDomainId } = await tracer.span("d1.createSampleData", () =>
+      createSampleDataForNewUser(deps.db, newUser.id)
+    )
     // Update user's default study domain
-    await deps.repo.updateUser(newUser.id, { defaultStudyDomainId: studyDomainId })
+    await tracer.span("d1.updateDefaultDomain", () =>
+      deps.repo.updateUser(newUser.id, { defaultStudyDomainId: studyDomainId })
+    )
     newUser.defaultStudyDomainId = studyDomainId
   } catch (error) {
     logger.warn("Failed to create sample data for new user", {
@@ -143,14 +162,18 @@ export const getOrCreateDevUser = async (
   deps: AuthRepoDeps,
   input: DevLoginInput
 ): Promise<Result<User, AppError>> => {
-  let user = await deps.repo.findUserById(input.userId)
+  let user = await deps.tracer.span("d1.findUserById", () =>
+    deps.repo.findUserById(input.userId)
+  )
   if (!user) {
-    user = await deps.repo.createUserWithId(input.userId, {
-      email: input.email,
-      name: input.name,
-      avatarUrl: input.avatarUrl,
-      timezone: input.timezone,
-    })
+    user = await deps.tracer.span("d1.createUser", () =>
+      deps.repo.createUserWithId(input.userId, {
+        email: input.email,
+        name: input.name,
+        avatarUrl: input.avatarUrl,
+        timezone: input.timezone,
+      })
+    )
   }
 
   if (!user) {
@@ -167,11 +190,13 @@ export const saveRefreshToken = async (
   deps: AuthRepoDeps,
   input: SaveRefreshTokenInput
 ): Promise<Result<void, AppError>> => {
-  await deps.repo.saveRefreshToken({
-    userId: input.userId,
-    tokenHash: input.tokenHash,
-    expiresAt: input.expiresAt,
-  })
+  await deps.tracer.span("d1.saveRefreshToken", () =>
+    deps.repo.saveRefreshToken({
+      userId: input.userId,
+      tokenHash: input.tokenHash,
+      expiresAt: input.expiresAt,
+    })
+  )
   return ok(undefined)
 }
 
@@ -182,9 +207,13 @@ export const logout = async (
   deps: AuthRepoDeps,
   refreshTokenHash: string
 ): Promise<Result<void, AppError>> => {
-  const storedToken = await deps.repo.findRefreshTokenByHash(refreshTokenHash)
+  const storedToken = await deps.tracer.span("d1.findRefreshToken", () =>
+    deps.repo.findRefreshTokenByHash(refreshTokenHash)
+  )
   if (storedToken) {
-    await deps.repo.deleteRefreshToken(storedToken.id)
+    await deps.tracer.span("d1.deleteRefreshToken", () =>
+      deps.repo.deleteRefreshToken(storedToken.id)
+    )
   }
   return ok(undefined)
 }
@@ -197,7 +226,9 @@ export const refreshAccessToken = async (
 ): Promise<Result<{ accessToken: string; user: EnvUser }, AppError>> => {
   // Hash the provided token and look it up
   const tokenHash = await hashToken(refreshToken)
-  const storedToken = await deps.repo.findRefreshTokenByHash(tokenHash)
+  const storedToken = await deps.tracer.span("d1.findRefreshToken", () =>
+    deps.repo.findRefreshTokenByHash(tokenHash)
+  )
 
   if (!storedToken) {
     return err(unauthorized("無効なリフレッシュトークンです"))
@@ -206,12 +237,16 @@ export const refreshAccessToken = async (
   // Check expiration
   if (storedToken.expiresAt < new Date()) {
     // Delete expired token
-    await deps.repo.deleteRefreshToken(storedToken.id)
+    await deps.tracer.span("d1.deleteRefreshToken", () =>
+      deps.repo.deleteRefreshToken(storedToken.id)
+    )
     return err(unauthorized("リフレッシュトークンの有効期限が切れています"))
   }
 
   // Get user
-  const user = await deps.repo.findUserById(storedToken.userId)
+  const user = await deps.tracer.span("d1.findUserById", () =>
+    deps.repo.findUserById(storedToken.userId)
+  )
   if (!user) {
     return err(internalError("データベースエラーが発生しました"))
   }

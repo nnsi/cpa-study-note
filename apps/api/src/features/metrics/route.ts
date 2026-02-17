@@ -21,7 +21,8 @@ export const metricsRoutes = ({ db }: MetricsDeps) => {
     .get("/today", authMiddleware, async (c) => {
       const user = c.get("user")
       const logger = c.get("logger").child({ feature: "metrics" })
-      const result = await getTodayMetrics({ metricsRepo, logger }, user.id, user.timezone)
+      const tracer = c.get("tracer")
+      const result = await getTodayMetrics({ metricsRepo, logger, tracer }, user.id, user.timezone)
       return handleResult(c, result, "metrics")
     })
 
@@ -34,8 +35,9 @@ export const metricsRoutes = ({ db }: MetricsDeps) => {
         const user = c.get("user")
         const { from, to } = c.req.valid("query")
         const logger = c.get("logger").child({ feature: "metrics" })
+        const tracer = c.get("tracer")
 
-        const result = await getDailyMetrics({ metricsRepo, logger }, user.id, from, to, user.timezone)
+        const result = await getDailyMetrics({ metricsRepo, logger, tracer }, user.id, from, to, user.timezone)
         return handleResult(c, result, "metrics")
       }
     )
@@ -44,8 +46,9 @@ export const metricsRoutes = ({ db }: MetricsDeps) => {
     .post("/snapshot", authMiddleware, async (c) => {
       const user = c.get("user")
       const logger = c.get("logger").child({ feature: "metrics" })
+      const tracer = c.get("tracer")
 
-      const result = await createSnapshot({ metricsRepo, logger }, user.id)
+      const result = await createSnapshot({ metricsRepo, logger, tracer }, user.id)
       return handleResult(c, result, "snapshot", 201)
     })
 
@@ -58,8 +61,9 @@ export const metricsRoutes = ({ db }: MetricsDeps) => {
         const user = c.get("user")
         const { date } = c.req.valid("param")
         const logger = c.get("logger").child({ feature: "metrics" })
+        const tracer = c.get("tracer")
 
-        const result = await createSnapshot({ metricsRepo, logger }, user.id, date)
+        const result = await createSnapshot({ metricsRepo, logger, tracer }, user.id, date)
         return handleResult(c, result, "snapshot", 201)
       }
     )

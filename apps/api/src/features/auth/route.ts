@@ -114,8 +114,9 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
       }
 
       const logger = c.get("logger").child({ feature: "auth" })
+      const tracer = c.get("tracer")
       const result = await handleOAuthCallback(
-        { repo, providers, db, logger },
+        { repo, providers, db, logger, tracer },
         providerName,
         code
       )
@@ -145,7 +146,7 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
       const expiresAt = new Date()
       expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_EXPIRES_DAYS)
       const saveResult = await saveRefreshToken(
-        { repo, logger },
+        { repo, logger, tracer },
         {
           userId: user.id,
           tokenHash: refreshTokenHash,
@@ -193,8 +194,9 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
       }
 
       const logger = c.get("logger").child({ feature: "auth" })
+      const tracer = c.get("tracer")
       const result = await refreshAccessToken(
-        { repo, logger },
+        { repo, logger, tracer },
         refreshToken,
         jwtSecret,
         generateAccessToken
@@ -229,8 +231,9 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
 
       // ユーザーが存在しない場合は作成（UseCase経由）
       const logger = c.get("logger").child({ feature: "auth" })
+      const tracer = c.get("tracer")
       const userResult = await getOrCreateDevUser(
-        { repo, logger },
+        { repo, logger, tracer },
         {
           userId: devUserId,
           email: `${devUserId}@example.com`,
@@ -263,7 +266,7 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
       const expiresAt = new Date()
       expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_EXPIRES_DAYS)
       const saveResult = await saveRefreshToken(
-        { repo, logger },
+        { repo, logger, tracer },
         {
           userId: devUser.id,
           tokenHash: refreshTokenHash,
@@ -294,11 +297,12 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
     .post("/logout", async (c) => {
       const refreshToken = getCookie(c, "refresh_token")
       const logger = c.get("logger").child({ feature: "auth" })
+      const tracer = c.get("tracer")
 
       if (refreshToken) {
         // Delete refresh token from DB（UseCase経由）
         const tokenHash = await hashToken(refreshToken)
-        const logoutResult = await logout({ repo, logger }, tokenHash)
+        const logoutResult = await logout({ repo, logger, tracer }, tokenHash)
         // エラーが発生してもクッキーはクリアする（ログ出力のみ）
         if (!logoutResult.ok) {
           logger.error("Logout DB error", { error: logoutResult.error })

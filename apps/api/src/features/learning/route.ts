@@ -34,8 +34,9 @@ export const learningRoutes = ({ db }: LearningDeps) => {
       const topicId = c.req.param("topicId")
       const user = c.get("user")
       const logger = c.get("logger").child({ feature: "learning" })
+      const tracer = c.get("tracer")
 
-      const result = await touchTopic({ learningRepo, logger }, user.id, topicId)
+      const result = await touchTopic({ learningRepo, logger, tracer }, user.id, topicId)
       return handleResult(c, result, "progress")
     })
 
@@ -44,8 +45,9 @@ export const learningRoutes = ({ db }: LearningDeps) => {
       const topicId = c.req.param("topicId")
       const user = c.get("user")
       const logger = c.get("logger").child({ feature: "learning" })
+      const tracer = c.get("tracer")
 
-      const result = await getProgress({ learningRepo, logger }, user.id, topicId)
+      const result = await getProgress({ learningRepo, logger, tracer }, user.id, topicId)
       return handleResult(c, result, "progress")
     })
 
@@ -59,8 +61,9 @@ export const learningRoutes = ({ db }: LearningDeps) => {
         const user = c.get("user")
         const { understood } = c.req.valid("json")
         const logger = c.get("logger").child({ feature: "learning" })
+        const tracer = c.get("tracer")
 
-        const result = await updateProgress({ learningRepo, logger }, user.id, topicId, understood)
+        const result = await updateProgress({ learningRepo, logger, tracer }, user.id, topicId, understood)
         return handleResult(c, result, "progress")
       }
     )
@@ -70,8 +73,9 @@ export const learningRoutes = ({ db }: LearningDeps) => {
       const topicId = c.req.param("topicId")
       const user = c.get("user")
       const logger = c.get("logger").child({ feature: "learning" })
+      const tracer = c.get("tracer")
 
-      const result = await getCheckHistory({ learningRepo, logger }, user.id, topicId)
+      const result = await getCheckHistory({ learningRepo, logger, tracer }, user.id, topicId)
       return handleResult(c, result, "history")
     })
 
@@ -84,8 +88,9 @@ export const learningRoutes = ({ db }: LearningDeps) => {
         const user = c.get("user")
         const { limit } = c.req.valid("query")
         const logger = c.get("logger").child({ feature: "learning" })
+        const tracer = c.get("tracer")
 
-        const result = await listRecentTopics({ learningRepo, logger }, user.id, limit)
+        const result = await listRecentTopics({ learningRepo, logger, tracer }, user.id, limit)
         return handleResult(c, result, "topics")
       }
     )
@@ -94,8 +99,9 @@ export const learningRoutes = ({ db }: LearningDeps) => {
     .get("/progress", authMiddleware, async (c) => {
       const user = c.get("user")
       const logger = c.get("logger").child({ feature: "learning" })
+      const tracer = c.get("tracer")
 
-      const result = await listUserProgress({ learningRepo, logger }, user.id)
+      const result = await listUserProgress({ learningRepo, logger, tracer }, user.id)
       return handleResult(c, result, "progress")
     })
 
@@ -103,8 +109,9 @@ export const learningRoutes = ({ db }: LearningDeps) => {
     .get("/subjects/progress-stats", authMiddleware, async (c) => {
       const user = c.get("user")
       const logger = c.get("logger").child({ feature: "learning" })
+      const tracer = c.get("tracer")
 
-      const result = await getSubjectProgressStats({ subjectRepo, logger }, user.id)
+      const result = await getSubjectProgressStats({ subjectRepo, logger, tracer }, user.id)
       return handleResult(c, result, "stats")
     })
 

@@ -44,8 +44,10 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         const user = c.get("user")
         const { topicId } = c.req.valid("json")
 
+        const logger = c.get("logger").child({ feature: "chat" })
+        const tracer = c.get("tracer")
         const result = await createSession(
-          { chatRepo, learningRepo, logger: c.get("logger").child({ feature: "chat" }) },
+          { chatRepo, learningRepo, logger, tracer },
           user.id,
           topicId
         )
@@ -63,7 +65,8 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         const user = c.get("user")
 
         const logger = c.get("logger").child({ feature: "chat" })
-        const result = await listSessionsByTopic({ chatRepo, logger }, user.id, topicId)
+        const tracer = c.get("tracer")
+        const result = await listSessionsByTopic({ chatRepo, logger, tracer }, user.id, topicId)
         return handleResult(c, result, "sessions")
       }
     )
@@ -77,7 +80,8 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         const user = c.get("user")
 
         const logger = c.get("logger").child({ feature: "chat" })
-        const result = await listGoodQuestionsByTopic({ chatRepo, logger }, user.id, topicId)
+        const tracer = c.get("tracer")
+        const result = await listGoodQuestionsByTopic({ chatRepo, logger, tracer }, user.id, topicId)
         return handleResult(c, result, "questions")
       }
     )
@@ -87,8 +91,9 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
       const sessionId = c.req.param("sessionId")
       const user = c.get("user")
       const logger = c.get("logger").child({ feature: "chat" })
+      const tracer = c.get("tracer")
 
-      const result = await getSession({ chatRepo, logger }, user.id, sessionId)
+      const result = await getSession({ chatRepo, logger, tracer }, user.id, sessionId)
       return handleResult(c, result, "session")
     })
 
@@ -97,8 +102,9 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
       const sessionId = c.req.param("sessionId")
       const user = c.get("user")
       const logger = c.get("logger").child({ feature: "chat" })
+      const tracer = c.get("tracer")
 
-      const result = await listMessages({ chatRepo, logger }, user.id, sessionId)
+      const result = await listMessages({ chatRepo, logger, tracer }, user.id, sessionId)
       return handleResult(c, result, "messages")
     })
 
