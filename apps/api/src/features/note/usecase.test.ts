@@ -7,7 +7,7 @@ import type { ChatRepository } from "../chat/repository"
 import type { AIAdapter } from "@/shared/lib/ai"
 import { defaultAIConfig } from "@/shared/lib/ai"
 import type { SubjectRepository } from "../subject/repository"
-import { noopLogger, noopTracer } from "../../test/helpers"
+import { noopLogger } from "../../test/helpers"
 import {
   createNoteFromSession,
   createManualNote,
@@ -174,7 +174,7 @@ describe("Note UseCase", () => {
       const aiAdapter = createMockAIAdapter()
 
       const result = await createNoteFromSession(
-        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: defaultAIConfig.noteSummary, logger: noopLogger, tracer: noopTracer },
+        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: defaultAIConfig.noteSummary, logger: noopLogger },
         { userId: "user-1", sessionId: "session-1" }
       )
 
@@ -195,7 +195,7 @@ describe("Note UseCase", () => {
       const aiAdapter = createMockAIAdapter()
 
       const result = await createNoteFromSession(
-        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: defaultAIConfig.noteSummary, logger: noopLogger, tracer: noopTracer },
+        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: defaultAIConfig.noteSummary, logger: noopLogger },
         { userId: "user-1", sessionId: "non-existent" }
       )
 
@@ -214,7 +214,7 @@ describe("Note UseCase", () => {
       const aiAdapter = createMockAIAdapter()
 
       const result = await createNoteFromSession(
-        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: defaultAIConfig.noteSummary, logger: noopLogger, tracer: noopTracer },
+        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: defaultAIConfig.noteSummary, logger: noopLogger },
         { userId: "user-1", sessionId: "session-1" }
       )
 
@@ -252,7 +252,7 @@ describe("Note UseCase", () => {
       })
 
       const result = await createNoteFromSession(
-        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: defaultAIConfig.noteSummary, logger: noopLogger, tracer: noopTracer },
+        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: defaultAIConfig.noteSummary, logger: noopLogger },
         { userId: "user-1", sessionId: "session-1" }
       )
 
@@ -283,7 +283,7 @@ describe("Note UseCase", () => {
       })
 
       const result = await createNoteFromSession(
-        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: defaultAIConfig.noteSummary, logger: noopLogger, tracer: noopTracer },
+        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: defaultAIConfig.noteSummary, logger: noopLogger },
         { userId: "user-1", sessionId: "session-1" }
       )
 
@@ -307,7 +307,7 @@ describe("Note UseCase", () => {
         findByUser: vi.fn().mockResolvedValue(notes),
       })
 
-      const result = await listNotes({ noteRepo, logger: noopLogger, tracer: noopTracer }, "user-1")
+      const result = await listNotes({ noteRepo, logger: noopLogger }, "user-1")
 
       expect(result.ok).toBe(true)
       if (!result.ok) return
@@ -322,7 +322,7 @@ describe("Note UseCase", () => {
         findByUser: vi.fn().mockResolvedValue([]),
       })
 
-      const result = await listNotes({ noteRepo, logger: noopLogger, tracer: noopTracer }, "user-1")
+      const result = await listNotes({ noteRepo, logger: noopLogger }, "user-1")
 
       expect(result.ok).toBe(true)
       if (!result.ok) return
@@ -340,7 +340,7 @@ describe("Note UseCase", () => {
         findByTopic: vi.fn().mockResolvedValue(notes),
       })
 
-      const result = await listNotesByTopic({ noteRepo, logger: noopLogger, tracer: noopTracer }, "user-1", "topic-1")
+      const result = await listNotesByTopic({ noteRepo, logger: noopLogger }, "user-1", "topic-1")
 
       expect(result.ok).toBe(true)
       if (!result.ok) return
@@ -362,7 +362,7 @@ describe("Note UseCase", () => {
         findByIdWithTopic: vi.fn().mockResolvedValue(note),
       })
 
-      const result = await getNote({ noteRepo, logger: noopLogger, tracer: noopTracer }, "user-1", "note-1")
+      const result = await getNote({ noteRepo, logger: noopLogger }, "user-1", "note-1")
 
       expect(result.ok).toBe(true)
       if (result.ok) {
@@ -377,7 +377,7 @@ describe("Note UseCase", () => {
         findByIdWithTopic: vi.fn().mockResolvedValue(null),
       })
 
-      const result = await getNote({ noteRepo, logger: noopLogger, tracer: noopTracer }, "user-1", "non-existent")
+      const result = await getNote({ noteRepo, logger: noopLogger }, "user-1", "non-existent")
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
@@ -397,7 +397,7 @@ describe("Note UseCase", () => {
         findByIdWithTopic: vi.fn().mockResolvedValue(note),
       })
 
-      const result = await getNote({ noteRepo, logger: noopLogger, tracer: noopTracer }, "user-1", "note-1")
+      const result = await getNote({ noteRepo, logger: noopLogger }, "user-1", "note-1")
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
@@ -416,7 +416,7 @@ describe("Note UseCase", () => {
       })
 
       const result = await updateNote(
-        { noteRepo, logger: noopLogger, tracer: noopTracer },
+        { noteRepo, logger: noopLogger },
         "user-1",
         "note-1",
         { userMemo: "新しいメモ" }
@@ -438,7 +438,7 @@ describe("Note UseCase", () => {
       })
 
       const result = await updateNote(
-        { noteRepo, logger: noopLogger, tracer: noopTracer },
+        { noteRepo, logger: noopLogger },
         "user-1",
         "note-1",
         { keyPoints: ["新ポイント1", "新ポイント2"] }
@@ -459,7 +459,7 @@ describe("Note UseCase", () => {
       })
 
       const result = await updateNote(
-        { noteRepo, logger: noopLogger, tracer: noopTracer },
+        { noteRepo, logger: noopLogger },
         "user-1",
         "note-1",
         { stumbledPoints: ["新つまずき1"] }
@@ -477,7 +477,7 @@ describe("Note UseCase", () => {
       })
 
       const result = await updateNote(
-        { noteRepo, logger: noopLogger, tracer: noopTracer },
+        { noteRepo, logger: noopLogger },
         "user-1",
         "non-existent",
         { userMemo: "メモ" }
@@ -496,7 +496,7 @@ describe("Note UseCase", () => {
       })
 
       const result = await updateNote(
-        { noteRepo, logger: noopLogger, tracer: noopTracer },
+        { noteRepo, logger: noopLogger },
         "user-1",
         "note-1",
         { userMemo: "メモ" }
@@ -528,7 +528,7 @@ describe("Note UseCase", () => {
       })
 
       const result = await createManualNote(
-        { noteRepo, subjectRepo, logger: noopLogger, tracer: noopTracer },
+        { noteRepo, subjectRepo, logger: noopLogger },
         {
           userId: "user-1",
           topicId: "topic-1",
@@ -576,7 +576,7 @@ describe("Note UseCase", () => {
       })
 
       const result = await createManualNote(
-        { noteRepo, subjectRepo, logger: noopLogger, tracer: noopTracer },
+        { noteRepo, subjectRepo, logger: noopLogger },
         {
           userId: "user-1",
           topicId: "topic-1",
@@ -598,7 +598,7 @@ describe("Note UseCase", () => {
       })
 
       const result = await createManualNote(
-        { noteRepo, subjectRepo, logger: noopLogger, tracer: noopTracer },
+        { noteRepo, subjectRepo, logger: noopLogger },
         {
           userId: "user-1",
           topicId: "non-existent",
@@ -631,7 +631,7 @@ describe("Note UseCase", () => {
       const aiAdapter = createMockAIAdapter()
 
       const result = await createNoteFromSession(
-        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: defaultAIConfig.noteSummary, logger: noopLogger, tracer: noopTracer },
+        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: defaultAIConfig.noteSummary, logger: noopLogger },
         { userId: "user-1", sessionId: "session-1" }
       )
 
@@ -663,7 +663,7 @@ describe("Note UseCase", () => {
       })
 
       const result = await createManualNote(
-        { noteRepo, subjectRepo, logger: noopLogger, tracer: noopTracer },
+        { noteRepo, subjectRepo, logger: noopLogger },
         {
           userId: "user-1",
           topicId: "topic-1",
@@ -704,7 +704,7 @@ describe("Note UseCase", () => {
       })
 
       const result = await createManualNote(
-        { noteRepo, subjectRepo, logger: noopLogger, tracer: noopTracer },
+        { noteRepo, subjectRepo, logger: noopLogger },
         {
           userId: "user-1",
           topicId: "topic-1",
@@ -756,7 +756,7 @@ describe("Note UseCase", () => {
       })
 
       const result = await createNoteFromSession(
-        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: defaultAIConfig.noteSummary, logger: noopLogger, tracer: noopTracer },
+        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: defaultAIConfig.noteSummary, logger: noopLogger },
         { userId: "user-1", sessionId: "session-1" }
       )
 

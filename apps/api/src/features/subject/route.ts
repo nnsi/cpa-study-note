@@ -10,7 +10,7 @@ import {
 } from "@cpa-study/shared/schemas"
 import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
-import { createSubjectRepository } from "./repository"
+import { createSubjectRepository, tracedSubjectRepo } from "./repository"
 import {
   getSubject,
   createSubject,
@@ -49,7 +49,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectRouteDeps) => {
         const logger = c.get("logger").child({ feature: "subject" })
         const tracer = c.get("tracer")
         const studyDomainId = resolveStudyDomainId(explicitStudyDomainId, user)
-        const result = await listSubjects({ subjectRepo, logger, tracer }, user.id, studyDomainId)
+        const result = await listSubjects({ subjectRepo: tracedSubjectRepo(subjectRepo, tracer), logger }, user.id, studyDomainId)
         return handleResult(c, result, "subjects")
       }
     )
@@ -60,7 +60,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectRouteDeps) => {
       const id = c.req.param("id")
       const logger = c.get("logger").child({ feature: "subject" })
       const tracer = c.get("tracer")
-      const result = await getSubject({ subjectRepo, logger, tracer }, user.id, id)
+      const result = await getSubject({ subjectRepo: tracedSubjectRepo(subjectRepo, tracer), logger }, user.id, id)
       return handleResult(c, result, "subject")
     })
 
@@ -75,7 +75,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectRouteDeps) => {
         const data = c.req.valid("json")
         const logger = c.get("logger").child({ feature: "subject" })
         const tracer = c.get("tracer")
-        const result = await createSubject({ subjectRepo, logger, tracer }, user.id, {
+        const result = await createSubject({ subjectRepo: tracedSubjectRepo(subjectRepo, tracer), logger }, user.id, {
           studyDomainId: domainId,
           ...data,
         })
@@ -94,7 +94,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectRouteDeps) => {
         const data = c.req.valid("json")
         const logger = c.get("logger").child({ feature: "subject" })
         const tracer = c.get("tracer")
-        const result = await updateSubject({ subjectRepo, logger, tracer }, user.id, id, data)
+        const result = await updateSubject({ subjectRepo: tracedSubjectRepo(subjectRepo, tracer), logger }, user.id, id, data)
         return handleResult(c, result, "subject")
       }
     )
@@ -105,7 +105,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectRouteDeps) => {
       const id = c.req.param("id")
       const logger = c.get("logger").child({ feature: "subject" })
       const tracer = c.get("tracer")
-      const result = await deleteSubject({ subjectRepo, logger, tracer }, user.id, id)
+      const result = await deleteSubject({ subjectRepo: tracedSubjectRepo(subjectRepo, tracer), logger }, user.id, id)
       return handleResult(c, result, 204)
     })
 
@@ -115,7 +115,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectRouteDeps) => {
       const id = c.req.param("id")
       const logger = c.get("logger").child({ feature: "subject" })
       const tracer = c.get("tracer")
-      const result = await getSubjectTree({ subjectRepo, db, txRunner, logger, tracer }, user.id, id)
+      const result = await getSubjectTree({ subjectRepo: tracedSubjectRepo(subjectRepo, tracer), db, txRunner, logger, tracer }, user.id, id)
       return handleResult(c, result, "tree")
     })
 
@@ -130,7 +130,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectRouteDeps) => {
         const data = c.req.valid("json")
         const logger = c.get("logger").child({ feature: "subject" })
         const tracer = c.get("tracer")
-        const result = await updateSubjectTree({ subjectRepo, db, txRunner, logger, tracer }, user.id, id, data)
+        const result = await updateSubjectTree({ subjectRepo: tracedSubjectRepo(subjectRepo, tracer), db, txRunner, logger, tracer }, user.id, id, data)
         return handleResult(c, result, "tree")
       }
     )
@@ -147,7 +147,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectRouteDeps) => {
         const logger = c.get("logger").child({ feature: "subject" })
         const tracer = c.get("tracer")
 
-        const result = await importCSVToSubject({ subjectRepo, db, txRunner, logger, tracer }, user.id, id, csvContent)
+        const result = await importCSVToSubject({ subjectRepo: tracedSubjectRepo(subjectRepo, tracer), db, txRunner, logger, tracer }, user.id, id, csvContent)
         return handleResult(c, result)
       }
     )

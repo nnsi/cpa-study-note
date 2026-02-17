@@ -1,5 +1,6 @@
 import { eq, and, isNull } from "drizzle-orm"
 import type { Db } from "@cpa-study/db"
+import { traced, type Tracer } from "@/shared/lib/tracer"
 import {
   subjects,
   categories,
@@ -19,6 +20,10 @@ export type TopicForSuggest = {
 export type QuickChatRepository = {
   findAllTopicsByDomain: (domainId: string, userId: string) => Promise<TopicForSuggest[]>
 }
+
+export const tracedQuickChatRepo = (repo: QuickChatRepository, tracer: Tracer): QuickChatRepository => ({
+  findAllTopicsByDomain: traced(tracer, "d1.findAllTopicsByDomain", repo.findAllTopicsByDomain),
+})
 
 export const createQuickChatRepository = (db: Db): QuickChatRepository => ({
   findAllTopicsByDomain: async (domainId, userId) => {

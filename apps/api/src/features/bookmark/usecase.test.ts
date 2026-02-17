@@ -10,7 +10,7 @@ import {
   addBookmark,
   removeBookmark,
 } from "./usecase"
-import { noopLogger, noopTracer } from "../../test/helpers"
+import { noopLogger } from "../../test/helpers"
 
 // Mock data
 const mockBookmark: Bookmark = {
@@ -46,7 +46,7 @@ describe("Bookmark UseCase", () => {
       const repo = createMockRepository({
         findBookmarksByUser: vi.fn().mockResolvedValue([]),
       })
-      const deps = { repo, logger: noopLogger, tracer: noopTracer }
+      const deps = { repo, logger: noopLogger }
 
       const result = await getBookmarks(deps, "user-1")
 
@@ -58,7 +58,7 @@ describe("Bookmark UseCase", () => {
 
     it("should return bookmarks with details", async () => {
       const repo = createMockRepository()
-      const deps = { repo, logger: noopLogger, tracer: noopTracer }
+      const deps = { repo, logger: noopLogger }
 
       const result = await getBookmarks(deps, "user-1")
 
@@ -82,7 +82,7 @@ describe("Bookmark UseCase", () => {
 
     it("should convert dates to ISO strings", async () => {
       const repo = createMockRepository()
-      const deps = { repo, logger: noopLogger, tracer: noopTracer }
+      const deps = { repo, logger: noopLogger }
 
       const result = await getBookmarks(deps, "user-1")
 
@@ -111,7 +111,7 @@ describe("Bookmark UseCase", () => {
           return Promise.resolve(mockBookmarkDetails)
         }),
       })
-      const deps = { repo, logger: noopLogger, tracer: noopTracer }
+      const deps = { repo, logger: noopLogger }
 
       const result = await getBookmarks(deps, "user-1")
 
@@ -168,7 +168,7 @@ describe("Bookmark UseCase", () => {
           }
         }),
       })
-      const deps = { repo, logger: noopLogger, tracer: noopTracer }
+      const deps = { repo, logger: noopLogger }
 
       const result = await getBookmarks(deps, "user-1")
 
@@ -184,7 +184,7 @@ describe("Bookmark UseCase", () => {
   describe("addBookmark", () => {
     it("should add new bookmark successfully", async () => {
       const repo = createMockRepository()
-      const deps = { repo, logger: noopLogger, tracer: noopTracer }
+      const deps = { repo, logger: noopLogger }
 
       const result = await addBookmark(deps, "user-1", "topic", "topic-1")
 
@@ -202,7 +202,7 @@ describe("Bookmark UseCase", () => {
       const repo = createMockRepository({
         addBookmark: vi.fn().mockResolvedValue({ bookmark: null, alreadyExists: true }),
       })
-      const deps = { repo, logger: noopLogger, tracer: noopTracer }
+      const deps = { repo, logger: noopLogger }
 
       const result = await addBookmark(deps, "user-1", "topic", "topic-1")
 
@@ -217,7 +217,7 @@ describe("Bookmark UseCase", () => {
       const repo = createMockRepository({
         targetExists: vi.fn().mockResolvedValue(false),
       })
-      const deps = { repo, logger: noopLogger, tracer: noopTracer }
+      const deps = { repo, logger: noopLogger }
 
       const result = await addBookmark(deps, "user-1", "topic", "non-existent")
 
@@ -230,7 +230,7 @@ describe("Bookmark UseCase", () => {
 
     it("should convert dates to ISO strings in bookmark response", async () => {
       const repo = createMockRepository()
-      const deps = { repo, logger: noopLogger, tracer: noopTracer }
+      const deps = { repo, logger: noopLogger }
 
       const result = await addBookmark(deps, "user-1", "topic", "topic-1")
 
@@ -258,7 +258,7 @@ describe("Bookmark UseCase", () => {
         addBookmark: vi.fn().mockResolvedValue({ bookmark: subjectBookmark, alreadyExists: false }),
         getBookmarkDetails: vi.fn().mockResolvedValue(subjectDetails),
       })
-      const deps = { repo, logger: noopLogger, tracer: noopTracer }
+      const deps = { repo, logger: noopLogger }
 
       const result = await addBookmark(deps, "user-1", "subject", "subject-1")
 
@@ -288,7 +288,7 @@ describe("Bookmark UseCase", () => {
         addBookmark: vi.fn().mockResolvedValue({ bookmark: categoryBookmark, alreadyExists: false }),
         getBookmarkDetails: vi.fn().mockResolvedValue(categoryDetails),
       })
-      const deps = { repo, logger: noopLogger, tracer: noopTracer }
+      const deps = { repo, logger: noopLogger }
 
       const result = await addBookmark(deps, "user-1", "category", "category-1")
 
@@ -305,7 +305,7 @@ describe("Bookmark UseCase", () => {
       const repo = createMockRepository({
         removeBookmark: vi.fn().mockResolvedValue(true),
       })
-      const deps = { repo, logger: noopLogger, tracer: noopTracer }
+      const deps = { repo, logger: noopLogger }
 
       const result = await removeBookmark(deps, "user-1", "topic", "topic-1")
 
@@ -317,7 +317,7 @@ describe("Bookmark UseCase", () => {
       const repo = createMockRepository({
         removeBookmark: vi.fn().mockResolvedValue(false),
       })
-      const deps = { repo, logger: noopLogger, tracer: noopTracer }
+      const deps = { repo, logger: noopLogger }
 
       const result = await removeBookmark(deps, "user-1", "topic", "non-existent")
 
@@ -331,7 +331,7 @@ describe("Bookmark UseCase", () => {
       const repo = createMockRepository({
         removeBookmark: vi.fn().mockResolvedValue(true),
       })
-      const deps = { repo, logger: noopLogger, tracer: noopTracer }
+      const deps = { repo, logger: noopLogger }
 
       const result = await removeBookmark(deps, "user-1", "subject", "subject-1")
 
@@ -343,7 +343,7 @@ describe("Bookmark UseCase", () => {
       const repo = createMockRepository({
         removeBookmark: vi.fn().mockResolvedValue(true),
       })
-      const deps = { repo, logger: noopLogger, tracer: noopTracer }
+      const deps = { repo, logger: noopLogger }
 
       const result = await removeBookmark(deps, "user-1", "category", "category-1")
 
@@ -359,7 +359,7 @@ describe("Bookmark UseCase", () => {
       const repo = createMockRepository({
         targetExists: vi.fn().mockResolvedValue(true),
       })
-      const deps = { repo, logger: noopLogger, tracer: noopTracer }
+      const deps = { repo, logger: noopLogger }
 
       await addBookmark(deps, "user-1", "subject", "subject-1")
 
@@ -370,7 +370,7 @@ describe("Bookmark UseCase", () => {
       const repo = createMockRepository({
         targetExists: vi.fn().mockResolvedValue(true),
       })
-      const deps = { repo, logger: noopLogger, tracer: noopTracer }
+      const deps = { repo, logger: noopLogger }
 
       await addBookmark(deps, "user-1", "category", "category-1")
 
@@ -383,7 +383,7 @@ describe("Bookmark UseCase", () => {
         addBookmark: vi.fn().mockResolvedValue({ bookmark: null, alreadyExists: true }),
         getBookmarkDetails: vi.fn().mockResolvedValue(mockBookmarkDetails),
       })
-      const deps = { repo, logger: noopLogger, tracer: noopTracer }
+      const deps = { repo, logger: noopLogger }
 
       const result = await addBookmark(deps, "user-1", "topic", "topic-1")
 

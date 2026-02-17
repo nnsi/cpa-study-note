@@ -1,6 +1,7 @@
 import { eq, and, isNull, inArray } from "drizzle-orm"
 import type { Db } from "@cpa-study/db"
 import { studyDomains, subjects, categories, topics } from "@cpa-study/db/schema"
+import { traced, type Tracer } from "@/shared/lib/tracer"
 
 export type StudyDomain = {
   id: string
@@ -36,6 +37,14 @@ export type StudyDomainRepository = {
   update: (id: string, userId: string, data: UpdateStudyDomainInput) => Promise<StudyDomain | null>
   softDelete: (id: string, userId: string) => Promise<boolean>
 }
+
+export const tracedStudyDomainRepo = (repo: StudyDomainRepository, tracer: Tracer): StudyDomainRepository => ({
+  findByUserId: traced(tracer, "d1.findByUserId", repo.findByUserId),
+  findById: traced(tracer, "d1.findById", repo.findById),
+  create: traced(tracer, "d1.create", repo.create),
+  update: traced(tracer, "d1.update", repo.update),
+  softDelete: traced(tracer, "d1.softDelete", repo.softDelete),
+})
 
 export const createStudyDomainRepository = (db: Db): StudyDomainRepository => ({
   findByUserId: async (userId) => {

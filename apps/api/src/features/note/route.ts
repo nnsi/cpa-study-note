@@ -4,9 +4,10 @@ import type { Db } from "@cpa-study/db"
 import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
 import { createAIAdapter, resolveAIConfig } from "@/shared/lib/ai"
-import { createNoteRepository } from "./repository"
-import { createChatRepository } from "../chat/repository"
-import { createSubjectRepository } from "../subject/repository"
+import { tracedAIAdapter } from "@/shared/lib/ai/traced"
+import { createNoteRepository, tracedNoteRepo } from "./repository"
+import { createChatRepository, tracedChatRepo } from "../chat/repository"
+import { createSubjectRepository, tracedSubjectRepo } from "../subject/repository"
 import {
   createNoteFromSessionRequestSchema,
   createManualNoteRequestSchema,
@@ -54,7 +55,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
         })
 
         const result = await createNoteFromSession(
-          { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: aiConfig.noteSummary, logger, tracer },
+          { noteRepo: tracedNoteRepo(noteRepo, tracer), chatRepo: tracedChatRepo(chatRepo, tracer), aiAdapter: tracedAIAdapter(aiAdapter, tracer, "ai.noteSummary"), noteSummaryConfig: aiConfig.noteSummary, logger },
           { userId: user.id, sessionId }
         )
 
@@ -74,7 +75,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
         const tracer = c.get("tracer")
 
         const result = await createManualNote(
-          { noteRepo, subjectRepo, logger, tracer },
+          { noteRepo: tracedNoteRepo(noteRepo, tracer), subjectRepo: tracedSubjectRepo(subjectRepo, tracer), logger },
           {
             userId: user.id,
             topicId: body.topicId,
@@ -93,7 +94,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
       const user = c.get("user")
       const logger = c.get("logger").child({ feature: "note" })
       const tracer = c.get("tracer")
-      const result = await listNotes({ noteRepo, logger, tracer }, user.id)
+      const result = await listNotes({ noteRepo: tracedNoteRepo(noteRepo, tracer), logger }, user.id)
       return handleResult(c, result, "notes")
     })
 
@@ -103,7 +104,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
       const topicId = c.req.param("topicId")
       const logger = c.get("logger").child({ feature: "note" })
       const tracer = c.get("tracer")
-      const result = await listNotesByTopic({ noteRepo, logger, tracer }, user.id, topicId)
+      const result = await listNotesByTopic({ noteRepo: tracedNoteRepo(noteRepo, tracer), logger }, user.id, topicId)
       return handleResult(c, result, "notes")
     })
 
@@ -113,7 +114,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
       const sessionId = c.req.param("sessionId")
       const logger = c.get("logger").child({ feature: "note" })
       const tracer = c.get("tracer")
-      const result = await getNoteBySession({ noteRepo, logger, tracer }, user.id, sessionId)
+      const result = await getNoteBySession({ noteRepo: tracedNoteRepo(noteRepo, tracer), logger }, user.id, sessionId)
       return handleResult(c, result, "note")
     })
 
@@ -124,7 +125,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
       const logger = c.get("logger").child({ feature: "note" })
       const tracer = c.get("tracer")
 
-      const result = await getNote({ noteRepo, logger, tracer }, user.id, noteId)
+      const result = await getNote({ noteRepo: tracedNoteRepo(noteRepo, tracer), logger }, user.id, noteId)
       return handleResult(c, result, "note")
     })
 
@@ -140,7 +141,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
         const logger = c.get("logger").child({ feature: "note" })
         const tracer = c.get("tracer")
 
-        const result = await updateNote({ noteRepo, logger, tracer }, user.id, noteId, body)
+        const result = await updateNote({ noteRepo: tracedNoteRepo(noteRepo, tracer), logger }, user.id, noteId, body)
         return handleResult(c, result, "note")
       }
     )
@@ -158,7 +159,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
       })
 
       const result = await refreshNoteFromSession(
-        { noteRepo, chatRepo, aiAdapter, noteSummaryConfig: aiConfig.noteSummary, logger, tracer },
+        { noteRepo: tracedNoteRepo(noteRepo, tracer), chatRepo: tracedChatRepo(chatRepo, tracer), aiAdapter: tracedAIAdapter(aiAdapter, tracer, "ai.noteSummary"), noteSummaryConfig: aiConfig.noteSummary, logger },
         user.id,
         noteId
       )
@@ -173,7 +174,7 @@ export const noteRoutes = ({ env, db }: NoteDeps) => {
       const logger = c.get("logger").child({ feature: "note" })
       const tracer = c.get("tracer")
 
-      const result = await deleteNote({ noteRepo, logger, tracer }, user.id, noteId)
+      const result = await deleteNote({ noteRepo: tracedNoteRepo(noteRepo, tracer), logger }, user.id, noteId)
       return handleResult(c, result, 204)
     })
 

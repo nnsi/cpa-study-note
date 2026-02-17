@@ -5,7 +5,8 @@ import { quickChatSuggestRequestSchema } from "@cpa-study/shared/schemas"
 import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
 import { createAIAdapter, resolveAIConfig } from "@/shared/lib/ai"
-import { createQuickChatRepository } from "./repository"
+import { tracedAIAdapter } from "@/shared/lib/ai/traced"
+import { createQuickChatRepository, tracedQuickChatRepo } from "./repository"
 import { suggestTopicsForChat } from "./usecase"
 import { handleResult } from "@/shared/lib/route-helpers"
 
@@ -34,7 +35,7 @@ export const quickChatRoutes = ({ env, db }: QuickChatDeps) => {
         const tracer = c.get("tracer")
 
         const result = await suggestTopicsForChat(
-          { quickChatRepo, aiAdapter, aiConfig, logger, tracer },
+          { quickChatRepo: tracedQuickChatRepo(quickChatRepo, tracer), aiAdapter: tracedAIAdapter(aiAdapter, tracer, "ai.quickChatSuggest"), aiConfig, logger },
           { domainId, userId: user.id, question }
         )
 

@@ -1,6 +1,7 @@
 import { eq, and } from "drizzle-orm"
 import type { Db } from "@cpa-study/db"
 import { users, userOAuthConnections, refreshTokens } from "@cpa-study/db/schema"
+import { traced, type Tracer } from "@/shared/lib/tracer"
 import type { User, UserOAuthConnection, RefreshToken } from "./domain"
 
 type CreateUserInput = {
@@ -36,6 +37,20 @@ export type AuthRepository = {
   deleteRefreshToken: (id: string) => Promise<void>
   deleteAllUserRefreshTokens: (userId: string) => Promise<void>
 }
+
+export const tracedAuthRepo = (repo: AuthRepository, tracer: Tracer): AuthRepository => ({
+  findUserById: traced(tracer, "d1.findUserById", repo.findUserById),
+  findUserByEmail: traced(tracer, "d1.findUserByEmail", repo.findUserByEmail),
+  createUser: traced(tracer, "d1.createUser", repo.createUser),
+  createUserWithId: traced(tracer, "d1.createUserWithId", repo.createUserWithId),
+  updateUser: traced(tracer, "d1.updateUser", repo.updateUser),
+  findConnectionByProviderAndId: traced(tracer, "d1.findConnectionByProviderAndId", repo.findConnectionByProviderAndId),
+  createConnection: traced(tracer, "d1.createConnection", repo.createConnection),
+  saveRefreshToken: traced(tracer, "d1.saveRefreshToken", repo.saveRefreshToken),
+  findRefreshTokenByHash: traced(tracer, "d1.findRefreshTokenByHash", repo.findRefreshTokenByHash),
+  deleteRefreshToken: traced(tracer, "d1.deleteRefreshToken", repo.deleteRefreshToken),
+  deleteAllUserRefreshTokens: traced(tracer, "d1.deleteAllUserRefreshTokens", repo.deleteAllUserRefreshTokens),
+})
 
 export const createAuthRepository = (db: Db): AuthRepository => ({
   findUserById: async (id) => {

@@ -8,7 +8,7 @@ import {
 } from "@cpa-study/shared/schemas"
 import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
-import { createStudyDomainRepository } from "./repository"
+import { createStudyDomainRepository, tracedStudyDomainRepo } from "./repository"
 import {
   listStudyDomains,
   getStudyDomain,
@@ -16,7 +16,7 @@ import {
   updateStudyDomain,
   deleteStudyDomain,
 } from "./usecase"
-import { createSubjectRepository } from "../subject/repository"
+import { createSubjectRepository, tracedSubjectRepo } from "../subject/repository"
 import { bulkImportCSVToStudyDomain } from "../subject/tree-usecase"
 import { createNoTransactionRunner } from "@/shared/lib/transaction"
 import { handleResult } from "@/shared/lib/route-helpers"
@@ -29,7 +29,6 @@ type StudyDomainDeps = {
 
 export const studyDomainRoutes = ({ db }: StudyDomainDeps) => {
   const repo = createStudyDomainRepository(db)
-  const deps = { repo }
 
   const app = new Hono<{ Bindings: Env; Variables: Variables }>()
     // List user's study domains
@@ -37,7 +36,7 @@ export const studyDomainRoutes = ({ db }: StudyDomainDeps) => {
       const user = c.get("user")
       const logger = c.get("logger").child({ feature: "study-domain" })
       const tracer = c.get("tracer")
-      const result = await listStudyDomains({ ...deps, logger, tracer }, user.id)
+      const result = await listStudyDomains({ repo: tracedStudyDomainRepo(repo, tracer), logger }, user.id)
       return handleResult(c, result, "studyDomains")
     })
 
@@ -47,7 +46,7 @@ export const studyDomainRoutes = ({ db }: StudyDomainDeps) => {
       const logger = c.get("logger").child({ feature: "study-domain" })
       const tracer = c.get("tracer")
       const id = c.req.param("id")
-      const result = await getStudyDomain({ ...deps, logger, tracer }, id, user.id)
+      const result = await getStudyDomain({ repo: tracedStudyDomainRepo(repo, tracer), logger }, id, user.id)
       return handleResult(c, result, "studyDomain")
     })
 
@@ -61,7 +60,7 @@ export const studyDomainRoutes = ({ db }: StudyDomainDeps) => {
         const logger = c.get("logger").child({ feature: "study-domain" })
         const tracer = c.get("tracer")
         const data = c.req.valid("json")
-        const result = await createStudyDomain({ ...deps, logger, tracer }, user.id, data)
+        const result = await createStudyDomain({ repo: tracedStudyDomainRepo(repo, tracer), logger }, user.id, data)
 
         return handleResult(c, result, "studyDomain", 201)
       }
@@ -78,7 +77,7 @@ export const studyDomainRoutes = ({ db }: StudyDomainDeps) => {
         const tracer = c.get("tracer")
         const id = c.req.param("id")
         const data = c.req.valid("json")
-        const result = await updateStudyDomain({ ...deps, logger, tracer }, id, user.id, data)
+        const result = await updateStudyDomain({ repo: tracedStudyDomainRepo(repo, tracer), logger }, id, user.id, data)
         return handleResult(c, result, "studyDomain")
       }
     )
@@ -89,7 +88,7 @@ export const studyDomainRoutes = ({ db }: StudyDomainDeps) => {
       const logger = c.get("logger").child({ feature: "study-domain" })
       const tracer = c.get("tracer")
       const id = c.req.param("id")
-      const result = await deleteStudyDomain({ ...deps, logger, tracer }, id, user.id)
+      const result = await deleteStudyDomain({ repo: tracedStudyDomainRepo(repo, tracer), logger }, id, user.id)
 
       return handleResult(c, result, 204)
     })
@@ -109,7 +108,7 @@ export const studyDomainRoutes = ({ db }: StudyDomainDeps) => {
           const subjectRepo = createSubjectRepository(db)
           const txRunner = createNoTransactionRunner(db)
           const tracer = c.get("tracer")
-          const treeDeps = { subjectRepo, db, txRunner, logger, tracer }
+          const treeDeps = { subjectRepo: tracedSubjectRepo(subjectRepo, tracer), db, txRunner, logger, tracer }
 
           const result = await bulkImportCSVToStudyDomain(treeDeps, user.id, id, csvContent)
           return handleResult(c, result)

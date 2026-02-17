@@ -8,8 +8,8 @@ import {
 import type { Env, Variables } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
 import { handleResult } from "@/shared/lib/route-helpers"
-import { createLearningRepository } from "./repository"
-import { createSubjectRepository } from "../subject/repository"
+import { createLearningRepository, tracedLearningRepo } from "./repository"
+import { createSubjectRepository, tracedSubjectRepo } from "../subject/repository"
 import {
   touchTopic,
   getProgress,
@@ -36,7 +36,7 @@ export const learningRoutes = ({ db }: LearningDeps) => {
       const logger = c.get("logger").child({ feature: "learning" })
       const tracer = c.get("tracer")
 
-      const result = await touchTopic({ learningRepo, logger, tracer }, user.id, topicId)
+      const result = await touchTopic({ learningRepo: tracedLearningRepo(learningRepo, tracer), logger }, user.id, topicId)
       return handleResult(c, result, "progress")
     })
 
@@ -47,7 +47,7 @@ export const learningRoutes = ({ db }: LearningDeps) => {
       const logger = c.get("logger").child({ feature: "learning" })
       const tracer = c.get("tracer")
 
-      const result = await getProgress({ learningRepo, logger, tracer }, user.id, topicId)
+      const result = await getProgress({ learningRepo: tracedLearningRepo(learningRepo, tracer), logger }, user.id, topicId)
       return handleResult(c, result, "progress")
     })
 
@@ -63,7 +63,7 @@ export const learningRoutes = ({ db }: LearningDeps) => {
         const logger = c.get("logger").child({ feature: "learning" })
         const tracer = c.get("tracer")
 
-        const result = await updateProgress({ learningRepo, logger, tracer }, user.id, topicId, understood)
+        const result = await updateProgress({ learningRepo: tracedLearningRepo(learningRepo, tracer), logger }, user.id, topicId, understood)
         return handleResult(c, result, "progress")
       }
     )
@@ -75,7 +75,7 @@ export const learningRoutes = ({ db }: LearningDeps) => {
       const logger = c.get("logger").child({ feature: "learning" })
       const tracer = c.get("tracer")
 
-      const result = await getCheckHistory({ learningRepo, logger, tracer }, user.id, topicId)
+      const result = await getCheckHistory({ learningRepo: tracedLearningRepo(learningRepo, tracer), logger }, user.id, topicId)
       return handleResult(c, result, "history")
     })
 
@@ -90,7 +90,7 @@ export const learningRoutes = ({ db }: LearningDeps) => {
         const logger = c.get("logger").child({ feature: "learning" })
         const tracer = c.get("tracer")
 
-        const result = await listRecentTopics({ learningRepo, logger, tracer }, user.id, limit)
+        const result = await listRecentTopics({ learningRepo: tracedLearningRepo(learningRepo, tracer), logger }, user.id, limit)
         return handleResult(c, result, "topics")
       }
     )
@@ -101,7 +101,7 @@ export const learningRoutes = ({ db }: LearningDeps) => {
       const logger = c.get("logger").child({ feature: "learning" })
       const tracer = c.get("tracer")
 
-      const result = await listUserProgress({ learningRepo, logger, tracer }, user.id)
+      const result = await listUserProgress({ learningRepo: tracedLearningRepo(learningRepo, tracer), logger }, user.id)
       return handleResult(c, result, "progress")
     })
 
@@ -111,7 +111,7 @@ export const learningRoutes = ({ db }: LearningDeps) => {
       const logger = c.get("logger").child({ feature: "learning" })
       const tracer = c.get("tracer")
 
-      const result = await getSubjectProgressStats({ subjectRepo, logger, tracer }, user.id)
+      const result = await getSubjectProgressStats({ subjectRepo: tracedSubjectRepo(subjectRepo, tracer), logger }, user.id)
       return handleResult(c, result, "stats")
     })
 

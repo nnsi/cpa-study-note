@@ -2,6 +2,7 @@ import { eq, and, isNull } from "drizzle-orm"
 import type { Db } from "@cpa-study/db"
 import { userBookmarks, subjects, categories, topics } from "@cpa-study/db/schema"
 import type { BookmarkTargetType } from "@cpa-study/db/schema"
+import { traced, type Tracer } from "@/shared/lib/tracer"
 
 export type Bookmark = {
   id: string
@@ -47,6 +48,15 @@ export type BookmarkRepository = {
     userId: string
   ) => Promise<BookmarkDetails | null>
 }
+
+export const tracedBookmarkRepo = (repo: BookmarkRepository, tracer: Tracer): BookmarkRepository => ({
+  findBookmarksByUser: traced(tracer, "d1.findBookmarksByUser", repo.findBookmarksByUser),
+  addBookmark: traced(tracer, "d1.addBookmark", repo.addBookmark),
+  removeBookmark: traced(tracer, "d1.removeBookmark", repo.removeBookmark),
+  isBookmarked: traced(tracer, "d1.isBookmarked", repo.isBookmarked),
+  targetExists: traced(tracer, "d1.targetExists", repo.targetExists),
+  getBookmarkDetails: traced(tracer, "d1.getBookmarkDetails", repo.getBookmarkDetails),
+})
 
 export const createBookmarkRepository = (db: Db): BookmarkRepository => ({
   findBookmarksByUser: async (userId) => {

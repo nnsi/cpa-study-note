@@ -13,7 +13,6 @@ import { z } from "zod"
 import { ok, err, type Result } from "@/shared/lib/result"
 import { notFound, forbidden, badRequest, internalError, type AppError } from "@/shared/lib/errors"
 import type { Logger } from "@/shared/lib/logger"
-import type { Tracer } from "@/shared/lib/tracer"
 
 // LLM output parsing schema for note summary
 const noteSummaryParseSchema = z.object({
@@ -28,7 +27,6 @@ export type NoteDeps = {
   aiAdapter: AIAdapter
   noteSummaryConfig: AIModelConfig
   logger: Logger
-  tracer: Tracer
 }
 
 type CreateNoteFromSessionInput = {
@@ -126,14 +124,12 @@ ${conversationText}${goodQuestionsSection}
 
   let aiResult
   try {
-    aiResult = await deps.tracer.span("ai.noteSummary", () =>
-      aiAdapter.generateText({
-        model: noteSummaryConfig.model,
-        messages: [{ role: "user", content: summaryPrompt }],
-        temperature: noteSummaryConfig.temperature,
-        maxTokens: noteSummaryConfig.maxTokens,
-      })
-    )
+    aiResult = await aiAdapter.generateText({
+      model: noteSummaryConfig.model,
+      messages: [{ role: "user", content: summaryPrompt }],
+      temperature: noteSummaryConfig.temperature,
+      maxTokens: noteSummaryConfig.maxTokens,
+    })
   } catch (error) {
     deps.logger.error("AI generateText failed", { error: error instanceof Error ? error.message : String(error), sessionId })
     return err(internalError("AI要約の生成に失敗しました。再度お試しください。"))
@@ -151,62 +147,54 @@ ${conversationText}${goodQuestionsSection}
   const keyPoints = parsed.keyPoints
   const stumbledPoints = parsed.stumbledPoints
 
-  const note = await deps.tracer.span("d1.createNote", () =>
-    noteRepo.create({
-      userId,
-      topicId: session.topicId,
-      sessionId,
-      aiSummary,
-      userMemo: null,
-      keyPoints,
-      stumbledPoints,
-    })
-  )
+  const note = await noteRepo.create({
+    userId,
+    topicId: session.topicId,
+    sessionId,
+    aiSummary,
+    userMemo: null,
+    keyPoints,
+    stumbledPoints,
+  })
 
   return ok(toNoteWithSource(note))
 }
 
 // 独立ノート作成（手動）
 export const createManualNote = async (
-  deps: { noteRepo: NoteRepository; subjectRepo: SubjectRepository; logger: Logger; tracer: Tracer },
+  deps: { noteRepo: NoteRepository; subjectRepo: SubjectRepository; logger: Logger },
   input: CreateManualNoteInput
 ): Promise<Result<NoteWithSource, AppError>> => {
   const { noteRepo, subjectRepo } = deps
   const { userId, topicId, userMemo, keyPoints = [], stumbledPoints = [] } = input
 
   // topicの存在確認
-  const topic = await deps.tracer.span("d1.findTopic", () =>
-    subjectRepo.findTopicById(topicId, userId)
-  )
+  const topic = await subjectRepo.findTopicById(topicId, userId)
   if (!topic) {
     return err(notFound("論点が見つかりません"))
   }
 
   // ノート作成
-  const note = await deps.tracer.span("d1.createNote", () =>
-    noteRepo.create({
-      userId,
-      topicId,
-      sessionId: null,
-      aiSummary: null,
-      userMemo,
-      keyPoints,
-      stumbledPoints,
-    })
-  )
+  const note = await noteRepo.create({
+    userId,
+    topicId,
+    sessionId: null,
+    aiSummary: null,
+    userMemo,
+    keyPoints,
+    stumbledPoints,
+  })
 
   return ok(toNoteWithSource(note))
 }
 
 // ノート一覧取得
 export const listNotes = async (
-  deps: Pick<NoteDeps, "noteRepo" | "logger" | "tracer">,
+  deps: Pick<NoteDeps, "noteRepo" | "logger">,
   userId: string
 ): Promise<Result<NoteListItem[], AppError>> => {
   try {
-    const notes = await deps.tracer.span("d1.findNotes", () =>
-      deps.noteRepo.findByUser(userId)
-    )
+    const notes = await deps.noteRepo.findByUser(userId)
     return ok(notes.map((note) => ({
       ...toNoteWithSource(note),
       topicName: note.topicName,
@@ -220,14 +208,12 @@ export const listNotes = async (
 
 // 論点別ノート一覧取得
 export const listNotesByTopic = async (
-  deps: Pick<NoteDeps, "noteRepo" | "logger" | "tracer">,
+  deps: Pick<NoteDeps, "noteRepo" | "logger">,
   userId: string,
   topicId: string
 ): Promise<Result<NoteWithSource[], AppError>> => {
   try {
-    const notes = await deps.tracer.span("d1.findNotesByTopic", () =>
-      deps.noteRepo.findByTopic(userId, topicId)
-    )
+    const notes = await deps.noteRepo.findByTopic(userId, topicId)
     return ok(notes.map(toNoteWithSource))
   } catch (e) {
     deps.logger.error("Failed to list notes by topic", { error: e instanceof Error ? e.message : String(e), topicId })
@@ -237,13 +223,11 @@ export const listNotesByTopic = async (
 
 // ノート詳細取得
 export const getNote = async (
-  deps: Pick<NoteDeps, "noteRepo" | "logger" | "tracer">,
+  deps: Pick<NoteDeps, "noteRepo" | "logger">,
   userId: string,
   noteId: string
 ): Promise<Result<NoteDetailResponse, AppError>> => {
-  const note = await deps.tracer.span("d1.findNote", () =>
-    deps.noteRepo.findByIdWithTopic(noteId)
-  )
+  const note = await deps.noteRepo.findByIdWithTopic(noteId)
 
   if (!note) {
     return err(notFound("ノートが見つかりません"))
@@ -264,14 +248,12 @@ export const getNote = async (
 
 // ノート更新
 export const updateNote = async (
-  deps: Pick<NoteDeps, "noteRepo" | "logger" | "tracer">,
+  deps: Pick<NoteDeps, "noteRepo" | "logger">,
   userId: string,
   noteId: string,
   input: UpdateNoteInput
 ): Promise<Result<NoteWithSource, AppError>> => {
-  const existing = await deps.tracer.span("d1.findNote", () =>
-    deps.noteRepo.findById(noteId)
-  )
+  const existing = await deps.noteRepo.findById(noteId)
 
   if (!existing) {
     return err(notFound("ノートが見つかりません"))
@@ -281,22 +263,18 @@ export const updateNote = async (
     return err(forbidden("このノートへのアクセス権限がありません"))
   }
 
-  const note = await deps.tracer.span("d1.updateNote", () =>
-    deps.noteRepo.update(noteId, input)
-  )
+  const note = await deps.noteRepo.update(noteId, input)
 
   return ok(toNoteWithSource(note!))
 }
 
 // ノート削除
 export const deleteNote = async (
-  deps: Pick<NoteDeps, "noteRepo" | "logger" | "tracer">,
+  deps: Pick<NoteDeps, "noteRepo" | "logger">,
   userId: string,
   noteId: string
 ): Promise<Result<void, AppError>> => {
-  const existing = await deps.tracer.span("d1.findNote", () =>
-    deps.noteRepo.findById(noteId)
-  )
+  const existing = await deps.noteRepo.findById(noteId)
 
   if (!existing) {
     return err(notFound("ノートが見つかりません"))
@@ -306,22 +284,18 @@ export const deleteNote = async (
     return err(forbidden("このノートへのアクセス権限がありません"))
   }
 
-  await deps.tracer.span("d1.deleteNote", () =>
-    deps.noteRepo.softDelete(noteId)
-  )
+  await deps.noteRepo.softDelete(noteId)
   return ok(undefined)
 }
 
 // セッションIDからノート取得
 export const getNoteBySession = async (
-  deps: Pick<NoteDeps, "noteRepo" | "logger" | "tracer">,
+  deps: Pick<NoteDeps, "noteRepo" | "logger">,
   userId: string,
   sessionId: string
 ): Promise<Result<NoteWithSource | null, AppError>> => {
   try {
-    const note = await deps.tracer.span("d1.findNoteBySession", () =>
-      deps.noteRepo.findBySessionId(sessionId)
-    )
+    const note = await deps.noteRepo.findBySessionId(sessionId)
 
     if (!note || note.userId !== userId) {
       return ok(null)
@@ -391,14 +365,12 @@ ${conversationText}${goodQuestionsSection}
 
   let aiResult
   try {
-    aiResult = await deps.tracer.span("ai.noteSummary", () =>
-      aiAdapter.generateText({
-        model: noteSummaryConfig.model,
-        messages: [{ role: "user", content: summaryPrompt }],
-        temperature: noteSummaryConfig.temperature,
-        maxTokens: noteSummaryConfig.maxTokens,
-      })
-    )
+    aiResult = await aiAdapter.generateText({
+      model: noteSummaryConfig.model,
+      messages: [{ role: "user", content: summaryPrompt }],
+      temperature: noteSummaryConfig.temperature,
+      maxTokens: noteSummaryConfig.maxTokens,
+    })
   } catch (error) {
     deps.logger.error("AI generateText failed", { error: error instanceof Error ? error.message : String(error), noteId })
     return err(internalError("AI要約の生成に失敗しました。再度お試しください。"))
@@ -416,13 +388,11 @@ ${conversationText}${goodQuestionsSection}
   const keyPoints = parsed.keyPoints
   const stumbledPoints = parsed.stumbledPoints
 
-  const note = await deps.tracer.span("d1.updateNote", () =>
-    noteRepo.update(noteId, {
-      aiSummary,
-      keyPoints,
-      stumbledPoints,
-    })
-  )
+  const note = await noteRepo.update(noteId, {
+    aiSummary,
+    keyPoints,
+    stumbledPoints,
+  })
 
   return ok(toNoteWithSource(note!))
 }

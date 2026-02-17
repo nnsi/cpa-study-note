@@ -1,5 +1,6 @@
 import { eq, and, isNull, sql, inArray, desc } from "drizzle-orm"
 import type { Db } from "@cpa-study/db"
+import { traced, type Tracer } from "@/shared/lib/tracer"
 import {
   subjects,
   studyDomains,
@@ -175,6 +176,40 @@ export type SubjectRepository = {
   findTopicById: (id: string, userId: string) => Promise<TopicRecord | null>
   findTopicWithHierarchy: (id: string, userId: string) => Promise<TopicWithHierarchy | null>
 }
+
+export const tracedSubjectRepo = (repo: SubjectRepository, tracer: Tracer): SubjectRepository => ({
+  findByStudyDomainId: traced(tracer, "d1.findByStudyDomainId", repo.findByStudyDomainId),
+  findById: traced(tracer, "d1.findById", repo.findById),
+  create: traced(tracer, "d1.create", repo.create),
+  update: traced(tracer, "d1.update", repo.update),
+  softDelete: traced(tracer, "d1.softDelete", repo.softDelete),
+  verifyStudyDomainOwnership: traced(tracer, "d1.verifyStudyDomainOwnership", repo.verifyStudyDomainOwnership),
+  verifyCategoryBelongsToSubject: traced(tracer, "d1.verifyCategoryBelongsToSubject", repo.verifyCategoryBelongsToSubject),
+  verifyTopicBelongsToSubject: traced(tracer, "d1.verifyTopicBelongsToSubject", repo.verifyTopicBelongsToSubject),
+  findSubjectByIdAndUserId: traced(tracer, "d1.findSubjectByIdAndUserId", repo.findSubjectByIdAndUserId),
+  findCategoriesBySubjectId: traced(tracer, "d1.findCategoriesBySubjectId", repo.findCategoriesBySubjectId),
+  findTopicsByCategoryIds: traced(tracer, "d1.findTopicsByCategoryIds", repo.findTopicsByCategoryIds),
+  findCategoryIdsBySubjectIdWithSoftDeleted: traced(tracer, "d1.findCategoryIdsBySubjectIdWithSoftDeleted", repo.findCategoryIdsBySubjectIdWithSoftDeleted),
+  findTopicIdsBySubjectWithSoftDeleted: traced(tracer, "d1.findTopicIdsBySubjectWithSoftDeleted", repo.findTopicIdsBySubjectWithSoftDeleted),
+  findExistingCategoryIds: traced(tracer, "d1.findExistingCategoryIds", repo.findExistingCategoryIds),
+  findExistingTopicIds: traced(tracer, "d1.findExistingTopicIds", repo.findExistingTopicIds),
+  softDeleteCategories: traced(tracer, "d1.softDeleteCategories", repo.softDeleteCategories),
+  softDeleteTopics: traced(tracer, "d1.softDeleteTopics", repo.softDeleteTopics),
+  upsertCategory: traced(tracer, "d1.upsertCategory", repo.upsertCategory),
+  upsertTopic: traced(tracer, "d1.upsertTopic", repo.upsertTopic),
+  getProgressCountsByCategory: traced(tracer, "d1.getProgressCountsByCategory", repo.getProgressCountsByCategory),
+  getProgressCountsBySubject: traced(tracer, "d1.getProgressCountsBySubject", repo.getProgressCountsBySubject),
+  findRecentTopics: traced(tracer, "d1.findRecentTopics", repo.findRecentTopics),
+  findAllSubjectsForUser: traced(tracer, "d1.findAllSubjectsForUser", repo.findAllSubjectsForUser),
+  findSubjectByIdForUser: traced(tracer, "d1.findSubjectByIdForUser", repo.findSubjectByIdForUser),
+  getSubjectStats: traced(tracer, "d1.getSubjectStats", repo.getSubjectStats),
+  getBatchSubjectStats: traced(tracer, "d1.getBatchSubjectStats", repo.getBatchSubjectStats),
+  findCategoriesHierarchy: traced(tracer, "d1.findCategoriesHierarchy", repo.findCategoriesHierarchy),
+  getCategoryTopicCounts: traced(tracer, "d1.getCategoryTopicCounts", repo.getCategoryTopicCounts),
+  findTopicsByCategoryIdForUser: traced(tracer, "d1.findTopicsByCategoryIdForUser", repo.findTopicsByCategoryIdForUser),
+  findTopicById: traced(tracer, "d1.findTopicById", repo.findTopicById),
+  findTopicWithHierarchy: traced(tracer, "d1.findTopicWithHierarchy", repo.findTopicWithHierarchy),
+})
 
 export const createSubjectRepository = (db: Db): SubjectRepository => ({
   findByStudyDomainId: async (studyDomainId, userId) => {

@@ -1,5 +1,6 @@
 import { eq, and, isNull, desc, sql } from "drizzle-orm"
 import type { Db } from "@cpa-study/db"
+import { traced, type Tracer } from "@/shared/lib/tracer"
 import {
   topics,
   categories,
@@ -69,6 +70,17 @@ export type LearningRepository = {
   // Validation methods
   verifyTopicExists: (userId: string, topicId: string) => Promise<boolean>
 }
+
+export const tracedLearningRepo = (repo: LearningRepository, tracer: Tracer): LearningRepository => ({
+  findProgress: traced(tracer, "d1.findProgress", repo.findProgress),
+  upsertProgress: traced(tracer, "d1.upsertProgress", repo.upsertProgress),
+  findProgressByUser: traced(tracer, "d1.findProgressByUser", repo.findProgressByUser),
+  findRecentTopics: traced(tracer, "d1.findRecentTopics", repo.findRecentTopics),
+  touchTopic: traced(tracer, "d1.touchTopic", repo.touchTopic),
+  createCheckHistory: traced(tracer, "d1.createCheckHistory", repo.createCheckHistory),
+  findCheckHistoryByTopic: traced(tracer, "d1.findCheckHistoryByTopic", repo.findCheckHistoryByTopic),
+  verifyTopicExists: traced(tracer, "d1.verifyTopicExists", repo.verifyTopicExists),
+})
 
 export const createLearningRepository = (db: Db): LearningRepository => ({
   findProgress: async (userId, topicId) => {
