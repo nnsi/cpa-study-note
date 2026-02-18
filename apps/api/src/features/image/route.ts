@@ -39,7 +39,7 @@ export const imageRoutes = ({ env, db }: ImageDeps) => {
         const user = c.get("user")
         const { filename, mimeType } = c.req.valid("json")
 
-        const logger = c.get("logger").child({ feature: "image" })
+        const logger = c.get("logger")
 
         const result = await createUploadUrl(
           { imageRepo, apiBaseUrl: env.API_BASE_URL, logger },
@@ -61,7 +61,7 @@ export const imageRoutes = ({ env, db }: ImageDeps) => {
         return handleResult(c, err(payloadTooLarge("ファイルサイズが大きすぎます（最大10MB）")))
       }
 
-      const logger = c.get("logger").child({ feature: "image" })
+      const logger = c.get("logger")
 
       const result = await uploadImage(
         { imageRepo, r2: env.R2, logger },
@@ -83,7 +83,7 @@ export const imageRoutes = ({ env, db }: ImageDeps) => {
         apiKey: env.OPENROUTER_API_KEY,
       })
 
-      const logger = c.get("logger").child({ feature: "image" })
+      const logger = c.get("logger")
       const tracer = c.get("tracer")
 
       const result = await performOCR(
@@ -100,7 +100,7 @@ export const imageRoutes = ({ env, db }: ImageDeps) => {
       const user = c.get("user")
       const imageId = c.req.param("imageId")
 
-      const logger = c.get("logger").child({ feature: "image" })
+      const logger = c.get("logger")
       const result = await getImage({ imageRepo, logger }, user.id, imageId)
       return handleResult(c, result, "image")
     })
@@ -110,7 +110,7 @@ export const imageRoutes = ({ env, db }: ImageDeps) => {
       const user = c.get("user")
       const imageId = c.req.param("imageId")
 
-      const logger = c.get("logger").child({ feature: "image" })
+      const logger = c.get("logger")
 
       const result = await getImageFile(
         { imageRepo, r2: env.R2, logger },

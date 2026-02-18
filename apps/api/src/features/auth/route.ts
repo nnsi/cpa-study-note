@@ -115,7 +115,7 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
         return handleResult(c, { ok: false, error: badRequest("Invalid state") })
       }
 
-      const logger = c.get("logger").child({ feature: "auth" })
+      const logger = c.get("logger")
       const tracer = c.get("tracer")
       const tracedSampleData = traced(tracer, "d1.createSampleData",
         (userId: string) => createSampleDataForNewUser(db, userId))
@@ -197,7 +197,7 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
         return handleResult(c, { ok: false, error: unauthorized("No refresh token") })
       }
 
-      const logger = c.get("logger").child({ feature: "auth" })
+      const logger = c.get("logger")
       const tracer = c.get("tracer")
       const result = await refreshAccessToken(
         { repo: tracedAuthRepo(repo, tracer), logger },
@@ -234,7 +234,7 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
       const devUserId = env.DEV_USER_ID || "test-user-1"
 
       // ユーザーが存在しない場合は作成（UseCase経由）
-      const logger = c.get("logger").child({ feature: "auth" })
+      const logger = c.get("logger")
       const tracer = c.get("tracer")
       const userResult = await getOrCreateDevUser(
         { repo: tracedAuthRepo(repo, tracer), logger },
@@ -300,7 +300,7 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
     // ログアウト
     .post("/logout", async (c) => {
       const refreshToken = getCookie(c, "refresh_token")
-      const logger = c.get("logger").child({ feature: "auth" })
+      const logger = c.get("logger")
       const tracer = c.get("tracer")
 
       if (refreshToken) {

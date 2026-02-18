@@ -34,7 +34,7 @@ export const studyDomainRoutes = ({ db }: StudyDomainDeps) => {
     // List user's study domains
     .get("/", authMiddleware, async (c) => {
       const user = c.get("user")
-      const logger = c.get("logger").child({ feature: "study-domain" })
+      const logger = c.get("logger")
       const tracer = c.get("tracer")
       const result = await listStudyDomains({ repo: tracedStudyDomainRepo(repo, tracer), logger }, user.id)
       return handleResult(c, result, "studyDomains")
@@ -43,7 +43,7 @@ export const studyDomainRoutes = ({ db }: StudyDomainDeps) => {
     // Get study domain by ID
     .get("/:id", authMiddleware, async (c) => {
       const user = c.get("user")
-      const logger = c.get("logger").child({ feature: "study-domain" })
+      const logger = c.get("logger")
       const tracer = c.get("tracer")
       const id = c.req.param("id")
       const result = await getStudyDomain({ repo: tracedStudyDomainRepo(repo, tracer), logger }, id, user.id)
@@ -57,7 +57,7 @@ export const studyDomainRoutes = ({ db }: StudyDomainDeps) => {
       zValidator("json", createStudyDomainRequestSchema),
       async (c) => {
         const user = c.get("user")
-        const logger = c.get("logger").child({ feature: "study-domain" })
+        const logger = c.get("logger")
         const tracer = c.get("tracer")
         const data = c.req.valid("json")
         const result = await createStudyDomain({ repo: tracedStudyDomainRepo(repo, tracer), logger }, user.id, data)
@@ -73,7 +73,7 @@ export const studyDomainRoutes = ({ db }: StudyDomainDeps) => {
       zValidator("json", updateStudyDomainRequestSchema),
       async (c) => {
         const user = c.get("user")
-        const logger = c.get("logger").child({ feature: "study-domain" })
+        const logger = c.get("logger")
         const tracer = c.get("tracer")
         const id = c.req.param("id")
         const data = c.req.valid("json")
@@ -85,7 +85,7 @@ export const studyDomainRoutes = ({ db }: StudyDomainDeps) => {
     // Delete study domain (soft delete)
     .delete("/:id", authMiddleware, async (c) => {
       const user = c.get("user")
-      const logger = c.get("logger").child({ feature: "study-domain" })
+      const logger = c.get("logger")
       const tracer = c.get("tracer")
       const id = c.req.param("id")
       const result = await deleteStudyDomain({ repo: tracedStudyDomainRepo(repo, tracer), logger }, id, user.id)
@@ -102,7 +102,7 @@ export const studyDomainRoutes = ({ db }: StudyDomainDeps) => {
         const user = c.get("user")
         const id = c.req.param("id")
         const { csvContent } = c.req.valid("json")
-        const logger = c.get("logger").child({ feature: "study-domain" })
+        const logger = c.get("logger")
 
         try {
           const subjectRepo = createSubjectRepository(db)

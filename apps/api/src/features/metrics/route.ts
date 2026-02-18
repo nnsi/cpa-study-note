@@ -20,7 +20,7 @@ export const metricsRoutes = ({ db }: MetricsDeps) => {
     // 今日の活動メトリクス取得（リアルタイム、タイムゾーン考慮）
     .get("/today", authMiddleware, async (c) => {
       const user = c.get("user")
-      const logger = c.get("logger").child({ feature: "metrics" })
+      const logger = c.get("logger")
       const tracer = c.get("tracer")
       const result = await getTodayMetrics({ metricsRepo: tracedMetricsRepo(metricsRepo, tracer), logger }, user.id, user.timezone)
       return handleResult(c, result, "metrics")
@@ -34,7 +34,7 @@ export const metricsRoutes = ({ db }: MetricsDeps) => {
       async (c) => {
         const user = c.get("user")
         const { from, to } = c.req.valid("query")
-        const logger = c.get("logger").child({ feature: "metrics" })
+        const logger = c.get("logger")
         const tracer = c.get("tracer")
 
         const result = await getDailyMetrics({ metricsRepo: tracedMetricsRepo(metricsRepo, tracer), logger }, user.id, from, to, user.timezone)
@@ -45,7 +45,7 @@ export const metricsRoutes = ({ db }: MetricsDeps) => {
     // スナップショット作成（当日分）
     .post("/snapshot", authMiddleware, async (c) => {
       const user = c.get("user")
-      const logger = c.get("logger").child({ feature: "metrics" })
+      const logger = c.get("logger")
       const tracer = c.get("tracer")
 
       const result = await createSnapshot({ metricsRepo: tracedMetricsRepo(metricsRepo, tracer), logger }, user.id)
@@ -60,7 +60,7 @@ export const metricsRoutes = ({ db }: MetricsDeps) => {
       async (c) => {
         const user = c.get("user")
         const { date } = c.req.valid("param")
-        const logger = c.get("logger").child({ feature: "metrics" })
+        const logger = c.get("logger")
         const tracer = c.get("tracer")
 
         const result = await createSnapshot({ metricsRepo: tracedMetricsRepo(metricsRepo, tracer), logger }, user.id, date)

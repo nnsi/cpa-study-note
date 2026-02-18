@@ -1,5 +1,6 @@
 import { eq, and, isNull, asc } from "drizzle-orm"
 import type { Db } from "@cpa-study/db"
+import { traced, type Tracer } from "@/shared/lib/tracer"
 import {
   topics,
   categories,
@@ -23,6 +24,10 @@ export type CategoryTopicsData = {
 export type CategoryTopicsViewRepository = {
   getCategoryTopics: (categoryId: string, userId: string) => Promise<CategoryTopicsData | null>
 }
+
+export const tracedCategoryTopicsViewRepo = (repo: CategoryTopicsViewRepository, tracer: Tracer): CategoryTopicsViewRepository => ({
+  getCategoryTopics: traced(tracer, "d1.getCategoryTopics", repo.getCategoryTopics),
+})
 
 export const createCategoryTopicsViewRepository = (db: Db): CategoryTopicsViewRepository => ({
   getCategoryTopics: async (categoryId, userId) => {

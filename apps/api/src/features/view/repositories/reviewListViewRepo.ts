@@ -1,5 +1,6 @@
 import { eq, and, isNull, sql, or, gte, desc } from "drizzle-orm"
 import type { Db } from "@cpa-study/db"
+import { traced, type Tracer } from "@/shared/lib/tracer"
 import {
   topics,
   categories,
@@ -32,6 +33,10 @@ export type ReviewListData = {
 export type ReviewListViewRepository = {
   getReviewList: (userId: string, filters?: ReviewListFilters) => Promise<ReviewListData>
 }
+
+export const tracedReviewListViewRepo = (repo: ReviewListViewRepository, tracer: Tracer): ReviewListViewRepository => ({
+  getReviewList: traced(tracer, "d1.getReviewList", repo.getReviewList),
+})
 
 export const createReviewListViewRepository = (db: Db): ReviewListViewRepository => ({
   getReviewList: async (userId, filters = {}) => {

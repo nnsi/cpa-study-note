@@ -46,7 +46,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectRouteDeps) => {
       async (c) => {
         const { studyDomainId: explicitStudyDomainId } = c.req.valid("query")
         const user = c.get("user")
-        const logger = c.get("logger").child({ feature: "subject" })
+        const logger = c.get("logger")
         const tracer = c.get("tracer")
         const studyDomainId = resolveStudyDomainId(explicitStudyDomainId, user)
         const result = await listSubjects({ subjectRepo: tracedSubjectRepo(subjectRepo, tracer), logger }, user.id, studyDomainId)
@@ -58,7 +58,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectRouteDeps) => {
     .get("/:id", authMiddleware, async (c) => {
       const user = c.get("user")
       const id = c.req.param("id")
-      const logger = c.get("logger").child({ feature: "subject" })
+      const logger = c.get("logger")
       const tracer = c.get("tracer")
       const result = await getSubject({ subjectRepo: tracedSubjectRepo(subjectRepo, tracer), logger }, user.id, id)
       return handleResult(c, result, "subject")
@@ -73,7 +73,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectRouteDeps) => {
         const user = c.get("user")
         const domainId = c.req.param("domainId")
         const data = c.req.valid("json")
-        const logger = c.get("logger").child({ feature: "subject" })
+        const logger = c.get("logger")
         const tracer = c.get("tracer")
         const result = await createSubject({ subjectRepo: tracedSubjectRepo(subjectRepo, tracer), logger }, user.id, {
           studyDomainId: domainId,
@@ -92,7 +92,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectRouteDeps) => {
         const user = c.get("user")
         const id = c.req.param("id")
         const data = c.req.valid("json")
-        const logger = c.get("logger").child({ feature: "subject" })
+        const logger = c.get("logger")
         const tracer = c.get("tracer")
         const result = await updateSubject({ subjectRepo: tracedSubjectRepo(subjectRepo, tracer), logger }, user.id, id, data)
         return handleResult(c, result, "subject")
@@ -103,7 +103,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectRouteDeps) => {
     .delete("/:id", authMiddleware, async (c) => {
       const user = c.get("user")
       const id = c.req.param("id")
-      const logger = c.get("logger").child({ feature: "subject" })
+      const logger = c.get("logger")
       const tracer = c.get("tracer")
       const result = await deleteSubject({ subjectRepo: tracedSubjectRepo(subjectRepo, tracer), logger }, user.id, id)
       return handleResult(c, result, 204)
@@ -113,7 +113,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectRouteDeps) => {
     .get("/:id/tree", authMiddleware, async (c) => {
       const user = c.get("user")
       const id = c.req.param("id")
-      const logger = c.get("logger").child({ feature: "subject" })
+      const logger = c.get("logger")
       const tracer = c.get("tracer")
       const result = await getSubjectTree({ subjectRepo: tracedSubjectRepo(subjectRepo, tracer), db, txRunner, logger, tracer }, user.id, id)
       return handleResult(c, result, "tree")
@@ -128,7 +128,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectRouteDeps) => {
         const user = c.get("user")
         const id = c.req.param("id")
         const data = c.req.valid("json")
-        const logger = c.get("logger").child({ feature: "subject" })
+        const logger = c.get("logger")
         const tracer = c.get("tracer")
         const result = await updateSubjectTree({ subjectRepo: tracedSubjectRepo(subjectRepo, tracer), db, txRunner, logger, tracer }, user.id, id, data)
         return handleResult(c, result, "tree")
@@ -144,7 +144,7 @@ export const subjectRoutes = ({ db, txRunner }: SubjectRouteDeps) => {
         const user = c.get("user")
         const id = c.req.param("id")
         const { csvContent } = c.req.valid("json")
-        const logger = c.get("logger").child({ feature: "subject" })
+        const logger = c.get("logger")
         const tracer = c.get("tracer")
 
         const result = await importCSVToSubject({ subjectRepo: tracedSubjectRepo(subjectRepo, tracer), db, txRunner, logger, tracer }, user.id, id, csvContent)

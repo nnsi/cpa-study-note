@@ -67,7 +67,7 @@ export const exerciseRoutes = ({ env, db }: ExerciseDeps) => {
         apiKey: env.OPENROUTER_API_KEY,
       })
 
-      const logger = c.get("logger").child({ feature: "exercise" })
+      const logger = c.get("logger")
       const tracer = c.get("tracer")
 
       const result = await analyzeExercise(
@@ -91,7 +91,7 @@ export const exerciseRoutes = ({ env, db }: ExerciseDeps) => {
         const exerciseId = c.req.param("exerciseId")
         const { topicId, markAsUnderstood } = c.req.valid("json")
 
-        const logger = c.get("logger").child({ feature: "exercise" })
+        const logger = c.get("logger")
         const tracer = c.get("tracer")
 
         const result = await confirmExercise(
@@ -111,7 +111,7 @@ export const exerciseRoutes = ({ env, db }: ExerciseDeps) => {
       const user = c.get("user")
       const topicId = c.req.param("topicId")
 
-      const logger = c.get("logger").child({ feature: "exercise" })
+      const logger = c.get("logger")
       const tracer = c.get("tracer")
 
       const result = await getTopicExercises({ exerciseRepo, logger, tracer }, user.id, topicId)

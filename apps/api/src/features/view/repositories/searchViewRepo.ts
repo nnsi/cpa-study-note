@@ -1,5 +1,6 @@
 import { eq, and, isNull, like, sql, asc } from "drizzle-orm"
 import type { Db } from "@cpa-study/db"
+import { traced, type Tracer } from "@/shared/lib/tracer"
 import {
   topics,
   categories,
@@ -16,6 +17,10 @@ export type SearchViewRepository = {
     limit?: number
   ) => Promise<SearchTopicsResponse>
 }
+
+export const tracedSearchViewRepo = (repo: SearchViewRepository, tracer: Tracer): SearchViewRepository => ({
+  searchTopics: traced(tracer, "d1.searchTopics", repo.searchTopics),
+})
 
 export const createSearchViewRepository = (db: Db): SearchViewRepository => ({
   searchTopics: async (userId, query, studyDomainId, limit = 20) => {
