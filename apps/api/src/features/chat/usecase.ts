@@ -1,6 +1,7 @@
 import type { AIAdapter, AIMessage, StreamChunk, AIConfig } from "@/shared/lib/ai"
 import type { ChatRepository } from "./repository"
 import type { LearningRepository } from "../learning/repository"
+import type { ImageRepository } from "../image/repository"
 import { buildSystemPrompt, buildEvaluationPrompt } from "./domain/prompts"
 import { parseLLMJson } from "@cpa-study/shared"
 import type {
@@ -22,6 +23,13 @@ export type ChatDeps = {
   aiConfig: AIConfig
   logger: Logger
   tracer: Tracer
+  imageRepo?: ImageRepository
+}
+
+const canUseImage = async (deps: ChatDeps, userId: string, imageId?: string) => {
+  if (!imageId) return true
+  const image = await deps.imageRepo?.findById(imageId)
+  return image?.userId === userId
 }
 
 // セッション作成
@@ -178,6 +186,11 @@ export async function* sendMessage(
     return
   }
 
+  if (!(await canUseImage(deps, input.userId, input.imageId))) {
+    yield { type: "error", error: "Image not found" }
+    return
+  }
+
   // Phase 2: 階層取得と履歴取得を並列実行（履歴は新メッセージ保存前に取得）
   const [hierarchy, history] = await tracer.span("d1.hierarchyAndHistory", () =>
     Promise.all([
@@ -300,6 +313,11 @@ export async function* sendMessageWithNewSession(
   )
   if (!exists) {
     yield { type: "error", error: "Topic not found" }
+    return
+  }
+
+  if (!(await canUseImage(deps, input.userId, input.imageId))) {
+    yield { type: "error", error: "Image not found" }
     return
   }
 

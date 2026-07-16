@@ -89,6 +89,10 @@ export const suggestTopicsForChat = async (
   deps: QuickChatDeps,
   input: SuggestInput
 ): Promise<Result<{ suggestions: QuickChatSuggestion[] }, AppError>> => {
+  if (!(await deps.quickChatRepo.domainExists(input.domainId, input.userId))) {
+    return err(notFound("学習領域が見つかりません"))
+  }
+
   // 1. ドメイン内の全論点を取得
   const allTopics = await deps.quickChatRepo.findAllTopicsByDomain(
     input.domainId,

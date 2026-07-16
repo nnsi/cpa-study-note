@@ -56,6 +56,8 @@ const createMockRepo = (overrides: Partial<StudyPlanRepository> = {}): StudyPlan
   createRevision: vi.fn(),
   updateRevision: vi.fn(),
   isPlanOwnedByUser: vi.fn().mockResolvedValue(false),
+  isSubjectOwnedByUser: vi.fn().mockResolvedValue(true),
+  isTopicOwnedByUser: vi.fn().mockResolvedValue(true),
   ...overrides,
 })
 

@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useEffect } from "react"
 import { useAuthStore } from "@/lib/auth"
+import { decodeAccessTokenUser } from "@/lib/jwt"
 
 export const Route = createFileRoute("/auth/callback")({
   component: AuthCallback,
@@ -19,13 +20,7 @@ function AuthCallback() {
     if (token) {
       // Decode JWT to get user info
       try {
-        const payload = JSON.parse(atob(token.split(".")[1]))
-        const user = {
-          id: payload.sub,
-          email: payload.email,
-          displayName: payload.name,
-          avatarUrl: payload.avatarUrl,
-        }
+        const user = decodeAccessTokenUser(token)
         setAuth(user, token)
 
         // Clear the hash from URL

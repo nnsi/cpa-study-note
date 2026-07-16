@@ -7,6 +7,7 @@ import { authMiddleware } from "@/shared/middleware/auth"
 import { createAIAdapter, streamToSSE, resolveAIConfig } from "@/shared/lib/ai"
 import { createChatRepository } from "./repository"
 import { createLearningRepository } from "../learning/repository"
+import { createImageRepository } from "../image/repository"
 import {
   createSession,
   getSession,
@@ -28,6 +29,7 @@ type ChatDeps = {
 export const chatRoutes = ({ env, db }: ChatDeps) => {
   const chatRepo = createChatRepository(db)
   const learningRepo = createLearningRepository(db)
+  const imageRepo = createImageRepository(db)
   const aiConfig = resolveAIConfig(env.ENVIRONMENT)
   const aiAdapter = createAIAdapter({
     provider: env.AI_PROVIDER,
@@ -121,7 +123,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         const logger = c.get("logger")
         const tracer = c.get("tracer")
         const stream = sendMessage(
-          { chatRepo, learningRepo, aiAdapter, aiConfig, logger, tracer },
+          { chatRepo, learningRepo, imageRepo, aiAdapter, aiConfig, logger, tracer },
           {
             sessionId,
             userId: user.id,
@@ -148,7 +150,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         const logger = c.get("logger")
         const tracer = c.get("tracer")
         const stream = sendMessageWithNewSession(
-          { chatRepo, learningRepo, aiAdapter, aiConfig, logger, tracer },
+          { chatRepo, learningRepo, imageRepo, aiAdapter, aiConfig, logger, tracer },
           {
             topicId,
             userId: user.id,

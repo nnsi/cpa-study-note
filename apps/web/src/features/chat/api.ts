@@ -1,6 +1,7 @@
-import { api } from "@/lib/api-client"
-import { useAuthStore } from "@/lib/auth"
+import { api, fetchWithRetry } from "@/lib/api-client"
+import { parseSSEStream } from "@/lib/sse"
 import {
+  chatStreamChunkSchema,
   chatMessagesWrapperResponseSchema,
   correctSpeechResponseSchema,
   sessionsListResponseSchema,
@@ -32,31 +33,6 @@ export const getSessionsByTopic = async (topicId: string) => {
   return sessionsListResponseSchema.parse(data)
 }
 
-async function* parseSSEStream(res: Response): AsyncGenerator<StreamChunk> {
-  if (!res.body) throw new Error("ストリーミングに失敗しました")
-  const reader = res.body.getReader()
-  const decoder = new TextDecoder()
-  let buffer = ""
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-    buffer += decoder.decode(value, { stream: true })
-    const lines = buffer.split("\n\n")
-    buffer = lines.pop() || ""
-    for (const line of lines) {
-      if (line.startsWith("data: ")) {
-        try {
-          const chunk: StreamChunk = JSON.parse(line.slice(6))
-          yield chunk
-          if (chunk.type === "done" || chunk.type === "error") return
-        } catch (e) {
-          if (import.meta.env.DEV) console.warn("SSE parse error:", line, e)
-        }
-      }
-    }
-  }
-}
-
 export async function* streamMessage(
   sessionId: string,
   content: string,
@@ -64,21 +40,19 @@ export async function* streamMessage(
   ocrResult?: string
 ): AsyncIterable<StreamChunk> {
   const apiUrl = import.meta.env.VITE_API_URL || ""
-  const token = useAuthStore.getState().token
-  const res = await fetch(
+  const res = await fetchWithRetry(
     `${apiUrl}/api/chat/sessions/${sessionId}/messages/stream`,
     {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       credentials: "include",
       body: JSON.stringify({ content, imageId, ocrResult }),
     }
   )
   if (!res.ok) throw new Error("ストリーミングに失敗しました")
-  yield* parseSSEStream(res)
+  yield* parseSSEStream(res, chatStreamChunkSchema, "ストリーミングに失敗しました")
 }
 
 // 新規セッション + メッセージ送信（最初のメッセージ送信時にセッション作成）
@@ -89,21 +63,19 @@ export async function* streamMessageWithNewSession(
   ocrResult?: string
 ): AsyncIterable<StreamChunk> {
   const apiUrl = import.meta.env.VITE_API_URL || ""
-  const token = useAuthStore.getState().token
-  const res = await fetch(
+  const res = await fetchWithRetry(
     `${apiUrl}/api/chat/topics/${topicId}/messages/stream`,
     {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       credentials: "include",
       body: JSON.stringify({ content, imageId, ocrResult }),
     }
   )
   if (!res.ok) throw new Error("ストリーミングに失敗しました")
-  yield* parseSSEStream(res)
+  yield* parseSSEStream(res, chatStreamChunkSchema, "ストリーミングに失敗しました")
 }
 
 export const correctSpeech = async (text: string) => {

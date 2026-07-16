@@ -58,7 +58,7 @@ describe("useExerciseAnalyze", () => {
       imageId: "img-1",
       ocrText: "テスト問題文",
       suggestedTopics: [
-        { topicId: "topic-1", topicName: "論点A", subjectName: "科目A", confidence: "high" as const, reason: "テスト理由" },
+        { topicId: "topic-1", topicName: "論点A", studyDomainId: "domain-1", subjectId: "subject-1", categoryId: "category-1", subjectName: "科目A", confidence: "high" as const, reason: "テスト理由" },
       ],
     }
     vi.mocked(api.analyzeExercise).mockResolvedValue(mockResult)

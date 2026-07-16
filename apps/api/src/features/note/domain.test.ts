@@ -100,6 +100,7 @@ describe("Note Domain Types", () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         topicName: "Depreciation Methods",
+        studyDomainId: "domain-123",
         categoryId: "category-123",
         subjectId: "subject-123",
         subjectName: "Financial Accounting",

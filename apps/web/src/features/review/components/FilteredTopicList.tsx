@@ -189,8 +189,9 @@ type TopicListItemProps = {
 const TopicListItem = ({ topic }: TopicListItemProps) => {
   return (
     <Link
-      to="/subjects/$subjectId/$categoryId/$topicId"
+      to="/domains/$domainId/subjects/$subjectId/$categoryId/$topicId"
       params={{
+        domainId: topic.studyDomainId,
         subjectId: topic.subjectId,
         categoryId: topic.categoryId,
         topicId: topic.id,

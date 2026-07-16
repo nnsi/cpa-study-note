@@ -8,6 +8,7 @@ import {
   type CategoryNodeInput,
 } from "@/features/subject/api"
 import type { QuickChatSuggestion } from "@cpa-study/shared/schemas"
+import { findCreatedTopic } from "./logic"
 
 type UseQuickChatOptions = {
   domainId: string | null
@@ -81,6 +82,13 @@ export const useQuickChat = ({ domainId }: UseQuickChatOptions) => {
       // 1. 現在のツリーを取得
       const treeData = await getSubjectTree(subjectId)
       const currentTree = treeData.tree
+      const existingTopicIds = new Set(
+        currentTree.categories.flatMap((category) =>
+          category.subcategories.flatMap((subcategory) =>
+            subcategory.topics.map((topic) => topic.id)
+          )
+        )
+      )
 
       // 2. Input型に変換（id: string → id: string | null）
       const updatedCategories: CategoryNodeInput[] = currentTree.categories.map((c) => ({
@@ -150,21 +158,15 @@ export const useQuickChat = ({ domainId }: UseQuickChatOptions) => {
       // 4. ツリー更新
       const result = await updateSubjectTree(subjectId, { categories: updatedCategories })
 
-      // 5. レスポンスから新トピックのIDを取得（名前マッチ）
-      let newTopicId: string | null = null
-      let newCategoryId: string | null = null
-      for (const cat of result.tree.categories) {
-        for (const subcat of cat.subcategories) {
-          for (const topic of subcat.topics) {
-            if (topic.name === topicName) {
-              newTopicId = topic.id
-              newCategoryId = subcat.id
-            }
-          }
-        }
-      }
+      // 5. レスポンスから今回追加された論点だけを取得
+      const createdTopic = findCreatedTopic(
+        result.tree,
+        topicName,
+        existingTopicIds,
+        categoryId
+      )
 
-      if (!newTopicId || !newCategoryId) {
+      if (!createdTopic) {
         throw new Error("作成した論点が見つかりません")
       }
 
@@ -174,8 +176,8 @@ export const useQuickChat = ({ domainId }: UseQuickChatOptions) => {
         params: {
           domainId,
           subjectId,
-          categoryId: newCategoryId,
-          topicId: newTopicId,
+          categoryId: createdTopic.categoryId,
+          topicId: createdTopic.topicId,
         },
         search: { quickChatQuestion: question },
       })

@@ -18,6 +18,8 @@ import { createViewFeature } from "@/features/view"
 import { createExerciseFeature } from "@/features/exercise"
 import { createTopicGeneratorFeature } from "@/features/topic-generator"
 import { createStudyPlanFeature } from "@/features/study-plan"
+import { createQuickChatFeature } from "@/features/quick-chat"
+import { loggerMiddleware } from "@/shared/middleware/logger"
 import { createTestDatabase, seedTestData } from "@/test/mocks/db"
 import { createMockR2Bucket } from "@/test/mocks/r2"
 import type { Env, Variables } from "@/shared/types/env"
@@ -48,6 +50,7 @@ const env: Env = {
 const typedDb = db as unknown as Db
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>()
+  .use("*", loggerMiddleware())
   .use("*", cors({ origin: "*", credentials: true }))
   .route("/api/auth", createAuthFeature(env, typedDb))
   .route("/api/chat", createChatFeature(env, typedDb))
@@ -61,6 +64,7 @@ const app = new Hono<{ Bindings: Env; Variables: Variables }>()
   .route("/api/view", createViewFeature(env, typedDb))
   .route("/api/exercises", createExerciseFeature(env, typedDb))
   .route("/api/topic-generator", createTopicGeneratorFeature(env, typedDb))
+  .route("/api/quick-chat", createQuickChatFeature(env, typedDb))
   .route("/api/study-plans", createStudyPlanFeature(env, typedDb))
   .get("/api/health", (c) => c.json({ status: "ok" }))
   .post("/api/test/reset", (c) => {
@@ -70,6 +74,8 @@ const app = new Hono<{ Bindings: Env; Variables: Variables }>()
     sqlite.exec("DELETE FROM notes")
     sqlite.exec("DELETE FROM user_bookmarks")
     sqlite.exec("DELETE FROM topic_check_history")
+    sqlite.exec("DELETE FROM exercises")
+    sqlite.exec("DELETE FROM images")
     console.log("[E2E Server] DB reset complete")
     return c.json({ status: "ok" })
   })

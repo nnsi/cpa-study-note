@@ -10,6 +10,27 @@ type GoogleConfig = {
 // Google OIDC公開鍵エンドポイント
 const GOOGLE_JWKS_URI = "https://www.googleapis.com/oauth2/v3/certs"
 
+export const getVerifiedGoogleProfile = (payload: jose.JWTPayload) => {
+  const { sub, email, email_verified, name, picture } = payload as {
+    sub?: string
+    email?: string
+    email_verified?: boolean
+    name?: string
+    picture?: string
+  }
+
+  if (!sub || !email || email_verified !== true) {
+    throw new Error("Missing or unverified required claims in ID token")
+  }
+
+  return {
+    providerId: sub,
+    email,
+    name: name || email.split("@")[0],
+    avatarUrl: picture ?? null,
+  }
+}
+
 export const createGoogleProvider = (config: GoogleConfig): OAuthProvider => ({
   name: "google",
 
@@ -61,23 +82,7 @@ export const createGoogleProvider = (config: GoogleConfig): OAuthProvider => ({
         audience: config.clientId,
       })
 
-      const { sub, email, name, picture } = payload as {
-        sub: string
-        email?: string
-        name?: string
-        picture?: string
-      }
-
-      if (!sub || !email) {
-        throw new Error("Missing required claims (sub, email) in ID token")
-      }
-
-      return {
-        providerId: sub,
-        email,
-        name: name || email.split("@")[0],
-        avatarUrl: picture ?? null,
-      }
+      return getVerifiedGoogleProfile(payload)
     } catch (error) {
       throw new Error(
         `ID token verification failed: ${error instanceof Error ? error.message : String(error)}`

@@ -360,14 +360,14 @@ describe("StudyPlanRepository", () => {
         now: new Date(),
       })
 
-      const found = await repository.findItemById("item-1")
+      const found = await repository.findItemById("plan-1", "item-1")
 
       expect(found).not.toBeNull()
       expect(found?.description).toBe("テスト要素")
     })
 
     it("存在しない要素はnullを返す", async () => {
-      const found = await repository.findItemById("non-existent")
+      const found = await repository.findItemById("plan-1", "non-existent")
 
       expect(found).toBeNull()
     })
@@ -390,16 +390,32 @@ describe("StudyPlanRepository", () => {
         now: new Date(),
       })
 
-      const updated = await repository.updateItem("item-1", { description: "更新後の説明" })
+      const updated = await repository.updateItem("plan-1", "item-1", { description: "更新後の説明" })
 
       expect(updated).not.toBeNull()
       expect(updated?.description).toBe("更新後の説明")
     })
 
     it("存在しない要素の更新はnullを返す", async () => {
-      const updated = await repository.updateItem("non-existent", { description: "test" })
+      const updated = await repository.updateItem("plan-1", "non-existent", { description: "test" })
 
       expect(updated).toBeNull()
+    })
+
+    it("別の計画に属する要素を更新しない", async () => {
+      for (const id of ["plan-1", "plan-2"]) {
+        await repository.createPlan({ id, userId: testData.userId, title: id, scope: "all", now: new Date() })
+      }
+      await repository.createItem({
+        id: "item-2",
+        studyPlanId: "plan-2",
+        description: "変更前",
+        orderIndex: 0,
+        now: new Date(),
+      })
+
+      expect(await repository.updateItem("plan-1", "item-2", { description: "不正変更" })).toBeNull()
+      expect((await repository.findItemById("plan-2", "item-2"))?.description).toBe("変更前")
     })
   })
 
@@ -420,17 +436,27 @@ describe("StudyPlanRepository", () => {
         now: new Date(),
       })
 
-      const success = await repository.deleteItem("item-1")
+      const success = await repository.deleteItem("plan-1", "item-1")
 
       expect(success).toBe(true)
-      const found = await repository.findItemById("item-1")
+      const found = await repository.findItemById("plan-1", "item-1")
       expect(found).toBeNull()
     })
 
     it("存在しない要素の削除はfalseを返す", async () => {
-      const success = await repository.deleteItem("non-existent")
+      const success = await repository.deleteItem("plan-1", "non-existent")
 
       expect(success).toBe(false)
+    })
+
+    it("別の計画に属する要素を削除しない", async () => {
+      for (const id of ["plan-1", "plan-2"]) {
+        await repository.createPlan({ id, userId: testData.userId, title: id, scope: "all", now: new Date() })
+      }
+      await repository.createItem({ id: "item-2", studyPlanId: "plan-2", description: "保持", orderIndex: 0, now: new Date() })
+
+      expect(await repository.deleteItem("plan-1", "item-2")).toBe(false)
+      expect(await repository.findItemById("plan-2", "item-2")).not.toBeNull()
     })
   })
 
@@ -530,7 +556,7 @@ describe("StudyPlanRepository", () => {
         now: new Date(),
       })
 
-      const updated = await repository.updateRevision("revision-1", { reason: "理由を追記" })
+      const updated = await repository.updateRevision("plan-1", "revision-1", { reason: "理由を追記" })
 
       expect(updated).not.toBeNull()
       expect(updated?.reason).toBe("理由を追記")
@@ -552,16 +578,26 @@ describe("StudyPlanRepository", () => {
         now: new Date(),
       })
 
-      const updated = await repository.updateRevision("revision-1", { reason: null })
+      const updated = await repository.updateRevision("plan-1", "revision-1", { reason: null })
 
       expect(updated).not.toBeNull()
       expect(updated?.reason).toBeNull()
     })
 
     it("存在しない変遷の更新はnullを返す", async () => {
-      const updated = await repository.updateRevision("non-existent", { reason: "test" })
+      const updated = await repository.updateRevision("plan-1", "non-existent", { reason: "test" })
 
       expect(updated).toBeNull()
+    })
+
+    it("別の計画に属する変遷を更新しない", async () => {
+      for (const id of ["plan-1", "plan-2"]) {
+        await repository.createPlan({ id, userId: testData.userId, title: id, scope: "all", now: new Date() })
+      }
+      await repository.createRevision({ id: "revision-2", studyPlanId: "plan-2", summary: "保持", now: new Date() })
+
+      expect(await repository.updateRevision("plan-1", "revision-2", { reason: "不正変更" })).toBeNull()
+      expect((await repository.findRevisionsByPlan("plan-2"))[0].reason).toBeNull()
     })
   })
 

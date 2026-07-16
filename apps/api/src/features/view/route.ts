@@ -61,7 +61,7 @@ export const viewRoutes = ({ db }: ViewDeps) => {
       zValidator("query", reviewListQuerySchema),
       async (c) => {
         const user = c.get("user")
-        const { understood, daysSince, limit } = c.req.valid("query")
+        const { understood, daysSince, minSessionCount, minGoodQuestionCount, limit } = c.req.valid("query")
         const logger = c.get("logger")
         const tracer = c.get("tracer")
 
@@ -73,6 +73,8 @@ export const viewRoutes = ({ db }: ViewDeps) => {
         const result = await getReviewList(deps, user.id, {
           understood,
           daysSince,
+          minSessionCount,
+          minGoodQuestionCount,
           limit,
         })
         return handleResult(c, result)

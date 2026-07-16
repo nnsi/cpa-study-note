@@ -8,6 +8,9 @@ export type Confidence = z.infer<typeof confidenceSchema>
 export const suggestedTopicSchema = z.object({
   topicId: z.string(),
   topicName: z.string(),
+  studyDomainId: z.string(),
+  subjectId: z.string(),
+  categoryId: z.string(),
   subjectName: z.string(),
   confidence: confidenceSchema,
   reason: z.string(),

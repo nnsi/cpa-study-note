@@ -33,6 +33,7 @@ const createMockImageRepo = (overrides: Partial<ImageRepository> = {}): ImageRep
   create: vi.fn().mockResolvedValue(createMockImage()),
   findById: vi.fn().mockResolvedValue(null),
   updateOcrText: vi.fn().mockResolvedValue(undefined),
+  updateSize: vi.fn().mockResolvedValue(undefined),
   ...overrides,
 })
 
@@ -151,6 +152,7 @@ describe("Image UseCase", () => {
       // R2にアップロードされたことを確認
       const uploaded = await r2.get(image.r2Key)
       expect(uploaded).not.toBeNull()
+      expect(imageRepo.updateSize).toHaveBeenCalledWith("image-1", pngBuffer.byteLength)
     })
 
     it("存在しない画像でエラーを返す", async () => {

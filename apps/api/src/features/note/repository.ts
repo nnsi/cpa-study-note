@@ -23,6 +23,7 @@ export type NoteWithTopic = Note & {
 
 export type NoteWithTopicDetail = Note & {
   topicName: string
+  studyDomainId: string
   categoryId: string
   subjectId: string
   subjectName: string
@@ -115,6 +116,7 @@ export const createNoteRepository = (db: Db): NoteRepository => ({
         createdAt: notes.createdAt,
         updatedAt: notes.updatedAt,
         topicName: topics.name,
+        studyDomainId: subjects.studyDomainId,
         categoryId: categories.id,
         subjectId: subjects.id,
         subjectName: subjects.name,

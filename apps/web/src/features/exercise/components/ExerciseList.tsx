@@ -1,10 +1,10 @@
 import { Check, Image as ImageIcon } from "lucide-react"
 import type { ExerciseWithImage } from "@cpa-study/shared/schemas"
+import { AuthenticatedImage } from "@/features/image"
 
 type ExerciseListProps = {
   exercises: ExerciseWithImage[]
   onExerciseClick?: (exerciseId: string) => void
-  getImageUrl: (imageId: string) => string
 }
 
 const formatDate = (dateStr: string) => {
@@ -19,7 +19,6 @@ const formatDate = (dateStr: string) => {
 export const ExerciseList = ({
   exercises,
   onExerciseClick,
-  getImageUrl,
 }: ExerciseListProps) => {
   if (exercises.length === 0) {
     return (
@@ -42,8 +41,8 @@ export const ExerciseList = ({
         >
           {/* サムネイル */}
           <div className="flex-shrink-0 w-12 h-12 rounded bg-ink-100 overflow-hidden">
-            <img
-              src={getImageUrl(exercise.imageId)}
+            <AuthenticatedImage
+              imageId={exercise.imageId}
               alt="問題画像"
               className="w-full h-full object-cover"
               loading="lazy"

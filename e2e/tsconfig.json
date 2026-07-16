@@ -10,10 +10,15 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "types": ["@cloudflare/workers-types"],
+    "types": ["../apps/api/node_modules/@cloudflare/workers-types"],
     "baseUrl": "../apps/api",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "hono": ["./node_modules/hono"],
+      "hono/cors": ["./node_modules/hono/dist/types/middleware/cors/index.d.ts"],
+      "hono/*": ["./node_modules/hono/*"],
+      "@cpa-study/db": ["../../packages/db/src/index.ts"],
+      "@cpa-study/db/*": ["../../packages/db/src/*"]
     }
   },
   "include": [

@@ -50,7 +50,7 @@ const validateEnv = (env: Env): void => {
   }
 }
 
-const createApp = (env: Env) => {
+export const createApp = (env: Env) => {
   // 起動時に環境変数をバリデーション
   validateEnv(env)
 
@@ -74,16 +74,20 @@ const createApp = (env: Env) => {
       // ローカル環境: localhost, 127.0.0.1, プライベートIP を許可
       if (env.ENVIRONMENT === "local") {
         if (!origin) return origin // 同一オリジンリクエスト
-        const url = new URL(origin)
-        const host = url.hostname
-        if (
-          host === "localhost" ||
-          host === "127.0.0.1" ||
-          host.startsWith("192.168.") ||
-          host.startsWith("10.") ||
-          /^172\.(1[6-9]|2\d|3[01])\./.test(host)
-        ) {
-          return origin // リクエスト元をそのまま許可
+        try {
+          const url = new URL(origin)
+          const host = url.hostname
+          if (
+            host === "localhost" ||
+            host === "127.0.0.1" ||
+            host.startsWith("192.168.") ||
+            host.startsWith("10.") ||
+            /^172\.(1[6-9]|2\d|3[01])\./.test(host)
+          ) {
+            return origin // リクエスト元をそのまま許可
+          }
+        } catch {
+          return env.WEB_BASE_URL
         }
       }
       // staging/production: WEB_BASE_URL のみ許可
@@ -100,12 +104,18 @@ const createApp = (env: Env) => {
     // 認証系は厳格（5 req/min）
     .use("/api/auth/*", limiter.strict())
     // AI系は中程度（20 req/min）
-    .use("/api/chat/sessions/*/messages", limiter.moderate())
+    .use("/api/chat/sessions/:sessionId/messages/stream", limiter.moderate())
+    .use("/api/chat/topics/:topicId/messages/stream", limiter.moderate())
+    .use("/api/chat/correct-speech", limiter.moderate())
+    .use("/api/chat/messages/:messageId/evaluate", limiter.moderate())
     .use("/api/images/*/ocr", limiter.moderate())
     .use("/api/exercises/analyze", limiter.moderate())
     .use("/api/notes", limiter.moderate())
+    .use("/api/notes/:noteId/refresh", limiter.moderate())
     .use("/api/topic-generator/*", limiter.moderate())
     .use("/api/toc-import/*", limiter.moderate())
+    .use("/api/quick-chat/*", limiter.moderate())
+    .use("/api/study-plans/:planId/suggest", limiter.moderate())
     // その他は緩め（100 req/min）
     // rateLimitApplied フラグにより、上記で適用済みの場合はスキップされる
     .use("/api/*", limiter.lenient())
@@ -122,8 +132,6 @@ const createApp = (env: Env) => {
     .route("/api/exercises", createExerciseFeature(env, db))
     .route("/api/topic-generator", createTopicGeneratorFeature(env, db))
     .route("/api/toc-import", createTocImportFeature(env, db))
-    .use("/api/quick-chat/*", limiter.moderate())
-    .use("/api/study-plans/*/suggest", limiter.moderate())
     .route("/api/quick-chat", createQuickChatFeature(env, db))
     .route("/api/study-plans", createStudyPlanFeature(env, db))
     .get("/api/health", (c) => c.json({ status: "ok" }))

@@ -10,8 +10,6 @@ import { requireAuth } from "@/lib/auth"
 import { topicViewResponseSchema, type SessionWithStats } from "@cpa-study/shared/schemas"
 import { z } from "zod"
 
-const API_URL = import.meta.env.VITE_API_URL || ""
-const getImageUrl = (imageId: string) => `${API_URL}/api/images/${imageId}/file`
 
 const searchSchema = z.object({
   quickChatQuestion: z.string().optional(),
@@ -224,7 +222,6 @@ function TopicDetailPage() {
                 </button>
                 <ExerciseList
                   exercises={exercises}
-                  getImageUrl={getImageUrl}
                 />
               </div>
             )}
@@ -300,7 +297,6 @@ function TopicDetailPage() {
             </button>
             <ExerciseList
               exercises={exercises}
-              getImageUrl={getImageUrl}
             />
           </div>
         )}

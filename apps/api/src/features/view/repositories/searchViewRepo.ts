@@ -54,6 +54,7 @@ export const createSearchViewRepository = (db: Db): SearchViewRepository => ({
       .select({
         id: topics.id,
         name: topics.name,
+        studyDomainId: studyDomains.id,
         subjectId: subjects.id,
         subjectName: subjects.name,
         categoryId: categories.id,

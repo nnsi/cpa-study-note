@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { useMutation } from "@tanstack/react-query"
 import { allowedMimeTypes, type AllowedMimeType } from "@cpa-study/shared/schemas"
 import * as api from "./api"
@@ -15,6 +15,7 @@ type UploadState = {
 }
 
 export const useImageUpload = () => {
+  const previewUrlRef = useRef<string | null>(null)
   const [state, setState] = useState<UploadState>({
     status: "idle",
     imageId: null,
@@ -24,9 +25,8 @@ export const useImageUpload = () => {
   })
 
   const reset = useCallback(() => {
-    if (state.previewUrl) {
-      URL.revokeObjectURL(state.previewUrl)
-    }
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
+    previewUrlRef.current = null
     setState({
       status: "idle",
       imageId: null,
@@ -34,7 +34,11 @@ export const useImageUpload = () => {
       error: null,
       previewUrl: null,
     })
-  }, [state.previewUrl])
+  }, [])
+
+  useEffect(() => () => {
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
+  }, [])
 
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -42,10 +46,12 @@ export const useImageUpload = () => {
         throw new Error(`サポートされていないファイル形式です: ${file.type}`)
       }
 
+      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
+      previewUrlRef.current = URL.createObjectURL(file)
       setState((prev) => ({
         ...prev,
         status: "uploading",
-        previewUrl: URL.createObjectURL(file),
+        previewUrl: previewUrlRef.current,
       }))
 
       // 1. アップロードURL取得

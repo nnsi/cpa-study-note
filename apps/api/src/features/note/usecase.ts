@@ -240,6 +240,7 @@ export const getNote = async (
   return ok({
     ...toNoteWithSource(note),
     topicName: note.topicName,
+    studyDomainId: note.studyDomainId,
     categoryId: note.categoryId,
     subjectId: note.subjectId,
     subjectName: note.subjectName,

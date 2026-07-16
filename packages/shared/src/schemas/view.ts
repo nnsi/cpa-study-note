@@ -9,6 +9,8 @@ export const reviewListQuerySchema = z.object({
     .transform((v) => v === "true")
     .optional(),
   daysSince: z.coerce.number().int().min(0).optional(),
+  minSessionCount: z.coerce.number().int().min(0).optional(),
+  minGoodQuestionCount: z.coerce.number().int().min(0).optional(),
   limit: z.coerce.number().int().min(1).max(100).default(50),
 })
 
@@ -16,7 +18,7 @@ export type ReviewListQuery = z.infer<typeof reviewListQuerySchema>
 
 // Search query
 export const searchQuerySchema = z.object({
-  q: z.string().min(1),
+  q: z.string().min(1).max(100),
   studyDomainId: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(100).default(20),
 })
@@ -102,12 +104,15 @@ export const reviewListResponseSchema = z.object({
     z.object({
       id: z.string(),
       name: z.string(),
+      studyDomainId: z.string(),
       subjectId: z.string(),
       subjectName: z.string(),
       categoryId: z.string(),
       understood: z.boolean(),
       lastAccessedAt: z.string().datetime().nullable(),
+      lastChatAt: z.string().datetime().nullable(),
       sessionCount: z.number(),
+      goodQuestionCount: z.number(),
     })
   ),
   total: z.number(),
@@ -138,6 +143,7 @@ export type CategoryTopicsResponse = z.infer<typeof categoryTopicsResponseSchema
 export const viewTopicSearchResultSchema = z.object({
   id: z.string(),
   name: z.string(),
+  studyDomainId: z.string(),
   subjectId: z.string(),
   subjectName: z.string(),
   categoryId: z.string(),

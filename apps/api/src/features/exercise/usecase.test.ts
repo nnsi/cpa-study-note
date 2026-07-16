@@ -4,6 +4,7 @@
 import { describe, it, expect, vi } from "vitest"
 import type { ExerciseRepository, Exercise, ExerciseWithImage, TopicForSuggestion } from "./repository"
 import type { ImageRepository, Image } from "../image/repository"
+import type { LearningRepository } from "../learning/repository"
 import type { AIAdapter, AIConfig } from "@/shared/lib/ai"
 import { confirmExercise, getTopicExercises } from "./usecase"
 import { noopLogger, noopTracer } from "../../test/helpers"
@@ -43,6 +44,17 @@ const createMockExerciseRepo = (overrides: Partial<ExerciseRepository> = {}): Ex
   ...overrides,
 })
 
+const createConfirmDeps = (exerciseRepo: ExerciseRepository) => ({
+  exerciseRepo,
+  learningRepo: {
+    verifyTopicExists: vi.fn().mockResolvedValue(true),
+    upsertProgress: vi.fn().mockResolvedValue({}),
+    createCheckHistory: vi.fn().mockResolvedValue({}),
+  } as unknown as LearningRepository,
+  logger: noopLogger,
+  tracer: noopTracer,
+})
+
 describe("Exercise UseCase", () => {
   describe("confirmExercise", () => {
     it("問題を論点に確定する", async () => {
@@ -55,9 +67,10 @@ describe("Exercise UseCase", () => {
         findByIdWithOwnerCheck: vi.fn().mockResolvedValue(exercise),
         confirm: vi.fn().mockResolvedValue(confirmed),
       })
+      const deps = createConfirmDeps(exerciseRepo)
 
       const result = await confirmExercise(
-        { exerciseRepo, logger: noopLogger, tracer: noopTracer },
+        deps,
         "user-1",
         "exercise-1",
         "topic-1",
@@ -69,7 +82,7 @@ describe("Exercise UseCase", () => {
       expect(result.value.exerciseId).toBe("exercise-1")
       expect(result.value.topicId).toBe("topic-1")
       expect(result.value.topicChecked).toBe(false)
-      expect(exerciseRepo.confirm).toHaveBeenCalledWith("exercise-1", "topic-1", false)
+      expect(exerciseRepo.confirm).toHaveBeenCalledWith("exercise-1", "user-1", "topic-1", false)
     })
 
     it("理解済みマーク付きで確定する", async () => {
@@ -83,9 +96,10 @@ describe("Exercise UseCase", () => {
         findByIdWithOwnerCheck: vi.fn().mockResolvedValue(exercise),
         confirm: vi.fn().mockResolvedValue(confirmed),
       })
+      const deps = createConfirmDeps(exerciseRepo)
 
       const result = await confirmExercise(
-        { exerciseRepo, logger: noopLogger, tracer: noopTracer },
+        deps,
         "user-1",
         "exercise-1",
         "topic-1",
@@ -95,6 +109,37 @@ describe("Exercise UseCase", () => {
       expect(result.ok).toBe(true)
       if (!result.ok) return
       expect(result.value.topicChecked).toBe(true)
+      expect(deps.learningRepo.upsertProgress).toHaveBeenCalledWith("user-1", {
+        userId: "user-1",
+        topicId: "topic-1",
+        understood: true,
+      })
+      expect(deps.learningRepo.createCheckHistory).toHaveBeenCalledWith("user-1", {
+        userId: "user-1",
+        topicId: "topic-1",
+        action: "checked",
+      })
+    })
+
+    it("別ユーザーの論点への確定を拒否する", async () => {
+      const exerciseRepo = createMockExerciseRepo({
+        findByIdWithOwnerCheck: vi.fn().mockResolvedValue(createMockExercise()),
+      })
+      const deps = createConfirmDeps(exerciseRepo)
+      vi.mocked(deps.learningRepo.verifyTopicExists).mockResolvedValue(false)
+
+      const result = await confirmExercise(
+        deps,
+        "user-1",
+        "exercise-1",
+        "other-users-topic",
+        false
+      )
+
+      expect(result.ok).toBe(false)
+      if (result.ok) return
+      expect(result.error.code).toBe("NOT_FOUND")
+      expect(exerciseRepo.confirm).not.toHaveBeenCalled()
     })
 
     it("存在しない問題でエラーを返す", async () => {
@@ -103,7 +148,7 @@ describe("Exercise UseCase", () => {
       })
 
       const result = await confirmExercise(
-        { exerciseRepo, logger: noopLogger, tracer: noopTracer },
+        createConfirmDeps(exerciseRepo),
         "user-1",
         "non-existent",
         "topic-1",
@@ -125,7 +170,7 @@ describe("Exercise UseCase", () => {
       })
 
       const result = await confirmExercise(
-        { exerciseRepo, logger: noopLogger, tracer: noopTracer },
+        createConfirmDeps(exerciseRepo),
         "user-1",
         "exercise-1",
         "topic-2",
@@ -146,7 +191,7 @@ describe("Exercise UseCase", () => {
       })
 
       const result = await confirmExercise(
-        { exerciseRepo, logger: noopLogger, tracer: noopTracer },
+        createConfirmDeps(exerciseRepo),
         "user-1",
         "exercise-1",
         "invalid-topic",

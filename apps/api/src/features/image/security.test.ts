@@ -80,6 +80,20 @@ describe("validateMagicBytes", () => {
     expect(validateMagicBytes(buffer, "image/webp")).toBe(true)
   })
 
+  it("RIFFでもWEBPシグネチャがないWAV/AVI形式を拒否する", () => {
+    const wavHeader = new Uint8Array([
+      0x52, 0x49, 0x46, 0x46,
+      0x00, 0x00, 0x00, 0x00,
+      0x57, 0x41, 0x56, 0x45,
+    ])
+    expect(validateMagicBytes(wavHeader.buffer, "image/webp")).toBe(false)
+  })
+
+  it("GIFという3文字だけの偽装データを拒否する", () => {
+    const fakeGif = new TextEncoder().encode("GIFxxx")
+    expect(validateMagicBytes(fakeGif.buffer as ArrayBuffer, "image/gif")).toBe(false)
+  })
+
   it("偽装ファイルを検出する（拡張子とマジックバイト不一致）", () => {
     // PNGデータをJPEGとして検証
     expect(validateMagicBytes(PNG_MAGIC.buffer, "image/jpeg")).toBe(false)

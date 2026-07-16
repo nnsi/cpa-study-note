@@ -18,14 +18,29 @@ export type TopicForSuggest = {
 }
 
 export type QuickChatRepository = {
+  domainExists: (domainId: string, userId: string) => Promise<boolean>
   findAllTopicsByDomain: (domainId: string, userId: string) => Promise<TopicForSuggest[]>
 }
 
 export const tracedQuickChatRepo = (repo: QuickChatRepository, tracer: Tracer): QuickChatRepository => ({
+  domainExists: traced(tracer, "d1.quickChatDomainExists", repo.domainExists),
   findAllTopicsByDomain: traced(tracer, "d1.findAllTopicsByDomain", repo.findAllTopicsByDomain),
 })
 
 export const createQuickChatRepository = (db: Db): QuickChatRepository => ({
+  domainExists: async (domainId, userId) => {
+    const result = await db
+      .select({ id: studyDomains.id })
+      .from(studyDomains)
+      .where(and(
+        eq(studyDomains.id, domainId),
+        eq(studyDomains.userId, userId),
+        isNull(studyDomains.deletedAt)
+      ))
+      .limit(1)
+    return result.length > 0
+  },
+
   findAllTopicsByDomain: async (domainId, userId) => {
     const result = await db
       .select({

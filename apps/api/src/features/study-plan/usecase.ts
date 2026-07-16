@@ -91,6 +91,9 @@ export const createPlan = async (
   userId: string,
   input: { title: string; intent?: string; scope: StudyPlanScope; subjectId?: string }
 ): Promise<Result<StudyPlanResponse, AppError>> => {
+  if (input.subjectId && !(await deps.repo.isSubjectOwnedByUser(input.subjectId, userId))) {
+    return err(notFound("科目が見つかりません"))
+  }
   const plan = await deps.repo.createPlan({
     id: crypto.randomUUID(),
     userId,
@@ -112,6 +115,10 @@ export const updatePlan = async (
 ): Promise<Result<StudyPlanResponse, AppError>> => {
   const ownershipCheck = await checkOwnership(deps, planId, userId)
   if (!ownershipCheck.ok) return ownershipCheck
+
+  if (input.subjectId && !(await deps.repo.isSubjectOwnedByUser(input.subjectId, userId))) {
+    return err(notFound("科目が見つかりません"))
+  }
 
   const plan = await deps.repo.updatePlan(planId, input)
   if (!plan) return err(notFound("計画が見つかりません"))
@@ -170,6 +177,10 @@ export const addItem = async (
   const ownershipCheck = await checkOwnership(deps, planId, userId)
   if (!ownershipCheck.ok) return ownershipCheck
 
+  if (input.topicId && !(await deps.repo.isTopicOwnedByUser(input.topicId, userId))) {
+    return err(notFound("論点が見つかりません"))
+  }
+
   const item = await deps.repo.createItem({
     id: crypto.randomUUID(),
     studyPlanId: planId,
@@ -193,7 +204,11 @@ export const updateItem = async (
   const ownershipCheck = await checkOwnership(deps, planId, userId)
   if (!ownershipCheck.ok) return ownershipCheck
 
-  const item = await deps.repo.updateItem(itemId, input)
+  if (input.topicId && !(await deps.repo.isTopicOwnedByUser(input.topicId, userId))) {
+    return err(notFound("論点が見つかりません"))
+  }
+
+  const item = await deps.repo.updateItem(planId, itemId, input)
   if (!item) return err(notFound("計画要素が見つかりません"))
   return ok(toItemResponse(item))
 }
@@ -209,10 +224,10 @@ export const removeItem = async (
   if (!ownershipCheck.ok) return ownershipCheck
 
   // 削除前にアイテム情報を取得（変遷の summary 用）
-  const item = await deps.repo.findItemById(itemId)
+  const item = await deps.repo.findItemById(planId, itemId)
   if (!item) return err(notFound("計画要素が見つかりません"))
 
-  const success = await deps.repo.deleteItem(itemId)
+  const success = await deps.repo.deleteItem(planId, itemId)
   if (!success) return err(notFound("計画要素が見つかりません"))
 
   // 変遷を自動記録
@@ -271,7 +286,7 @@ export const updateRevision = async (
   const ownershipCheck = await checkOwnership(deps, planId, userId)
   if (!ownershipCheck.ok) return ownershipCheck
 
-  const revision = await deps.repo.updateRevision(revisionId, input)
+  const revision = await deps.repo.updateRevision(planId, revisionId, input)
   if (!revision) return err(notFound("変遷記録が見つかりません"))
   return ok(toRevisionResponse(revision))
 }

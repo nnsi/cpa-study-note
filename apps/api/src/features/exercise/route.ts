@@ -7,6 +7,7 @@ import { authMiddleware } from "@/shared/middleware/auth"
 import { createAIAdapter, resolveAIConfig } from "@/shared/lib/ai"
 import { createExerciseRepository } from "./repository"
 import { createImageRepository } from "../image/repository"
+import { createLearningRepository } from "../learning/repository"
 import { analyzeExercise, confirmExercise, getTopicExercises } from "./usecase"
 import { handleResult } from "@/shared/lib/route-helpers"
 import { payloadTooLarge, badRequest } from "@/shared/lib/errors"
@@ -26,6 +27,7 @@ type ExerciseDeps = {
 export const exerciseRoutes = ({ env, db }: ExerciseDeps) => {
   const exerciseRepo = createExerciseRepository(db)
   const imageRepo = createImageRepository(db)
+  const learningRepo = createLearningRepository(db)
   const aiConfig = resolveAIConfig(env.ENVIRONMENT)
 
   const app = new Hono<{ Bindings: Env; Variables: Variables }>()
@@ -95,7 +97,7 @@ export const exerciseRoutes = ({ env, db }: ExerciseDeps) => {
         const tracer = c.get("tracer")
 
         const result = await confirmExercise(
-          { exerciseRepo, logger, tracer },
+          { exerciseRepo, learningRepo, logger, tracer },
           user.id,
           exerciseId,
           topicId,

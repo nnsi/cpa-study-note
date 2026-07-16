@@ -139,6 +139,7 @@ describe("groupTopicsBySubject", () => {
   const createTopic = (overrides: Partial<FilteredTopic> = {}): FilteredTopic => ({
     id: "topic-1",
     name: "テスト論点",
+    studyDomainId: "domain-1",
     subjectId: "subject-1",
     subjectName: "テスト科目",
     categoryId: "cat-1",

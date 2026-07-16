@@ -4,8 +4,7 @@ import remarkGfm from "remark-gfm"
 import remarkMath from "remark-math"
 import rehypeKatex from "rehype-katex"
 import type { DisplayMessage } from "../logic"
-
-const API_URL = import.meta.env.VITE_API_URL || ""
+import { useAuthenticatedImageUrl } from "@/features/image"
 
 // remarkPlugins配列をモジュールスコープで安定化（レンダリングごとの再生成を防止）
 const remarkPluginsStable = [remarkGfm, remarkMath]
@@ -87,7 +86,6 @@ const ImagePreviewModal = ({
         src={imageUrl}
         alt="プレビュー"
         className="max-w-full max-h-[90vh] object-contain rounded-lg"
-        crossOrigin="use-credentials"
         onClick={(e) => e.stopPropagation()}
       />
       <button
@@ -108,9 +106,7 @@ export const ChatMessageView = ({ message, isStreaming }: Props) => {
   const [showOcrText, setShowOcrText] = useState(false)
 
   // 画像URLを生成
-  const imageUrl = message.imageId
-    ? `${API_URL}/api/images/${message.imageId}/file`
-    : null
+  const imageUrl = useAuthenticatedImageUrl(message.imageId)
 
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} animate-fade-in-up`}>
@@ -133,7 +129,6 @@ export const ChatMessageView = ({ message, isStreaming }: Props) => {
               src={imageUrl}
               alt="添付画像"
               className="max-w-full max-h-48 object-contain bg-white/10"
-              crossOrigin="use-credentials"
             />
           </button>
         )}
