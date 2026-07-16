@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { z } from "zod"
 import { ArrowLeft, AlertCircle } from "lucide-react"
@@ -13,12 +13,14 @@ import {
 } from "@/features/exercise"
 import { searchTopicsResponseSchema } from "@cpa-study/shared/schemas"
 import type { ViewTopicSearchResult, SearchTopicsResponse } from "@cpa-study/shared/schemas"
+import { requireAuth } from "@/lib/auth"
 
 const searchParamsSchema = z.object({
   topicId: z.string().optional(),
 })
 
 export const Route = createFileRoute("/exercises/")({
+  beforeLoad: requireAuth,
   validateSearch: searchParamsSchema,
   component: ExercisePage,
 })
@@ -29,7 +31,12 @@ function ExercisePage() {
   const navigate = useNavigate()
   const [step, setStep] = useState<Step>("upload")
   const [confirmedTopicName, setConfirmedTopicName] = useState<string | null>(null)
-  const [confirmedTopicId, setConfirmedTopicId] = useState<string | null>(null)
+  const [confirmedTopic, setConfirmedTopic] = useState<{
+    id: string
+    studyDomainId: string
+    subjectId: string
+    categoryId: string
+  } | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedSearchTopic, setSelectedSearchTopic] = useState<ViewTopicSearchResult | null>(null)
 
@@ -59,9 +66,9 @@ function ExercisePage() {
   )
 
   // 分析完了時にステップを進める
-  if (analyzeState.status === "done" && step === "upload") {
-    setStep("suggestion")
-  }
+  useEffect(() => {
+    if (analyzeState.status === "done" && step === "upload") setStep("suggestion")
+  }, [analyzeState.status, step])
 
   const handleConfirm = useCallback(
     (topicId: string, markAsUnderstood: boolean) => {
@@ -79,7 +86,14 @@ function ExercisePage() {
         {
           onSuccess: () => {
             setConfirmedTopicName(topicName)
-            setConfirmedTopicId(topicId)
+            if (suggestedTopic) {
+              setConfirmedTopic({
+                id: topicId,
+                studyDomainId: suggestedTopic.studyDomainId,
+                subjectId: suggestedTopic.subjectId,
+                categoryId: suggestedTopic.categoryId,
+              })
+            }
             setStep("complete")
           },
         }
@@ -102,7 +116,12 @@ function ExercisePage() {
           {
             onSuccess: () => {
               setConfirmedTopicName(topic.name)
-              setConfirmedTopicId(topic.id)
+              setConfirmedTopic({
+                id: topic.id,
+                studyDomainId: topic.studyDomainId,
+                subjectId: topic.subjectId,
+                categoryId: topic.categoryId,
+              })
               setStep("complete")
             },
           }
@@ -120,11 +139,18 @@ function ExercisePage() {
   }, [analyzeState])
 
   const handleViewTopic = useCallback(() => {
-    if (confirmedTopicId) {
-      // ホームに戻る（論点詳細への遷移はルーティング構造に依存）
-      navigate({ to: "/" })
+    if (confirmedTopic) {
+      navigate({
+        to: "/domains/$domainId/subjects/$subjectId/$categoryId/$topicId",
+        params: {
+          domainId: confirmedTopic.studyDomainId,
+          subjectId: confirmedTopic.subjectId,
+          categoryId: confirmedTopic.categoryId,
+          topicId: confirmedTopic.id,
+        },
+      })
     }
-  }, [confirmedTopicId, navigate])
+  }, [confirmedTopic, navigate])
 
   const handleBack = useCallback(() => {
     if (step === "search") {

@@ -1,5 +1,6 @@
 import { eq, and, desc, isNull } from "drizzle-orm"
 import type { Db } from "@cpa-study/db"
+import { traced, type Tracer } from "@/shared/lib/tracer"
 import { notes, topics, categories, subjects } from "@cpa-study/db/schema"
 
 export type Note = {
@@ -22,6 +23,7 @@ export type NoteWithTopic = Note & {
 
 export type NoteWithTopicDetail = Note & {
   topicName: string
+  studyDomainId: string
   categoryId: string
   subjectId: string
   subjectName: string
@@ -40,6 +42,17 @@ export type NoteRepository = {
   ) => Promise<Note | null>
   softDelete: (id: string) => Promise<boolean>
 }
+
+export const tracedNoteRepo = (repo: NoteRepository, tracer: Tracer): NoteRepository => ({
+  create: traced(tracer, "d1.create", repo.create),
+  findById: traced(tracer, "d1.findById", repo.findById),
+  findByIdWithTopic: traced(tracer, "d1.findByIdWithTopic", repo.findByIdWithTopic),
+  findBySessionId: traced(tracer, "d1.findBySessionId", repo.findBySessionId),
+  findByTopic: traced(tracer, "d1.findByTopic", repo.findByTopic),
+  findByUser: traced(tracer, "d1.findByUser", repo.findByUser),
+  update: traced(tracer, "d1.update", repo.update),
+  softDelete: traced(tracer, "d1.softDelete", repo.softDelete),
+})
 
 export const createNoteRepository = (db: Db): NoteRepository => ({
   create: async (data) => {
@@ -103,6 +116,7 @@ export const createNoteRepository = (db: Db): NoteRepository => ({
         createdAt: notes.createdAt,
         updatedAt: notes.updatedAt,
         topicName: topics.name,
+        studyDomainId: subjects.studyDomainId,
         categoryId: categories.id,
         subjectId: subjects.id,
         subjectName: subjects.name,

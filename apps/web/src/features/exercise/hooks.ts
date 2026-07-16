@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import type { SuggestedTopic, ExerciseWithImage } from "@cpa-study/shared/schemas"
 import * as api from "./api"
@@ -14,6 +14,7 @@ type AnalyzeState = {
 }
 
 export const useExerciseAnalyze = () => {
+  const previewUrlRef = useRef<string | null>(null)
   const [state, setState] = useState<AnalyzeState>({
     status: "idle",
     exerciseId: null,
@@ -25,9 +26,8 @@ export const useExerciseAnalyze = () => {
   })
 
   const reset = useCallback(() => {
-    if (state.previewUrl) {
-      URL.revokeObjectURL(state.previewUrl)
-    }
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
+    previewUrlRef.current = null
     setState({
       status: "idle",
       exerciseId: null,
@@ -37,14 +37,20 @@ export const useExerciseAnalyze = () => {
       previewUrl: null,
       error: null,
     })
-  }, [state.previewUrl])
+  }, [])
+
+  useEffect(() => () => {
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
+  }, [])
 
   const analyzeMutation = useMutation({
     mutationFn: async (file: File) => {
+      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
+      previewUrlRef.current = URL.createObjectURL(file)
       setState((prev) => ({
         ...prev,
         status: "analyzing",
-        previewUrl: URL.createObjectURL(file),
+        previewUrl: previewUrlRef.current,
         error: null,
       }))
 

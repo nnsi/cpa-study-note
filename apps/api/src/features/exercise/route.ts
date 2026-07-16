@@ -7,6 +7,7 @@ import { authMiddleware } from "@/shared/middleware/auth"
 import { createAIAdapter, resolveAIConfig } from "@/shared/lib/ai"
 import { createExerciseRepository } from "./repository"
 import { createImageRepository } from "../image/repository"
+import { createLearningRepository } from "../learning/repository"
 import { analyzeExercise, confirmExercise, getTopicExercises } from "./usecase"
 import { handleResult } from "@/shared/lib/route-helpers"
 import { payloadTooLarge, badRequest } from "@/shared/lib/errors"
@@ -26,6 +27,7 @@ type ExerciseDeps = {
 export const exerciseRoutes = ({ env, db }: ExerciseDeps) => {
   const exerciseRepo = createExerciseRepository(db)
   const imageRepo = createImageRepository(db)
+  const learningRepo = createLearningRepository(db)
   const aiConfig = resolveAIConfig(env.ENVIRONMENT)
 
   const app = new Hono<{ Bindings: Env; Variables: Variables }>()
@@ -67,7 +69,7 @@ export const exerciseRoutes = ({ env, db }: ExerciseDeps) => {
         apiKey: env.OPENROUTER_API_KEY,
       })
 
-      const logger = c.get("logger").child({ feature: "exercise" })
+      const logger = c.get("logger")
       const tracer = c.get("tracer")
 
       const result = await analyzeExercise(
@@ -91,11 +93,11 @@ export const exerciseRoutes = ({ env, db }: ExerciseDeps) => {
         const exerciseId = c.req.param("exerciseId")
         const { topicId, markAsUnderstood } = c.req.valid("json")
 
-        const logger = c.get("logger").child({ feature: "exercise" })
+        const logger = c.get("logger")
         const tracer = c.get("tracer")
 
         const result = await confirmExercise(
-          { exerciseRepo, logger, tracer },
+          { exerciseRepo, learningRepo, logger, tracer },
           user.id,
           exerciseId,
           topicId,
@@ -111,7 +113,7 @@ export const exerciseRoutes = ({ env, db }: ExerciseDeps) => {
       const user = c.get("user")
       const topicId = c.req.param("topicId")
 
-      const logger = c.get("logger").child({ feature: "exercise" })
+      const logger = c.get("logger")
       const tracer = c.get("tracer")
 
       const result = await getTopicExercises({ exerciseRepo, logger, tracer }, user.id, topicId)

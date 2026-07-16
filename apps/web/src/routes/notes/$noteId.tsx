@@ -72,8 +72,9 @@ function NoteDetailPage() {
           <>
             <span className="text-ink-300">|</span>
             <Link
-              to="/subjects/$subjectId/$categoryId/$topicId"
+              to="/domains/$domainId/subjects/$subjectId/$categoryId/$topicId"
               params={{
+                domainId: note.studyDomainId,
                 subjectId: note.subjectId,
                 categoryId: note.categoryId,
                 topicId: note.topicId,

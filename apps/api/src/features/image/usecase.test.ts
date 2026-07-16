@@ -33,6 +33,7 @@ const createMockImageRepo = (overrides: Partial<ImageRepository> = {}): ImageRep
   create: vi.fn().mockResolvedValue(createMockImage()),
   findById: vi.fn().mockResolvedValue(null),
   updateOcrText: vi.fn().mockResolvedValue(undefined),
+  updateSize: vi.fn().mockResolvedValue(undefined),
   ...overrides,
 })
 
@@ -51,6 +52,7 @@ const createMockAIConfig = () => ({
   ocr: { model: "openai/gpt-4o-mini", temperature: 0, maxTokens: 2000 },
   speechCorrection: { model: "test-model", temperature: 0, maxTokens: 500 },
   topicGenerator: { model: "test-model", temperature: 0.5, maxTokens: 3000 },
+  tocImport: { model: "test-model", temperature: 0, maxTokens: 8000 },
   planAssistant: { model: "test-model", temperature: 0.5, maxTokens: 3000 },
   quickChatSuggest: { model: "test-model", temperature: 0, maxTokens: 500 },
 })
@@ -150,6 +152,7 @@ describe("Image UseCase", () => {
       // R2にアップロードされたことを確認
       const uploaded = await r2.get(image.r2Key)
       expect(uploaded).not.toBeNull()
+      expect(imageRepo.updateSize).toHaveBeenCalledWith("image-1", pngBuffer.byteLength)
     })
 
     it("存在しない画像でエラーを返す", async () => {

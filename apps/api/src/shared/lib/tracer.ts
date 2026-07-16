@@ -57,6 +57,14 @@ export const createTracer = (): Tracer => {
   }
 }
 
+/** 関数をトレーシングスパンでラップするヘルパー */
+export const traced = <A extends unknown[], R>(
+  tracer: Tracer,
+  name: string,
+  fn: (...args: A) => Promise<R>
+): ((...args: A) => Promise<R>) =>
+  (...args) => tracer.span(name, () => fn(...args))
+
 /** テスト用のno-op tracer */
 export const noopTracer: Tracer = {
   span: async <T>(_name: string, fn: () => Promise<T>): Promise<T> => fn(),

@@ -1,6 +1,6 @@
-import { eq, and, desc } from "drizzle-orm"
+import { eq, and, desc, isNull } from "drizzle-orm"
 import type { Db } from "@cpa-study/db"
-import { exercises, images, topics, categories, subjects } from "@cpa-study/db/schema"
+import { exercises, images, topics, categories, subjects, studyDomains } from "@cpa-study/db/schema"
 
 export type Exercise = {
   id: string
@@ -24,6 +24,9 @@ export type ExerciseWithImage = {
 export type TopicForSuggestion = {
   id: string
   name: string
+  studyDomainId: string
+  subjectId: string
+  categoryId: string
   subjectName: string
 }
 
@@ -38,7 +41,7 @@ export type ExerciseRepository = {
   create: (data: CreateExerciseInput) => Promise<Exercise>
   findById: (id: string) => Promise<Exercise | null>
   findByIdWithOwnerCheck: (id: string, userId: string) => Promise<Exercise | null>
-  confirm: (id: string, topicId: string, markAsUnderstood: boolean) => Promise<Exercise | null>
+  confirm: (id: string, userId: string, topicId: string, markAsUnderstood: boolean) => Promise<Exercise | null>
   findByTopicId: (topicId: string, userId: string) => Promise<ExerciseWithImage[]>
   findTopicsForSuggestion: (userId: string, limit?: number) => Promise<TopicForSuggestion[]>
 }
@@ -102,7 +105,7 @@ export const createExerciseRepository = (db: Db): ExerciseRepository => ({
     }
   },
 
-  confirm: async (id, topicId, markAsUnderstood) => {
+  confirm: async (id, userId, topicId, markAsUnderstood) => {
     const now = new Date()
 
     try {
@@ -113,7 +116,7 @@ export const createExerciseRepository = (db: Db): ExerciseRepository => ({
           markedAsUnderstood: markAsUnderstood,
           confirmedAt: now,
         })
-        .where(eq(exercises.id, id))
+        .where(and(eq(exercises.id, id), eq(exercises.userId, userId)))
     } catch (e) {
       // 外部キー制約違反（存在しないtopicId）
       if (e instanceof Error && e.message.includes("FOREIGN KEY")) {
@@ -125,7 +128,7 @@ export const createExerciseRepository = (db: Db): ExerciseRepository => ({
     const result = await db
       .select()
       .from(exercises)
-      .where(eq(exercises.id, id))
+      .where(and(eq(exercises.id, id), eq(exercises.userId, userId)))
       .limit(1)
 
     const row = result[0]
@@ -159,12 +162,22 @@ export const createExerciseRepository = (db: Db): ExerciseRepository => ({
       .select({
         id: topics.id,
         name: topics.name,
+        studyDomainId: studyDomains.id,
+        subjectId: subjects.id,
+        categoryId: categories.id,
         subjectName: subjects.name,
       })
       .from(topics)
       .innerJoin(categories, eq(topics.categoryId, categories.id))
       .innerJoin(subjects, eq(categories.subjectId, subjects.id))
-      .where(eq(topics.userId, userId))
+      .innerJoin(studyDomains, eq(subjects.studyDomainId, studyDomains.id))
+      .where(and(
+        eq(topics.userId, userId),
+        isNull(topics.deletedAt),
+        isNull(categories.deletedAt),
+        isNull(subjects.deletedAt),
+        isNull(studyDomains.deletedAt)
+      ))
       .limit(limit)
 
     return result

@@ -7,6 +7,7 @@ import { authMiddleware } from "@/shared/middleware/auth"
 import { createAIAdapter, streamToSSE, resolveAIConfig } from "@/shared/lib/ai"
 import { createChatRepository } from "./repository"
 import { createLearningRepository } from "../learning/repository"
+import { createImageRepository } from "../image/repository"
 import {
   createSession,
   getSession,
@@ -28,6 +29,7 @@ type ChatDeps = {
 export const chatRoutes = ({ env, db }: ChatDeps) => {
   const chatRepo = createChatRepository(db)
   const learningRepo = createLearningRepository(db)
+  const imageRepo = createImageRepository(db)
   const aiConfig = resolveAIConfig(env.ENVIRONMENT)
   const aiAdapter = createAIAdapter({
     provider: env.AI_PROVIDER,
@@ -44,7 +46,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         const user = c.get("user")
         const { topicId } = c.req.valid("json")
 
-        const logger = c.get("logger").child({ feature: "chat" })
+        const logger = c.get("logger")
         const tracer = c.get("tracer")
         const result = await createSession(
           { chatRepo, learningRepo, logger, tracer },
@@ -64,7 +66,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         const topicId = c.req.param("topicId")
         const user = c.get("user")
 
-        const logger = c.get("logger").child({ feature: "chat" })
+        const logger = c.get("logger")
         const tracer = c.get("tracer")
         const result = await listSessionsByTopic({ chatRepo, logger, tracer }, user.id, topicId)
         return handleResult(c, result, "sessions")
@@ -79,7 +81,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         const topicId = c.req.param("topicId")
         const user = c.get("user")
 
-        const logger = c.get("logger").child({ feature: "chat" })
+        const logger = c.get("logger")
         const tracer = c.get("tracer")
         const result = await listGoodQuestionsByTopic({ chatRepo, logger, tracer }, user.id, topicId)
         return handleResult(c, result, "questions")
@@ -90,7 +92,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
     .get("/sessions/:sessionId", authMiddleware, async (c) => {
       const sessionId = c.req.param("sessionId")
       const user = c.get("user")
-      const logger = c.get("logger").child({ feature: "chat" })
+      const logger = c.get("logger")
       const tracer = c.get("tracer")
 
       const result = await getSession({ chatRepo, logger, tracer }, user.id, sessionId)
@@ -101,7 +103,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
     .get("/sessions/:sessionId/messages", authMiddleware, async (c) => {
       const sessionId = c.req.param("sessionId")
       const user = c.get("user")
-      const logger = c.get("logger").child({ feature: "chat" })
+      const logger = c.get("logger")
       const tracer = c.get("tracer")
 
       const result = await listMessages({ chatRepo, logger, tracer }, user.id, sessionId)
@@ -118,10 +120,10 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         const user = c.get("user")
         const { content, imageId, ocrResult } = c.req.valid("json")
 
-        const logger = c.get("logger").child({ feature: "chat" })
+        const logger = c.get("logger")
         const tracer = c.get("tracer")
         const stream = sendMessage(
-          { chatRepo, learningRepo, aiAdapter, aiConfig, logger, tracer },
+          { chatRepo, learningRepo, imageRepo, aiAdapter, aiConfig, logger, tracer },
           {
             sessionId,
             userId: user.id,
@@ -145,10 +147,10 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
         const user = c.get("user")
         const { content, imageId, ocrResult } = c.req.valid("json")
 
-        const logger = c.get("logger").child({ feature: "chat" })
+        const logger = c.get("logger")
         const tracer = c.get("tracer")
         const stream = sendMessageWithNewSession(
-          { chatRepo, learningRepo, aiAdapter, aiConfig, logger, tracer },
+          { chatRepo, learningRepo, imageRepo, aiAdapter, aiConfig, logger, tracer },
           {
             topicId,
             userId: user.id,
@@ -169,7 +171,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
       zValidator("json", correctSpeechRequestSchema),
       async (c) => {
         const { text } = c.req.valid("json")
-        const logger = c.get("logger").child({ feature: "chat" })
+        const logger = c.get("logger")
         const tracer = c.get("tracer")
 
         const result = await correctSpeechText(
@@ -185,7 +187,7 @@ export const chatRoutes = ({ env, db }: ChatDeps) => {
     .post("/messages/:messageId/evaluate", authMiddleware, async (c) => {
       const messageId = c.req.param("messageId")
       const user = c.get("user")
-      const logger = c.get("logger").child({ feature: "chat" })
+      const logger = c.get("logger")
       const tracer = c.get("tracer")
 
       const evalResult = await evaluateQuestion(

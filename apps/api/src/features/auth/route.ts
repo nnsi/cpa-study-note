@@ -4,7 +4,9 @@ import { SignJWT } from "jose"
 import type { Db } from "@cpa-study/db"
 import type { Env, Variables, User } from "@/shared/types/env"
 import { authMiddleware } from "@/shared/middleware/auth"
-import { createAuthRepository } from "./repository"
+import { createAuthRepository, tracedAuthRepo } from "./repository"
+import { traced } from "@/shared/lib/tracer"
+import { createSampleDataForNewUser } from "./sample-data"
 import { createProviders } from "./providers"
 import { handleOAuthCallback, refreshAccessToken, getOrCreateDevUser, saveRefreshToken, logout } from "./usecase"
 import { handleResult } from "@/shared/lib/route-helpers"
@@ -113,10 +115,12 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
         return handleResult(c, { ok: false, error: badRequest("Invalid state") })
       }
 
-      const logger = c.get("logger").child({ feature: "auth" })
+      const logger = c.get("logger")
       const tracer = c.get("tracer")
+      const tracedSampleData = traced(tracer, "d1.createSampleData",
+        (userId: string) => createSampleDataForNewUser(db, userId))
       const result = await handleOAuthCallback(
-        { repo, providers, db, logger, tracer },
+        { repo: tracedAuthRepo(repo, tracer), providers, createSampleData: tracedSampleData, logger },
         providerName,
         code
       )
@@ -146,7 +150,7 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
       const expiresAt = new Date()
       expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_EXPIRES_DAYS)
       const saveResult = await saveRefreshToken(
-        { repo, logger, tracer },
+        { repo: tracedAuthRepo(repo, tracer), logger },
         {
           userId: user.id,
           tokenHash: refreshTokenHash,
@@ -193,10 +197,10 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
         return handleResult(c, { ok: false, error: unauthorized("No refresh token") })
       }
 
-      const logger = c.get("logger").child({ feature: "auth" })
+      const logger = c.get("logger")
       const tracer = c.get("tracer")
       const result = await refreshAccessToken(
-        { repo, logger, tracer },
+        { repo: tracedAuthRepo(repo, tracer), logger },
         refreshToken,
         jwtSecret,
         generateAccessToken
@@ -230,10 +234,10 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
       const devUserId = env.DEV_USER_ID || "test-user-1"
 
       // ユーザーが存在しない場合は作成（UseCase経由）
-      const logger = c.get("logger").child({ feature: "auth" })
+      const logger = c.get("logger")
       const tracer = c.get("tracer")
       const userResult = await getOrCreateDevUser(
-        { repo, logger, tracer },
+        { repo: tracedAuthRepo(repo, tracer), logger },
         {
           userId: devUserId,
           email: `${devUserId}@example.com`,
@@ -266,7 +270,7 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
       const expiresAt = new Date()
       expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_EXPIRES_DAYS)
       const saveResult = await saveRefreshToken(
-        { repo, logger, tracer },
+        { repo: tracedAuthRepo(repo, tracer), logger },
         {
           userId: devUser.id,
           tokenHash: refreshTokenHash,
@@ -296,13 +300,13 @@ export const authRoutes = ({ env, db }: AuthDeps) => {
     // ログアウト
     .post("/logout", async (c) => {
       const refreshToken = getCookie(c, "refresh_token")
-      const logger = c.get("logger").child({ feature: "auth" })
+      const logger = c.get("logger")
       const tracer = c.get("tracer")
 
       if (refreshToken) {
         // Delete refresh token from DB（UseCase経由）
         const tokenHash = await hashToken(refreshToken)
-        const logoutResult = await logout({ repo, logger, tracer }, tokenHash)
+        const logoutResult = await logout({ repo: tracedAuthRepo(repo, tracer), logger }, tokenHash)
         // エラーが発生してもクッキーはクリアする（ログ出力のみ）
         if (!logoutResult.ok) {
           logger.error("Logout DB error", { error: logoutResult.error })

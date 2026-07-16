@@ -1,6 +1,6 @@
 import { eq, and, isNull, sql, desc, asc } from "drizzle-orm"
 import type { Db } from "@cpa-study/db"
-import { studyPlans, studyPlanItems, studyPlanRevisions, subjects, topics } from "@cpa-study/db/schema"
+import { studyPlans, studyPlanItems, studyPlanRevisions, studyDomains, subjects, categories, topics } from "@cpa-study/db/schema"
 import type { StudyPlanScope } from "@cpa-study/db/schema"
 
 export type StudyPlan = {
@@ -47,14 +47,16 @@ export type StudyPlanRepository = {
   duplicatePlan: (sourcePlanId: string, newPlanId: string, userId: string) => Promise<StudyPlan | null>
   findItemsByPlan: (planId: string) => Promise<StudyPlanItem[]>
   createItem: (data: { id: string; studyPlanId: string; topicId?: string; description: string; rationale?: string; orderIndex: number; now: Date }) => Promise<StudyPlanItem>
-  updateItem: (itemId: string, data: { description?: string; rationale?: string | null; topicId?: string | null; orderIndex?: number }) => Promise<StudyPlanItem | null>
-  deleteItem: (itemId: string) => Promise<boolean>
+  updateItem: (planId: string, itemId: string, data: { description?: string; rationale?: string | null; topicId?: string | null; orderIndex?: number }) => Promise<StudyPlanItem | null>
+  deleteItem: (planId: string, itemId: string) => Promise<boolean>
   reorderItems: (planId: string, itemIds: string[]) => Promise<void>
-  findItemById: (itemId: string) => Promise<StudyPlanItem | null>
+  findItemById: (planId: string, itemId: string) => Promise<StudyPlanItem | null>
   findRevisionsByPlan: (planId: string) => Promise<StudyPlanRevision[]>
   createRevision: (data: { id: string; studyPlanId: string; summary: string; reason?: string; now: Date }) => Promise<StudyPlanRevision>
-  updateRevision: (revisionId: string, data: { reason?: string | null }) => Promise<StudyPlanRevision | null>
+  updateRevision: (planId: string, revisionId: string, data: { reason?: string | null }) => Promise<StudyPlanRevision | null>
   isPlanOwnedByUser: (planId: string, userId: string) => Promise<boolean>
+  isSubjectOwnedByUser: (subjectId: string, userId: string) => Promise<boolean>
+  isTopicOwnedByUser: (topicId: string, userId: string) => Promise<boolean>
 }
 
 export const createStudyPlanRepository = (db: Db): StudyPlanRepository => ({
@@ -284,8 +286,9 @@ export const createStudyPlanRepository = (db: Db): StudyPlanRepository => ({
     return { ...items[0], topicName: items[0].topicName ?? null }
   },
 
-  updateItem: async (itemId, data) => {
-    const existing = await db.select().from(studyPlanItems).where(eq(studyPlanItems.id, itemId)).limit(1)
+  updateItem: async (planId, itemId, data) => {
+    const itemCondition = and(eq(studyPlanItems.id, itemId), eq(studyPlanItems.studyPlanId, planId))
+    const existing = await db.select().from(studyPlanItems).where(itemCondition).limit(1)
     if (existing.length === 0) return null
 
     const updates: Record<string, unknown> = {}
@@ -295,7 +298,7 @@ export const createStudyPlanRepository = (db: Db): StudyPlanRepository => ({
     if (data.orderIndex !== undefined) updates.orderIndex = data.orderIndex
 
     if (Object.keys(updates).length > 0) {
-      await db.update(studyPlanItems).set(updates).where(eq(studyPlanItems.id, itemId))
+      await db.update(studyPlanItems).set(updates).where(itemCondition)
     }
 
     const items = await db
@@ -311,16 +314,17 @@ export const createStudyPlanRepository = (db: Db): StudyPlanRepository => ({
       })
       .from(studyPlanItems)
       .leftJoin(topics, eq(studyPlanItems.topicId, topics.id))
-      .where(eq(studyPlanItems.id, itemId))
+      .where(itemCondition)
       .limit(1)
     const row = items[0]
     return row ? { ...row, topicName: row.topicName ?? null } : null
   },
 
-  deleteItem: async (itemId) => {
-    const existing = await db.select().from(studyPlanItems).where(eq(studyPlanItems.id, itemId)).limit(1)
+  deleteItem: async (planId, itemId) => {
+    const itemCondition = and(eq(studyPlanItems.id, itemId), eq(studyPlanItems.studyPlanId, planId))
+    const existing = await db.select().from(studyPlanItems).where(itemCondition).limit(1)
     if (existing.length === 0) return false
-    await db.delete(studyPlanItems).where(eq(studyPlanItems.id, itemId))
+    await db.delete(studyPlanItems).where(itemCondition)
     return true
   },
 
@@ -333,7 +337,7 @@ export const createStudyPlanRepository = (db: Db): StudyPlanRepository => ({
     }
   },
 
-  findItemById: async (itemId) => {
+  findItemById: async (planId, itemId) => {
     const items = await db
       .select({
         id: studyPlanItems.id,
@@ -347,7 +351,7 @@ export const createStudyPlanRepository = (db: Db): StudyPlanRepository => ({
       })
       .from(studyPlanItems)
       .leftJoin(topics, eq(studyPlanItems.topicId, topics.id))
-      .where(eq(studyPlanItems.id, itemId))
+      .where(and(eq(studyPlanItems.id, itemId), eq(studyPlanItems.studyPlanId, planId)))
       .limit(1)
     const row = items[0]
     return row ? { ...row, topicName: row.topicName ?? null } : null
@@ -367,18 +371,19 @@ export const createStudyPlanRepository = (db: Db): StudyPlanRepository => ({
     return revision
   },
 
-  updateRevision: async (revisionId, data) => {
-    const existing = await db.select().from(studyPlanRevisions).where(eq(studyPlanRevisions.id, revisionId)).limit(1)
+  updateRevision: async (planId, revisionId, data) => {
+    const revisionCondition = and(eq(studyPlanRevisions.id, revisionId), eq(studyPlanRevisions.studyPlanId, planId))
+    const existing = await db.select().from(studyPlanRevisions).where(revisionCondition).limit(1)
     if (existing.length === 0) return null
 
     const updates: Record<string, unknown> = {}
     if (data.reason !== undefined) updates.reason = data.reason
 
     if (Object.keys(updates).length > 0) {
-      await db.update(studyPlanRevisions).set(updates).where(eq(studyPlanRevisions.id, revisionId))
+      await db.update(studyPlanRevisions).set(updates).where(revisionCondition)
     }
 
-    const result = await db.select().from(studyPlanRevisions).where(eq(studyPlanRevisions.id, revisionId)).limit(1)
+    const result = await db.select().from(studyPlanRevisions).where(revisionCondition).limit(1)
     return result[0] ?? null
   },
 
@@ -387,6 +392,44 @@ export const createStudyPlanRepository = (db: Db): StudyPlanRepository => ({
       .select({ id: studyPlans.id })
       .from(studyPlans)
       .where(and(eq(studyPlans.id, planId), eq(studyPlans.userId, userId)))
+      .limit(1)
+    return result.length > 0
+  },
+
+  isSubjectOwnedByUser: async (subjectId, userId) => {
+    const result = await db
+      .select({ id: subjects.id })
+      .from(subjects)
+      .innerJoin(studyDomains, eq(subjects.studyDomainId, studyDomains.id))
+      .where(and(
+        eq(subjects.id, subjectId),
+        eq(subjects.userId, userId),
+        eq(studyDomains.userId, userId),
+        isNull(subjects.deletedAt),
+        isNull(studyDomains.deletedAt)
+      ))
+      .limit(1)
+    return result.length > 0
+  },
+
+  isTopicOwnedByUser: async (topicId, userId) => {
+    const result = await db
+      .select({ id: topics.id })
+      .from(topics)
+      .innerJoin(categories, eq(topics.categoryId, categories.id))
+      .innerJoin(subjects, eq(categories.subjectId, subjects.id))
+      .innerJoin(studyDomains, eq(subjects.studyDomainId, studyDomains.id))
+      .where(and(
+        eq(topics.id, topicId),
+        eq(topics.userId, userId),
+        eq(categories.userId, userId),
+        eq(subjects.userId, userId),
+        eq(studyDomains.userId, userId),
+        isNull(topics.deletedAt),
+        isNull(categories.deletedAt),
+        isNull(subjects.deletedAt),
+        isNull(studyDomains.deletedAt)
+      ))
       .limit(1)
     return result.length > 0
   },

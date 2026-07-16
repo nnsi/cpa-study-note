@@ -33,7 +33,7 @@ export const studyPlanAIRoutes = ({ env, db }: PlanAIRouteDeps) => {
         const user = c.get("user")
         const { planId } = c.req.valid("param")
         const { prompt } = c.req.valid("json")
-        const logger = c.get("logger").child({ feature: "study-plan" })
+        const logger = c.get("logger")
 
         const stream = suggestPlanItems(
           { repo, subjectRepo, aiAdapter, aiConfig, logger },

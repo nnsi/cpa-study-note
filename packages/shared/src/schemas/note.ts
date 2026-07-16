@@ -74,6 +74,7 @@ export const notesResponseSchema = z.array(noteSchema)
 // Note detail response (with topic/category/subject info)
 export const noteDetailResponseSchema = noteWithSourceSchema.extend({
   topicName: z.string(),
+  studyDomainId: z.string(),
   categoryId: z.string(),
   subjectId: z.string(),
   subjectName: z.string(),

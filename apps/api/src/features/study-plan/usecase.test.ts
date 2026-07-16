@@ -83,6 +83,8 @@ const createMockRepo = (overrides: Partial<StudyPlanRepository> = {}): StudyPlan
   createRevision: vi.fn().mockResolvedValue(createMockRevision()),
   updateRevision: vi.fn().mockResolvedValue(null),
   isPlanOwnedByUser: vi.fn().mockResolvedValue(false),
+  isSubjectOwnedByUser: vi.fn().mockResolvedValue(true),
+  isTopicOwnedByUser: vi.fn().mockResolvedValue(true),
   ...overrides,
 })
 
@@ -218,6 +220,20 @@ describe("StudyPlan UseCase", () => {
       expect(result.ok).toBe(true)
       if (!result.ok) return
       expect(result.value.intent).toBeNull()
+    })
+
+    it("別ユーザーの科目を参照する計画を拒否する", async () => {
+      const repo = createMockRepo({
+        isSubjectOwnedByUser: vi.fn().mockResolvedValue(false),
+      })
+      const result = await createPlan({ repo, logger: noopLogger }, "user-1", {
+        title: "不正な計画",
+        scope: "subject",
+        subjectId: "other-users-subject",
+      })
+
+      expect(result.ok).toBe(false)
+      expect(repo.createPlan).not.toHaveBeenCalled()
     })
   })
 
@@ -400,6 +416,21 @@ describe("StudyPlan UseCase", () => {
       if (result.ok) return
       expect(result.error.code).toBe("NOT_FOUND")
     })
+
+    it("別ユーザーの論点を参照する要素追加を拒否する", async () => {
+      const repo = createMockRepo({
+        isPlanOwnedByUser: vi.fn().mockResolvedValue(true),
+        isTopicOwnedByUser: vi.fn().mockResolvedValue(false),
+      })
+      const result = await addItem({ repo, logger: noopLogger }, "user-1", "plan-1", {
+        topicId: "other-users-topic",
+        description: "不正な要素",
+        orderIndex: 0,
+      })
+
+      expect(result.ok).toBe(false)
+      expect(repo.createItem).not.toHaveBeenCalled()
+    })
   })
 
   describe("updateItem", () => {
@@ -415,6 +446,9 @@ describe("StudyPlan UseCase", () => {
       expect(result.ok).toBe(true)
       if (!result.ok) return
       expect(result.value.description).toBe("更新後の説明")
+      expect(repo.updateItem).toHaveBeenCalledWith("plan-1", "item-1", {
+        description: "更新後の説明",
+      })
     })
 
     it("存在しない要素の更新でエラーを返す", async () => {
@@ -444,7 +478,7 @@ describe("StudyPlan UseCase", () => {
       const result = await removeItem({ repo, logger: noopLogger }, "user-1", "plan-1", "item-1")
 
       expect(result.ok).toBe(true)
-      expect(repo.deleteItem).toHaveBeenCalledWith("item-1")
+      expect(repo.deleteItem).toHaveBeenCalledWith("plan-1", "item-1")
       expect(repo.createRevision).toHaveBeenCalledWith(
         expect.objectContaining({
           studyPlanId: "plan-1",
@@ -549,6 +583,9 @@ describe("StudyPlan UseCase", () => {
       expect(result.ok).toBe(true)
       if (!result.ok) return
       expect(result.value.reason).toBe("追記された理由")
+      expect(repo.updateRevision).toHaveBeenCalledWith("plan-1", "revision-1", {
+        reason: "追記された理由",
+      })
     })
 
     it("存在しない変遷の更新でエラーを返す", async () => {

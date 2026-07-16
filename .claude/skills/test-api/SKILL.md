@@ -37,7 +37,7 @@ DEV_USER_ID=test-user-1 # デフォルトテストユーザー
 AI_PROVIDER=mock        # AIモック有効
 ```
 
-開発モードでは認証なしでAPIを直接叩ける。
+開発モード（ENVIRONMENT=local）では `X-Dev-User-Id` ヘッダーを付けることでJWTなしでAPIを直接叩ける。
 
 ---
 
@@ -46,14 +46,17 @@ AI_PROVIDER=mock        # AIモック有効
 ### 認証（開発モード）
 
 ```bash
-# 認証スキップ: ヘッダーなしでOK
-curl http://localhost:8787/api/auth/me
+# X-Dev-User-Id ヘッダーが必須（ヘッダーなしは401になる）
+curl http://localhost:8787/api/auth/me \
+  -H "X-Dev-User-Id: test-user-1"
 
-# 特定ユーザーを指定
+# ユーザー名も指定する場合
 curl http://localhost:8787/api/auth/me \
   -H "X-Dev-User-Id: user-123" \
   -H "X-Dev-User-Name: 山田太郎"
 ```
+
+以降の例では `-H "X-Dev-User-Id: test-user-1"` を省略しているが、認証必須エンドポイントには常に付けること。
 
 ### 科目・論点
 
@@ -128,7 +131,7 @@ curl -N -X POST http://localhost:8787/api/sessions/{sessionId}/messages/stream \
 // Playwright MCPを使用してブラウザ操作
 
 // 1. ページを開く
-await mcp__playwright__browser_navigate({ url: "http://localhost:5173" })
+await mcp__playwright__browser_navigate({ url: "http://localhost:5174" })
 
 // 2. スナップショットで現在の状態を確認
 await mcp__playwright__browser_snapshot({})

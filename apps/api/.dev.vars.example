@@ -1,4 +1,6 @@
 # Development Settings
+# ENVIRONMENT=local がないと JWT_SECRET の長さ検証(本番向け)が走り全リクエストが500になる
+ENVIRONMENT=local
 AUTH_MODE=dev
 DEV_USER_ID=test-user-1
 AI_PROVIDER=mock

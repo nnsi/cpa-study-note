@@ -94,12 +94,15 @@ const reviewListSchema = z.object({
     z.object({
       id: z.string(),
       name: z.string(),
+      studyDomainId: z.string(),
       subjectId: z.string(),
       subjectName: z.string(),
       categoryId: z.string(),
       understood: z.boolean(),
       lastAccessedAt: z.string().nullable(),
+      lastChatAt: z.string().nullable(),
       sessionCount: z.number(),
+      goodQuestionCount: z.number(),
     })
   ),
   total: z.number(),
@@ -553,6 +556,30 @@ describe("View Routes - Functional Tests", () => {
       body.topics.forEach((topic) => {
         expect(topic.understood).toBe(true)
       })
+    })
+
+    it("セッション数と良い質問数でフィルタできる", async () => {
+      const res = await app.request("/view/topics?minSessionCount=1&minGoodQuestionCount=2", {
+        headers: createAuthHeaders(ctx.testData.userId),
+      })
+
+      expect(res.status).toBe(200)
+      const body = await parseJson(res, reviewListSchema)
+      expect(body.topics.map((topic) => topic.id)).toEqual([ctx.testData.topicId])
+      expect(body.topics[0].sessionCount).toBe(1)
+      expect(body.topics[0].goodQuestionCount).toBe(2)
+      expect(body.topics[0].lastChatAt).not.toBeNull()
+    })
+
+    it("最終チャットから指定日数以上経過した論点だけを返す", async () => {
+      const res = await app.request("/view/topics?daysSince=1", {
+        headers: createAuthHeaders(ctx.testData.userId),
+      })
+
+      expect(res.status).toBe(200)
+      const body = await parseJson(res, reviewListSchema)
+      expect(body.topics.some((topic) => topic.id === ctx.testData.topicId)).toBe(false)
+      expect(body.topics.some((topic) => topic.id === "topic-2")).toBe(true)
     })
   })
 

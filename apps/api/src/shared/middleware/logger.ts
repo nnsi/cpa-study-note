@@ -3,6 +3,24 @@ import { createLogger } from "../lib/logger"
 import { createTracer } from "../lib/tracer"
 import { shouldWriteToWAE, writeToWAE } from "../lib/wae"
 
+/** パスの /api/{segment} または /{segment} から feature 名を抽出 */
+const extractFeature = (path: string): string => {
+  const match = path.match(/^(?:\/api)?\/([^/]+)/)
+  if (!match) return ""
+  const segment = match[1]
+  // 複数形パスセグメント → 単数形 feature 名に正規化
+  const featureMap: Record<string, string> = {
+    bookmarks: "bookmark",
+    subjects: "subject",
+    exercises: "exercise",
+    notes: "note",
+    images: "image",
+    "study-domains": "study-domain",
+    "study-plans": "study-plan",
+  }
+  return featureMap[segment] ?? segment
+}
+
 /**
  * 構造化ロガーミドルウェア
  * - リクエストごとにrequestIdを生成し、全ログに付与
@@ -16,13 +34,14 @@ export const loggerMiddleware = (): MiddlewareHandler => {
     const requestId = crypto.randomUUID().slice(0, 8)
     const method = c.req.method
     const path = c.req.path
+    const feature = extractFeature(path)
 
     const logs = (c.env as Record<string, unknown> | undefined)?.LOGS as
       | AnalyticsEngineDataset
       | undefined
 
     const logger = createLogger({
-      bindings: { requestId, method, path },
+      bindings: { requestId, method, path, feature },
       onWrite: logs
         ? (entry) => {
             if (shouldWriteToWAE(entry)) {

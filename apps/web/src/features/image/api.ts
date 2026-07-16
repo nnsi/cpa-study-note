@@ -1,4 +1,4 @@
-import { api } from "@/lib/api-client"
+import { api, fetchWithRetry } from "@/lib/api-client"
 import {
   uploadUrlResponseSchema,
   ocrResultResponseSchema,
@@ -20,14 +20,14 @@ export const uploadImage = async (
   file: File
 ): Promise<void> => {
   // Hono RPCはArrayBuffer bodyに対応していないため直接fetchを使用
+  // （fetchWithRetry経由で認証ヘッダーを付与する）
   const apiUrl = import.meta.env.VITE_API_URL || ""
-  const res = await fetch(`${apiUrl}/api/images/${imageId}/upload`, {
+  const res = await fetchWithRetry(`${apiUrl}/api/images/${imageId}/upload`, {
     method: "POST",
     headers: {
       "Content-Type": file.type,
     },
     body: await file.arrayBuffer(),
-    credentials: "include",
   })
   if (!res.ok) throw new Error("画像のアップロードに失敗しました")
 }

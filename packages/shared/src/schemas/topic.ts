@@ -139,15 +139,14 @@ export type TopicCheckHistoryResponse = z.infer<typeof topicCheckHistoryResponse
  *
  * フィルタ条件の意味:
  * - minSessionCount: 指定数以上のチャットセッションがある論点を抽出
- * - daysSinceLastChat: 指定日数以内に最後のチャットがある論点を抽出
- *   （例: 7を指定すると、直近7日以内にチャットがあった論点）
+ * - daysSinceLastChat: 最終チャットから指定日数以上経過した論点を抽出
  * - understood: 理解済みフラグの状態でフィルタ
  * - minGoodQuestionCount: 指定数以上の良い質問がある論点を抽出
  */
 export const topicFilterRequestSchema = z.object({
   /** 最小チャットセッション数 */
   minSessionCount: z.coerce.number().int().min(0).optional(),
-  /** 直近N日以内にチャットがある論点を抽出（N日以上経過したものを除外） */
+  /** 最終チャットからN日以上経過した論点を抽出 */
   daysSinceLastChat: z.coerce.number().int().min(0).optional(),
   /** 理解済みフラグ */
   understood: z
@@ -169,7 +168,7 @@ export type TopicFilterRequest = z.input<typeof topicFilterRequestSchema>
 export const topicFilterParamsSchema = z.object({
   /** 最小チャットセッション数 */
   minSessionCount: z.number().int().min(0).optional(),
-  /** 直近N日以内にチャットがある論点を抽出（N日以上経過したものを除外） */
+  /** 最終チャットからN日以上経過した論点を抽出 */
   daysSinceLastChat: z.number().int().min(0).optional(),
   /** 理解済みフラグ */
   understood: z.boolean().optional(),
@@ -182,6 +181,7 @@ export type TopicFilterParams = z.infer<typeof topicFilterParamsSchema>
 export const filteredTopicSchema = z.object({
   id: z.string(),
   name: z.string(),
+  studyDomainId: z.string(),
   categoryId: z.string(),
   subjectId: z.string(),
   subjectName: z.string(),

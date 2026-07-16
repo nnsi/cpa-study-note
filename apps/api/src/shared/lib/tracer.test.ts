@@ -1,33 +1,45 @@
-import { describe, it, expect } from "vitest"
+import { describe, it, expect, vi, afterEach } from "vitest"
 import { createTracer, noopTracer } from "./tracer"
 
 describe("createTracer", () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it("span()でasync関数の実行時間を計測する", async () => {
+    // 実時間のsetTimeoutはperformance.now()計測で指定ms未満に発火することがあり
+    // flakyになるため、タイマーとperformanceを両方フェイクして決定的に計測する
+    vi.useFakeTimers({ toFake: ["setTimeout", "performance"] })
     const tracer = createTracer()
 
-    const result = await tracer.span("d1.query", async () => {
+    const promise = tracer.span("d1.query", async () => {
       await new Promise((r) => setTimeout(r, 10))
       return "ok"
     })
+    await vi.advanceTimersByTimeAsync(10)
 
-    expect(result).toBe("ok")
+    expect(await promise).toBe("ok")
     const summary = tracer.getSummary()
-    expect(summary.d1Ms).toBeGreaterThanOrEqual(10)
+    expect(summary.d1Ms).toBe(10)
     expect(summary.spanCount).toBe(1)
   })
 
   it("span()で例外が発生してもdurationが記録される", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "performance"] })
     const tracer = createTracer()
 
-    await expect(
+    // advance前にrejectionハンドラを付けて未処理拒否を防ぐ
+    const assertion = expect(
       tracer.span("d1.failingQuery", async () => {
         await new Promise((r) => setTimeout(r, 5))
         throw new Error("DB error")
       })
     ).rejects.toThrow("DB error")
+    await vi.advanceTimersByTimeAsync(5)
+    await assertion
 
     const summary = tracer.getSummary()
-    expect(summary.d1Ms).toBeGreaterThanOrEqual(5)
+    expect(summary.d1Ms).toBe(5)
     expect(summary.spanCount).toBe(1)
   })
 

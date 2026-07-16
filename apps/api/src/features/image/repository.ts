@@ -17,6 +17,7 @@ export type ImageRepository = {
   create: (data: Omit<Image, "createdAt">) => Promise<Image>
   findById: (id: string) => Promise<Image | null>
   updateOcrText: (id: string, ocrText: string) => Promise<void>
+  updateSize: (id: string, size: number) => Promise<void>
 }
 
 export const createImageRepository = (db: Db): ImageRepository => ({
@@ -48,5 +49,9 @@ export const createImageRepository = (db: Db): ImageRepository => ({
 
   updateOcrText: async (id, ocrText) => {
     await db.update(images).set({ ocrText }).where(eq(images.id, id))
+  },
+
+  updateSize: async (id, size) => {
+    await db.update(images).set({ size }).where(eq(images.id, id))
   },
 })

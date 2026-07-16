@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { renderHook, waitFor } from "@testing-library/react"
+import { act, renderHook, waitFor } from "@testing-library/react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { createElement } from "react"
 import { useDailyMetrics } from "./hooks"
@@ -71,7 +71,7 @@ describe("useDailyMetrics", () => {
     expect(result.current.range).toBe("7days")
     expect(result.current.rangeLabel).toBe("直近7日")
 
-    result.current.setRange("30days")
+    act(() => result.current.setRange("30days"))
 
     await waitFor(() => {
       expect(result.current.range).toBe("30days")

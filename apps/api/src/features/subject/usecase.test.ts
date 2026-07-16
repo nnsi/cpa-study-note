@@ -31,7 +31,6 @@ describe("Subject UseCase", () => {
     deps = {
       subjectRepo: createSubjectRepository(db),
       logger: noopLogger,
-      tracer: noopTracer,
     }
   })
 

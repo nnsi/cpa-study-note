@@ -21,5 +21,5 @@ pnpm --filter @cpa-study/web dev
 ## 確認ポイント
 
 - API: `http://localhost:8787`
-- Web: `http://localhost:5173`
+- Web: `http://localhost:5174`
 - D1ローカル: `.wrangler/state/v3/d1/`

@@ -1,5 +1,6 @@
 import type { ExerciseRepository } from "./repository"
 import type { ImageRepository } from "../image/repository"
+import type { LearningRepository } from "../learning/repository"
 import type { AIAdapter, AIConfig } from "@/shared/lib/ai"
 import type { Logger } from "@/shared/lib/logger"
 import type { Tracer } from "@/shared/lib/tracer"
@@ -22,6 +23,7 @@ type ExerciseDeps = {
   r2: R2Bucket
   logger: Logger
   tracer: Tracer
+  learningRepo: LearningRepository
 }
 
 // ArrayBufferをBase64に変換（チャンク処理でスタックオーバーフロー防止）
@@ -39,7 +41,7 @@ const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
 // 論点推測AIレスポンスをパース
 const parseTopicSuggestions = (
   aiResponse: string,
-  topicMap: Map<string, { name: string; subjectName: string }>
+  topicMap: Map<string, { name: string; studyDomainId: string; subjectId: string; categoryId: string; subjectName: string }>
 ): SuggestedTopic[] => {
   try {
     // コードブロックを除去
@@ -66,6 +68,9 @@ const parseTopicSuggestions = (
         return {
           topicId: s.topicId,
           topicName: topic.name,
+          studyDomainId: topic.studyDomainId,
+          subjectId: topic.subjectId,
+          categoryId: topic.categoryId,
           subjectName: topic.subjectName,
           confidence,
           reason: s.reason || "AIによる推測",
@@ -79,7 +84,7 @@ const parseTopicSuggestions = (
 
 // 画像分析（アップロード + OCR + 論点推測）
 export const analyzeExercise = async (
-  deps: ExerciseDeps,
+  deps: Omit<ExerciseDeps, "learningRepo">,
   userId: string,
   filename: string,
   mimeType: string,
@@ -146,7 +151,13 @@ export const analyzeExercise = async (
   // 4. 論点リストを取得
   const topicsForSuggestion = await exerciseRepo.findTopicsForSuggestion(userId)
   const topicMap = new Map(
-    topicsForSuggestion.map((t) => [t.id, { name: t.name, subjectName: t.subjectName }])
+    topicsForSuggestion.map((t) => [t.id, {
+      name: t.name,
+      studyDomainId: t.studyDomainId,
+      subjectId: t.subjectId,
+      categoryId: t.categoryId,
+      subjectName: t.subjectName,
+    }])
   )
 
   // 5. 論点推測AI呼び出し
@@ -217,13 +228,13 @@ JSON形式で出力してください:
 
 // 論点確定
 export const confirmExercise = async (
-  deps: Pick<ExerciseDeps, "exerciseRepo" | "logger" | "tracer">,
+  deps: Pick<ExerciseDeps, "exerciseRepo" | "learningRepo" | "logger" | "tracer">,
   userId: string,
   exerciseId: string,
   topicId: string,
   markAsUnderstood: boolean
 ): Promise<Result<ConfirmExerciseResponse, AppError>> => {
-  const { exerciseRepo, logger, tracer } = deps
+  const { exerciseRepo, learningRepo, logger, tracer } = deps
 
   const exercise = await tracer.span("d1.findExercise", () =>
     exerciseRepo.findByIdWithOwnerCheck(exerciseId, userId)
@@ -236,11 +247,34 @@ export const confirmExercise = async (
     return err(badRequest("この問題は既に確定されています"))
   }
 
+  const topicExists = await tracer.span("d1.verifyTopicExists", () =>
+    learningRepo.verifyTopicExists(userId, topicId)
+  )
+  if (!topicExists) {
+    return err(notFound("論点が見つかりません"))
+  }
+
   const updated = await tracer.span("d1.confirmExercise", () =>
-    exerciseRepo.confirm(exerciseId, topicId, markAsUnderstood)
+    exerciseRepo.confirm(exerciseId, userId, topicId, markAsUnderstood)
   )
   if (!updated) {
     return err(badRequest("指定された論点が存在しないか、問題の更新に失敗しました"))
+  }
+
+
+  if (markAsUnderstood) {
+    await tracer.span("d1.markTopicUnderstood", async () => {
+      await learningRepo.upsertProgress(userId, {
+        userId,
+        topicId,
+        understood: true,
+      })
+      await learningRepo.createCheckHistory(userId, {
+        userId,
+        topicId,
+        action: "checked",
+      })
+    })
   }
 
   return ok({

@@ -1,5 +1,6 @@
 import { eq, and, desc, sql, inArray } from "drizzle-orm"
 import type { Db } from "@cpa-study/db"
+import { traced, type Tracer } from "@/shared/lib/tracer"
 import {
   chatSessions,
   chatMessages,
@@ -94,6 +95,22 @@ export type ChatRepository = {
   updateMessageQuality: (id: string, quality: string, reason?: string) => Promise<void>
   findGoodQuestionsByTopic: (userId: string, topicId: string) => Promise<GoodQuestion[]>
 }
+
+export const tracedChatRepo = (repo: ChatRepository, tracer: Tracer): ChatRepository => ({
+  createSession: traced(tracer, "d1.createSession", repo.createSession),
+  findSessionById: traced(tracer, "d1.findSessionById", repo.findSessionById),
+  findSessionsByTopic: traced(tracer, "d1.findSessionsByTopic", repo.findSessionsByTopic),
+  findSessionsWithStatsByTopic: traced(tracer, "d1.findSessionsWithStatsByTopic", repo.findSessionsWithStatsByTopic),
+  getSessionMessageCount: traced(tracer, "d1.getSessionMessageCount", repo.getSessionMessageCount),
+  getSessionQualityStats: traced(tracer, "d1.getSessionQualityStats", repo.getSessionQualityStats),
+  getTopicWithHierarchy: traced(tracer, "d1.getTopicWithHierarchy", repo.getTopicWithHierarchy),
+  createMessage: traced(tracer, "d1.createMessage", repo.createMessage),
+  findMessageById: traced(tracer, "d1.findMessageById", repo.findMessageById),
+  findMessagesBySession: traced(tracer, "d1.findMessagesBySession", repo.findMessagesBySession),
+  findRecentMessagesForContext: repo.findRecentMessagesForContext,
+  updateMessageQuality: traced(tracer, "d1.updateMessageQuality", repo.updateMessageQuality),
+  findGoodQuestionsByTopic: traced(tracer, "d1.findGoodQuestionsByTopic", repo.findGoodQuestionsByTopic),
+})
 
 export const createChatRepository = (db: Db): ChatRepository => ({
   createSession: async ({ userId, topicId }) => {

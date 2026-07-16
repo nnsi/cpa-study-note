@@ -155,6 +155,7 @@ const formatReviewList = (data: ReviewListData): ReviewListResponse => ({
   topics: data.topics.map((t) => ({
     ...t,
     lastAccessedAt: t.lastAccessedAt?.toISOString() ?? null,
+    lastChatAt: t.lastChatAt?.toISOString() ?? null,
   })),
   total: data.total,
 })

@@ -16,6 +16,12 @@ export const filterTopics = async (
   if (params.daysSinceLastChat !== undefined) {
     query.daysSince = String(params.daysSinceLastChat)
   }
+  if (params.minSessionCount !== undefined) {
+    query.minSessionCount = String(params.minSessionCount)
+  }
+  if (params.minGoodQuestionCount !== undefined) {
+    query.minGoodQuestionCount = String(params.minGoodQuestionCount)
+  }
 
   const res = await api.api.view.topics.$get({ query })
   if (!res.ok) throw new Error("論点のフィルタに失敗しました")
@@ -25,13 +31,13 @@ export const filterTopics = async (
   return data.topics.map((t) => ({
     id: t.id,
     name: t.name,
+    studyDomainId: t.studyDomainId,
     subjectId: t.subjectId,
     subjectName: t.subjectName,
     categoryId: t.categoryId,
     understood: t.understood,
-    lastChatAt: t.lastAccessedAt, // Map lastAccessedAt to lastChatAt for compatibility
+    lastChatAt: t.lastChatAt,
     sessionCount: t.sessionCount,
-    // View API doesn't return this field, default to 0
-    goodQuestionCount: 0,
+    goodQuestionCount: t.goodQuestionCount,
   }))
 }

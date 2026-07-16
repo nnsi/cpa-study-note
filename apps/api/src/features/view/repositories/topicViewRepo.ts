@@ -1,5 +1,6 @@
 import { eq, and, isNull, desc } from "drizzle-orm"
 import type { Db } from "@cpa-study/db"
+import { traced, type Tracer } from "@/shared/lib/tracer"
 import {
   topics,
   categories,
@@ -50,6 +51,10 @@ export type TopicViewData = {
 export type TopicViewRepository = {
   getTopicView: (topicId: string, userId: string) => Promise<TopicViewData | null>
 }
+
+export const tracedTopicViewRepo = (repo: TopicViewRepository, tracer: Tracer): TopicViewRepository => ({
+  getTopicView: traced(tracer, "d1.getTopicView", repo.getTopicView),
+})
 
 export const createTopicViewRepository = (db: Db): TopicViewRepository => ({
   getTopicView: async (topicId, userId) => {

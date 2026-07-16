@@ -1,6 +1,5 @@
 import type { AIAdapter, AIConfig } from "@/shared/lib/ai"
 import type { Logger } from "@/shared/lib/logger"
-import type { Tracer } from "@/shared/lib/tracer"
 import type { QuickChatRepository, TopicForSuggest } from "./repository"
 import type { QuickChatSuggestion } from "@cpa-study/shared/schemas"
 import { parseLLMJson } from "@cpa-study/shared"
@@ -14,7 +13,6 @@ export type QuickChatDeps = {
   aiAdapter: AIAdapter
   aiConfig: AIConfig
   logger: Logger
-  tracer: Tracer
 }
 
 type SuggestInput = {
@@ -91,12 +89,14 @@ export const suggestTopicsForChat = async (
   deps: QuickChatDeps,
   input: SuggestInput
 ): Promise<Result<{ suggestions: QuickChatSuggestion[] }, AppError>> => {
+  if (!(await deps.quickChatRepo.domainExists(input.domainId, input.userId))) {
+    return err(notFound("学習領域が見つかりません"))
+  }
+
   // 1. ドメイン内の全論点を取得
-  const allTopics = await deps.tracer.span("d1.findAllTopicsByDomain", () =>
-    deps.quickChatRepo.findAllTopicsByDomain(
-      input.domainId,
-      input.userId
-    )
+  const allTopics = await deps.quickChatRepo.findAllTopicsByDomain(
+    input.domainId,
+    input.userId
   )
 
   // 論点が0件でもAIに新規提案させるため続行
@@ -110,14 +110,12 @@ export const suggestTopicsForChat = async (
 
   let aiResponse: string
   try {
-    const result = await deps.tracer.span("ai.quickChatSuggest", () =>
-      deps.aiAdapter.generateText({
-        model: deps.aiConfig.quickChatSuggest.model,
-        messages: [{ role: "user", content: prompt }],
-        temperature: deps.aiConfig.quickChatSuggest.temperature,
-        maxTokens: deps.aiConfig.quickChatSuggest.maxTokens,
-      })
-    )
+    const result = await deps.aiAdapter.generateText({
+      model: deps.aiConfig.quickChatSuggest.model,
+      messages: [{ role: "user", content: prompt }],
+      temperature: deps.aiConfig.quickChatSuggest.temperature,
+      maxTokens: deps.aiConfig.quickChatSuggest.maxTokens,
+    })
     aiResponse = result.content
   } catch (error) {
     deps.logger.error("AI error", { error: error instanceof Error ? error.message : String(error) })

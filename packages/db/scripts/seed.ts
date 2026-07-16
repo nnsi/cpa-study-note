@@ -3,6 +3,10 @@ import { join } from "path"
 
 const DATA_DIR = join(process.cwd(), "data", "study-domains")
 
+// v2.1: コンテンツはユーザー所有。シードコンテンツは開発用ユーザーに紐づける
+// （.dev.vars の DEV_USER_ID / apps/web の VITE_DEV_USER_ID と一致させること）
+const SEED_CONTENT_USER_ID = "test-user-1"
+
 const generateId = () => crypto.randomUUID()
 
 const now = new Date()
@@ -44,23 +48,23 @@ type DomainJson = {
   description: string | null
   emoji: string
   color: string
-  isPublic: boolean
 }
 
-// DB row types
+// DB row types (v2.1: user-owned content)
 type StudyDomainData = {
   id: string
+  user_id: string
   name: string
   description: string | null
   emoji: string | null
   color: string | null
-  is_public: number
   created_at: Date
   updated_at: Date
 }
 
 type SubjectData = {
   id: string
+  user_id: string
   study_domain_id: string
   name: string
   description: string | null
@@ -73,6 +77,7 @@ type SubjectData = {
 
 type CategoryData = {
   id: string
+  user_id: string
   subject_id: string
   name: string
   depth: number
@@ -84,6 +89,7 @@ type CategoryData = {
 
 type TopicData = {
   id: string
+  user_id: string
   category_id: string
   name: string
   description: string | null
@@ -105,13 +111,6 @@ type UserData = {
   updated_at: Date
 }
 
-type UserStudyDomainData = {
-  id: string
-  user_id: string
-  study_domain_id: string
-  joined_at: Date
-}
-
 const devUsers: UserData[] = [
   {
     id: "test-user-1",
@@ -127,7 +126,8 @@ const devUsers: UserData[] = [
     email: "test2@example.com",
     name: "テストユーザー2",
     avatar_url: null,
-    default_study_domain_id: "cpa",
+    // コンテンツは SEED_CONTENT_USER_ID のみに作成するため、他ユーザーはデフォルト領域なし
+    default_study_domain_id: null,
     created_at: now,
     updated_at: now,
   },
@@ -136,7 +136,7 @@ const devUsers: UserData[] = [
     email: "admin@example.com",
     name: "管理者テスト",
     avatar_url: null,
-    default_study_domain_id: "cpa",
+    default_study_domain_id: null,
     created_at: now,
     updated_at: now,
   },
@@ -158,12 +158,11 @@ const generateSeedData = () => {
   const subjects: SubjectData[] = []
   const categories: CategoryData[] = []
   const topics: TopicData[] = []
-  const userStudyDomains: UserStudyDomainData[] = []
 
   // Scan study-domains directory
   if (!existsSync(DATA_DIR)) {
     console.error(`Data directory not found: ${DATA_DIR}`)
-    return { users: devUsers, studyDomains, userStudyDomains, subjects, categories, topics }
+    return { users: devUsers, studyDomains, subjects, categories, topics }
   }
 
   const domainDirs = readdirSync(DATA_DIR, { withFileTypes: true })
@@ -177,11 +176,11 @@ const generateSeedData = () => {
     const domainJson = loadDomainJson(domainDir)
     studyDomains.push({
       id: domainJson.id,
+      user_id: SEED_CONTENT_USER_ID,
       name: domainJson.name,
       description: domainJson.description,
       emoji: domainJson.emoji,
       color: domainJson.color,
-      is_public: domainJson.isPublic ? 1 : 0,
       created_at: now,
       updated_at: now,
     })
@@ -201,6 +200,7 @@ const generateSeedData = () => {
 
       subjects.push({
         id: subjectId,
+        user_id: SEED_CONTENT_USER_ID,
         study_domain_id: domainJson.id,
         name: subjectJson.name,
         description: subjectJson.description,
@@ -217,6 +217,7 @@ const generateSeedData = () => {
 
         categories.push({
           id: largeCategoryId,
+          user_id: SEED_CONTENT_USER_ID,
           subject_id: subjectId,
           name: categoryJson.name,
           depth: 1,
@@ -232,6 +233,7 @@ const generateSeedData = () => {
 
           categories.push({
             id: mediumCategoryId,
+            user_id: SEED_CONTENT_USER_ID,
             subject_id: subjectId,
             name: subcategoryJson.name,
             depth: 2,
@@ -246,6 +248,7 @@ const generateSeedData = () => {
             // If no topics, the subcategory name itself becomes a topic
             topics.push({
               id: generateId(),
+              user_id: SEED_CONTENT_USER_ID,
               category_id: mediumCategoryId,
               name: subcategoryJson.name,
               description: null,
@@ -262,6 +265,7 @@ const generateSeedData = () => {
             for (const topicJson of subcategoryJson.topics) {
               topics.push({
                 id: generateId(),
+                user_id: SEED_CONTENT_USER_ID,
                 category_id: mediumCategoryId,
                 name: topicJson.name,
                 description: null,
@@ -279,17 +283,7 @@ const generateSeedData = () => {
     }
   }
 
-  // Create user_study_domains for dev users
-  for (const user of devUsers) {
-    userStudyDomains.push({
-      id: generateId(),
-      user_id: user.id,
-      study_domain_id: "cpa",
-      joined_at: now,
-    })
-  }
-
-  return { users: devUsers, studyDomains, userStudyDomains, subjects, categories, topics }
+  return { users: devUsers, studyDomains, subjects, categories, topics }
 }
 
 const formatValue = (value: unknown): string => {
@@ -320,18 +314,16 @@ const generateInsertSQL = (table: string, data: Record<string, unknown>[], batch
 }
 
 const main = () => {
-  const { users, studyDomains, userStudyDomains, subjects, categories, topics } = generateSeedData()
+  const { users, studyDomains, subjects, categories, topics } = generateSeedData()
 
   let sql = "-- Seed data generated from JSON files\n\n"
 
-  sql += "-- Study Domains\n"
-  sql += generateInsertSQL("study_domains", studyDomains)
-
+  // users が study_domains より先（study_domains.user_id が users.id を参照）
   sql += "-- Users\n"
   sql += generateInsertSQL("users", users)
 
-  sql += "-- User Study Domains\n"
-  sql += generateInsertSQL("user_study_domains", userStudyDomains)
+  sql += "-- Study Domains\n"
+  sql += generateInsertSQL("study_domains", studyDomains)
 
   sql += "-- Subjects\n"
   sql += generateInsertSQL("subjects", subjects)
@@ -345,9 +337,8 @@ const main = () => {
   console.log(sql)
 
   console.error(`\nGenerated seed data:`)
-  console.error(`- Study Domains: ${studyDomains.length}`)
   console.error(`- Users: ${users.length}`)
-  console.error(`- User Study Domains: ${userStudyDomains.length}`)
+  console.error(`- Study Domains: ${studyDomains.length} (owner: ${SEED_CONTENT_USER_ID})`)
   console.error(`- Subjects: ${subjects.length}`)
   console.error(`- Categories: ${categories.length}`)
   console.error(`- Topics: ${topics.length}`)

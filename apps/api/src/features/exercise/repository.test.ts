@@ -129,6 +129,7 @@ describe("ExerciseRepository", () => {
 
       const confirmed = await exerciseRepo.confirm(
         "exercise-confirm",
+        testData.userId,
         testData.topicId,
         false
       )
@@ -149,6 +150,7 @@ describe("ExerciseRepository", () => {
 
       const confirmed = await exerciseRepo.confirm(
         "exercise-understood",
+        testData.userId,
         testData.topicId,
         true
       )
@@ -166,7 +168,7 @@ describe("ExerciseRepository", () => {
         imageId: testImageId,
         suggestedTopicIds: [],
       })
-      await exerciseRepo.confirm("exercise-topic-1", testData.topicId, true)
+      await exerciseRepo.confirm("exercise-topic-1", testData.userId, testData.topicId, true)
 
       // 2つ目の画像とexercise
       const imageId2 = "test-image-2"
@@ -185,7 +187,7 @@ describe("ExerciseRepository", () => {
         imageId: imageId2,
         suggestedTopicIds: [],
       })
-      await exerciseRepo.confirm("exercise-topic-2", testData.topicId, false)
+      await exerciseRepo.confirm("exercise-topic-2", testData.userId, testData.topicId, false)
 
       const exercises = await exerciseRepo.findByTopicId(
         testData.topicId,

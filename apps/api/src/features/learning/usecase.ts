@@ -3,7 +3,6 @@ import { notFound, type AppError } from "@/shared/lib/errors"
 import type { LearningRepository, TopicProgress } from "./repository"
 import type { SubjectRepository } from "../subject/repository"
 import type { Logger } from "@/shared/lib/logger"
-import type { Tracer } from "@/shared/lib/tracer"
 import type {
   ProgressResponse,
   SubjectProgressStats,
@@ -15,7 +14,6 @@ import type {
 export type LearningDeps = {
   learningRepo: LearningRepository
   logger: Logger
-  tracer: Tracer
 }
 
 // Helper function to format progress
@@ -38,18 +36,14 @@ export const touchTopic = async (
   userId: string,
   topicId: string
 ): Promise<Result<ProgressResponse, AppError>> => {
-  const { learningRepo, logger, tracer } = deps
+  const { learningRepo } = deps
   // Verify topic exists and belongs to user
-  const exists = await tracer.span("d1.verifyTopicExists", () =>
-    learningRepo.verifyTopicExists(userId, topicId)
-  )
+  const exists = await learningRepo.verifyTopicExists(userId, topicId)
   if (!exists) {
     return err(notFound("論点が見つかりません"))
   }
 
-  const progress = await tracer.span("d1.touchTopic", () =>
-    learningRepo.touchTopic(userId, topicId)
-  )
+  const progress = await learningRepo.touchTopic(userId, topicId)
   return ok(formatProgress(progress))
 }
 
@@ -61,18 +55,14 @@ export const getProgress = async (
   userId: string,
   topicId: string
 ): Promise<Result<ProgressResponse | null, AppError>> => {
-  const { learningRepo, logger, tracer } = deps
+  const { learningRepo } = deps
   // Verify topic exists and belongs to user
-  const exists = await tracer.span("d1.verifyTopicExists", () =>
-    learningRepo.verifyTopicExists(userId, topicId)
-  )
+  const exists = await learningRepo.verifyTopicExists(userId, topicId)
   if (!exists) {
     return err(notFound("論点が見つかりません"))
   }
 
-  const progress = await tracer.span("d1.findProgress", () =>
-    learningRepo.findProgress(userId, topicId)
-  )
+  const progress = await learningRepo.findProgress(userId, topicId)
   return ok(progress ? formatProgress(progress) : null)
 }
 
@@ -85,38 +75,30 @@ export const updateProgress = async (
   topicId: string,
   understood?: boolean
 ): Promise<Result<ProgressResponse, AppError>> => {
-  const { learningRepo, logger, tracer } = deps
+  const { learningRepo } = deps
   // Verify topic exists and belongs to user
-  const exists = await tracer.span("d1.verifyTopicExists", () =>
-    learningRepo.verifyTopicExists(userId, topicId)
-  )
+  const exists = await learningRepo.verifyTopicExists(userId, topicId)
   if (!exists) {
     return err(notFound("論点が見つかりません"))
   }
 
   // Get current progress to check if understood changed
-  const currentProgress = await tracer.span("d1.findProgress", () =>
-    learningRepo.findProgress(userId, topicId)
-  )
+  const currentProgress = await learningRepo.findProgress(userId, topicId)
   const previousUnderstood = currentProgress?.understood ?? false
 
-  const progress = await tracer.span("d1.upsertProgress", () =>
-    learningRepo.upsertProgress(userId, {
-      userId,
-      topicId,
-      understood,
-    })
-  )
+  const progress = await learningRepo.upsertProgress(userId, {
+    userId,
+    topicId,
+    understood,
+  })
 
   // Record check history if understood flag changed
   if (understood !== undefined && understood !== previousUnderstood) {
-    await tracer.span("d1.createCheckHistory", () =>
-      learningRepo.createCheckHistory(userId, {
-        userId,
-        topicId,
-        action: understood ? "checked" : "unchecked",
-      })
-    )
+    await learningRepo.createCheckHistory(userId, {
+      userId,
+      topicId,
+      action: understood ? "checked" : "unchecked",
+    })
   }
 
   return ok(formatProgress(progress))
@@ -129,10 +111,8 @@ export const listUserProgress = async (
   deps: LearningDeps,
   userId: string
 ): Promise<Result<ProgressResponse[], AppError>> => {
-  const { learningRepo, logger, tracer } = deps
-  const progressList = await tracer.span("d1.findProgressByUser", () =>
-    learningRepo.findProgressByUser(userId)
-  )
+  const { learningRepo } = deps
+  const progressList = await learningRepo.findProgressByUser(userId)
   return ok(progressList.map(formatProgress))
 }
 
@@ -144,18 +124,14 @@ export const getCheckHistory = async (
   userId: string,
   topicId: string
 ): Promise<Result<TopicCheckHistoryResponse[], AppError>> => {
-  const { learningRepo, logger, tracer } = deps
+  const { learningRepo } = deps
   // Verify topic exists and belongs to user
-  const exists = await tracer.span("d1.verifyTopicExists", () =>
-    learningRepo.verifyTopicExists(userId, topicId)
-  )
+  const exists = await learningRepo.verifyTopicExists(userId, topicId)
   if (!exists) {
     return err(notFound("論点が見つかりません"))
   }
 
-  const history = await tracer.span("d1.findCheckHistory", () =>
-    learningRepo.findCheckHistoryByTopic(userId, topicId)
-  )
+  const history = await learningRepo.findCheckHistoryByTopic(userId, topicId)
 
   return ok(
     history.map((h) => ({
@@ -174,10 +150,8 @@ export const listRecentTopics = async (
   userId: string,
   limit: number = 10
 ): Promise<Result<RecentTopic[], AppError>> => {
-  const { learningRepo, logger, tracer } = deps
-  const topics = await tracer.span("d1.findRecentTopics", () =>
-    learningRepo.findRecentTopics(userId, limit)
-  )
+  const { learningRepo } = deps
+  const topics = await learningRepo.findRecentTopics(userId, limit)
 
   return ok(
     topics.map((t) => ({
@@ -196,21 +170,17 @@ export const listRecentTopics = async (
  * Get subject progress stats
  */
 export const getSubjectProgressStats = async (
-  deps: { subjectRepo: SubjectRepository; logger: Logger; tracer: Tracer },
+  deps: { subjectRepo: SubjectRepository; logger: Logger },
   userId: string
 ): Promise<Result<SubjectProgressStats[], AppError>> => {
-  const { subjectRepo, logger, tracer } = deps
-  const [subjects, progressCounts] = await tracer.span("d1.findSubjectsAndProgress", () =>
-    Promise.all([
-      subjectRepo.findAllSubjectsForUser(undefined, userId),
-      subjectRepo.getProgressCountsBySubject(userId),
-    ])
-  )
+  const { subjectRepo } = deps
+  const [subjects, progressCounts] = await Promise.all([
+    subjectRepo.findAllSubjectsForUser(undefined, userId),
+    subjectRepo.getProgressCountsBySubject(userId),
+  ])
 
   const subjectIds = subjects.map((s) => s.id)
-  const batchStats = await tracer.span("d1.getBatchStats", () =>
-    subjectRepo.getBatchSubjectStats(subjectIds, userId)
-  )
+  const batchStats = await subjectRepo.getBatchSubjectStats(subjectIds, userId)
 
   const topicCountMap = new Map(batchStats.map((s) => [s.subjectId, s.topicCount]))
   const progressMap = new Map(progressCounts.map((p) => [p.subjectId, p.understoodCount]))

@@ -1,11 +1,14 @@
 import { createFileRoute, redirect } from "@tanstack/react-router"
-import { DEFAULT_STUDY_DOMAIN_ID } from "@cpa-study/shared/constants"
+import { requireAuth } from "@/lib/auth"
+import { getSubject } from "@/features/subject/api"
 
 export const Route = createFileRoute("/subjects/$subjectId/")({
-  beforeLoad: ({ params }) => {
+  beforeLoad: async ({ params }) => {
+    requireAuth()
+    const { subject } = await getSubject(params.subjectId)
     throw redirect({
       to: "/domains/$domainId/subjects/$subjectId",
-      params: { domainId: DEFAULT_STUDY_DOMAIN_ID, subjectId: params.subjectId },
+      params: { domainId: subject.studyDomainId, subjectId: params.subjectId },
       replace: true,
     })
   },

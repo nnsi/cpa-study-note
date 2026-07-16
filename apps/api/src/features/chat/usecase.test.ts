@@ -409,7 +409,17 @@ describe("Chat UseCase", () => {
       })
 
       for await (const _ of sendMessage(
-        { chatRepo, learningRepo, aiAdapter: trackingAdapter, aiConfig: defaultAIConfig, logger: noopLogger, tracer: noopTracer },
+        {
+          chatRepo,
+          learningRepo,
+          imageRepo: {
+            findById: async () => ({ userId: testData.userId }),
+          } as never,
+          aiAdapter: trackingAdapter,
+          aiConfig: defaultAIConfig,
+          logger: noopLogger,
+          tracer: noopTracer,
+        },
         {
           sessionId: session.id,
           userId: testData.userId,
@@ -425,6 +435,37 @@ describe("Chat UseCase", () => {
       const userMessage = capturedMessages.find((m) => m.role === "user")
       expect(userMessage?.content).toContain("[画像から抽出されたテキスト]")
       expect(userMessage?.content).toContain("Extracted text from image")
+    })
+
+    it("should reject an image owned by another user", async () => {
+      const session = await chatRepo.createSession({
+        userId: testData.userId,
+        topicId: testData.topicId,
+      })
+      const chunks: StreamChunk[] = []
+
+      for await (const chunk of sendMessage(
+        {
+          chatRepo,
+          learningRepo,
+          imageRepo: { findById: async () => ({ userId: "other-user" }) } as never,
+          aiAdapter,
+          aiConfig: defaultAIConfig,
+          logger: noopLogger,
+          tracer: noopTracer,
+        },
+        {
+          sessionId: session.id,
+          userId: testData.userId,
+          content: "image",
+          imageId: "other-users-image",
+        }
+      )) {
+        chunks.push(chunk)
+      }
+
+      expect(chunks).toEqual([{ type: "error", error: "Image not found" }])
+      expect(await chatRepo.findMessagesBySession(session.id)).toEqual([])
     })
   })
 

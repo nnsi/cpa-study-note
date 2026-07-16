@@ -4,6 +4,7 @@ import { TanStackRouterDevtools } from "@tanstack/router-devtools"
 import type { QueryClient } from "@tanstack/react-query"
 import { Layout } from "@/components/layout"
 import { GlobalSearchModal, useSearchModal, isSearchShortcut } from "@/features/search"
+import { useAuthStore } from "@/lib/auth"
 
 type RouterContext = {
   queryClient: QueryClient
@@ -15,11 +16,12 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 
 function RootComponent() {
   const { isOpen, query, setQuery, open, close } = useSearchModal()
+  const loggedIn = useAuthStore((state) => state.isAuthenticated())
 
   // Ctrl+K / Cmd+K でモーダルを開く
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (isSearchShortcut(e)) {
+      if (loggedIn && isSearchShortcut(e)) {
         e.preventDefault()
         open()
       }
@@ -27,19 +29,21 @@ function RootComponent() {
 
     document.addEventListener("keydown", handleKeyDown)
     return () => document.removeEventListener("keydown", handleKeyDown)
-  }, [open])
+  }, [loggedIn, open])
 
   return (
     <>
       <Layout onSearchClick={open}>
         <Outlet />
       </Layout>
-      <GlobalSearchModal
-        isOpen={isOpen}
-        query={query}
-        setQuery={setQuery}
-        onClose={close}
-      />
+      {loggedIn && (
+        <GlobalSearchModal
+          isOpen={isOpen}
+          query={query}
+          setQuery={setQuery}
+          onClose={close}
+        />
+      )}
       {import.meta.env.DEV && <TanStackRouterDevtools />}
     </>
   )

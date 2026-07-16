@@ -38,6 +38,13 @@ const defaultMockResponses: MockResponse[] = [
     delay: 30,
   },
   {
+    pattern: /目次画像/,
+    response: `\`\`\`json
+{"categories":[{"name":"財務諸表の基礎","subcategories":[{"name":"簿記の基本原理","topics":[{"name":"複式簿記の仕組み"},{"name":"勘定科目と仕訳"}]},{"name":"財務諸表の体系","topics":[{"name":"貸借対照表の構造"},{"name":"損益計算書の構造"}]}]},{"name":"収益認識","subcategories":[{"name":"収益認識","topics":[{"name":"5ステップモデル"},{"name":"変動対価"}]}]}]}
+\`\`\``,
+    delay: 5,
+  },
+  {
     pattern: /.*/,
     response: `ご質問ありがとうございます。
 

@@ -45,7 +45,7 @@ export const studyPlanRoutes = ({ db }: StudyPlanRouteDeps) => {
     // 計画一覧
     .get("/", authMiddleware, async (c) => {
       const user = c.get("user")
-      const logger = c.get("logger").child({ feature: "study-plan" })
+      const logger = c.get("logger")
       const archived = c.req.query("archived")
       const filter = archived !== undefined ? { archived: archived === "true" } : undefined
       const result = await listPlans({ ...deps, logger }, user.id, filter)
@@ -55,7 +55,7 @@ export const studyPlanRoutes = ({ db }: StudyPlanRouteDeps) => {
     // 計画作成
     .post("/", authMiddleware, zValidator("json", createStudyPlanRequestSchema), async (c) => {
       const user = c.get("user")
-      const logger = c.get("logger").child({ feature: "study-plan" })
+      const logger = c.get("logger")
       const input = c.req.valid("json")
       const result = await createPlan({ ...deps, logger }, user.id, input)
       return handleResult(c, result, "plan", 201)
@@ -64,7 +64,7 @@ export const studyPlanRoutes = ({ db }: StudyPlanRouteDeps) => {
     // 計画詳細
     .get("/:planId", authMiddleware, zValidator("param", studyPlanParamsSchema), async (c) => {
       const user = c.get("user")
-      const logger = c.get("logger").child({ feature: "study-plan" })
+      const logger = c.get("logger")
       const { planId } = c.req.valid("param")
       const result = await getPlanDetail({ ...deps, logger }, user.id, planId)
       return handleResult(c, result)
@@ -73,7 +73,7 @@ export const studyPlanRoutes = ({ db }: StudyPlanRouteDeps) => {
     // 計画更新
     .patch("/:planId", authMiddleware, zValidator("param", studyPlanParamsSchema), zValidator("json", updateStudyPlanRequestSchema), async (c) => {
       const user = c.get("user")
-      const logger = c.get("logger").child({ feature: "study-plan" })
+      const logger = c.get("logger")
       const { planId } = c.req.valid("param")
       const input = c.req.valid("json")
       const result = await updatePlan({ ...deps, logger }, user.id, planId, input)
@@ -83,7 +83,7 @@ export const studyPlanRoutes = ({ db }: StudyPlanRouteDeps) => {
     // 計画アーカイブ
     .post("/:planId/archive", authMiddleware, zValidator("param", studyPlanParamsSchema), async (c) => {
       const user = c.get("user")
-      const logger = c.get("logger").child({ feature: "study-plan" })
+      const logger = c.get("logger")
       const { planId } = c.req.valid("param")
       const result = await archivePlan({ ...deps, logger }, user.id, planId)
       return handleResult(c, result, 204)
@@ -92,7 +92,7 @@ export const studyPlanRoutes = ({ db }: StudyPlanRouteDeps) => {
     // 計画アーカイブ解除
     .post("/:planId/unarchive", authMiddleware, zValidator("param", studyPlanParamsSchema), async (c) => {
       const user = c.get("user")
-      const logger = c.get("logger").child({ feature: "study-plan" })
+      const logger = c.get("logger")
       const { planId } = c.req.valid("param")
       const result = await unarchivePlan({ ...deps, logger }, user.id, planId)
       return handleResult(c, result, 204)
@@ -101,7 +101,7 @@ export const studyPlanRoutes = ({ db }: StudyPlanRouteDeps) => {
     // 計画複製
     .post("/:planId/duplicate", authMiddleware, zValidator("param", studyPlanParamsSchema), async (c) => {
       const user = c.get("user")
-      const logger = c.get("logger").child({ feature: "study-plan" })
+      const logger = c.get("logger")
       const { planId } = c.req.valid("param")
       const result = await duplicatePlan({ ...deps, logger }, user.id, planId)
       return handleResult(c, result, "plan", 201)
@@ -110,7 +110,7 @@ export const studyPlanRoutes = ({ db }: StudyPlanRouteDeps) => {
     // 要素並べ替え (PUT must come before /:planId/items/:itemId to avoid conflict)
     .put("/:planId/items/reorder", authMiddleware, zValidator("param", studyPlanParamsSchema), zValidator("json", reorderStudyPlanItemsRequestSchema), async (c) => {
       const user = c.get("user")
-      const logger = c.get("logger").child({ feature: "study-plan" })
+      const logger = c.get("logger")
       const { planId } = c.req.valid("param")
       const { itemIds } = c.req.valid("json")
       const result = await reorderItems({ ...deps, logger }, user.id, planId, itemIds)
@@ -120,7 +120,7 @@ export const studyPlanRoutes = ({ db }: StudyPlanRouteDeps) => {
     // 要素追加
     .post("/:planId/items", authMiddleware, zValidator("param", studyPlanParamsSchema), zValidator("json", createStudyPlanItemRequestSchema), async (c) => {
       const user = c.get("user")
-      const logger = c.get("logger").child({ feature: "study-plan" })
+      const logger = c.get("logger")
       const { planId } = c.req.valid("param")
       const input = c.req.valid("json")
       const result = await addItem({ ...deps, logger }, user.id, planId, input)
@@ -130,7 +130,7 @@ export const studyPlanRoutes = ({ db }: StudyPlanRouteDeps) => {
     // 要素更新
     .patch("/:planId/items/:itemId", authMiddleware, zValidator("param", studyPlanItemParamsSchema), zValidator("json", updateStudyPlanItemRequestSchema), async (c) => {
       const user = c.get("user")
-      const logger = c.get("logger").child({ feature: "study-plan" })
+      const logger = c.get("logger")
       const { planId, itemId } = c.req.valid("param")
       const input = c.req.valid("json")
       const result = await updateItem({ ...deps, logger }, user.id, planId, itemId, input)
@@ -140,7 +140,7 @@ export const studyPlanRoutes = ({ db }: StudyPlanRouteDeps) => {
     // 要素削除
     .delete("/:planId/items/:itemId", authMiddleware, zValidator("param", studyPlanItemParamsSchema), async (c) => {
       const user = c.get("user")
-      const logger = c.get("logger").child({ feature: "study-plan" })
+      const logger = c.get("logger")
       const { planId, itemId } = c.req.valid("param")
       const result = await removeItem({ ...deps, logger }, user.id, planId, itemId)
       return handleResult(c, result, 204)
@@ -149,7 +149,7 @@ export const studyPlanRoutes = ({ db }: StudyPlanRouteDeps) => {
     // 変遷記録追加
     .post("/:planId/revisions", authMiddleware, zValidator("param", studyPlanParamsSchema), zValidator("json", createStudyPlanRevisionRequestSchema), async (c) => {
       const user = c.get("user")
-      const logger = c.get("logger").child({ feature: "study-plan" })
+      const logger = c.get("logger")
       const { planId } = c.req.valid("param")
       const input = c.req.valid("json")
       const result = await addRevision({ ...deps, logger }, user.id, planId, input)
@@ -159,7 +159,7 @@ export const studyPlanRoutes = ({ db }: StudyPlanRouteDeps) => {
     // 変遷更新（理由追記）
     .patch("/:planId/revisions/:revisionId", authMiddleware, zValidator("param", studyPlanRevisionParamsSchema), zValidator("json", updateStudyPlanRevisionRequestSchema), async (c) => {
       const user = c.get("user")
-      const logger = c.get("logger").child({ feature: "study-plan" })
+      const logger = c.get("logger")
       const { planId, revisionId } = c.req.valid("param")
       const input = c.req.valid("json")
       const result = await updateRevision({ ...deps, logger }, user.id, planId, revisionId, input)

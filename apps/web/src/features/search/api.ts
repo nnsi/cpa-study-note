@@ -21,7 +21,7 @@ export const searchTopics = async (
       id: r.id,
       name: r.name,
       description: null,
-      studyDomainId: studyDomainId ?? "",
+      studyDomainId: r.studyDomainId,
       subjectId: r.subjectId,
       categoryId: r.categoryId,
       subjectName: r.subjectName,

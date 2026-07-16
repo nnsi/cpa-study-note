@@ -19,7 +19,7 @@ export const MAGIC_BYTES: Record<string, number[]> = {
   "image/jpeg": [0xff, 0xd8, 0xff],
   "image/png": [0x89, 0x50, 0x4e, 0x47],
   "image/gif": [0x47, 0x49, 0x46],
-  "image/webp": [0x52, 0x49, 0x46, 0x46], // RIFF header
+  "image/webp": [0x52, 0x49, 0x46, 0x46],
 }
 
 export const validateMagicBytes = (buffer: ArrayBuffer, mimeType: string): boolean => {
@@ -27,7 +27,16 @@ export const validateMagicBytes = (buffer: ArrayBuffer, mimeType: string): boole
   const expected = MAGIC_BYTES[mimeType]
   if (!expected) return false
   if (bytes.length < expected.length) return false
-  return expected.every((b, i) => bytes[i] === b)
+  if (!expected.every((b, i) => bytes[i] === b)) return false
+  if (mimeType === "image/webp") {
+    const webp = [0x57, 0x45, 0x42, 0x50]
+    return bytes.length >= 12 && webp.every((byte, index) => bytes[index + 8] === byte)
+  }
+  if (mimeType === "image/gif") {
+    const version = String.fromCharCode(...bytes.slice(0, 6))
+    return version === "GIF87a" || version === "GIF89a"
+  }
+  return true
 }
 
 // ArrayBufferをBase64に変換（チャンク処理でスタックオーバーフロー防止）
@@ -132,6 +141,7 @@ export const uploadImage = async (
       contentType: image.mimeType,
     },
   })
+  await imageRepo.updateSize(imageId, body.byteLength)
 
   return ok(undefined)
 }

@@ -3,6 +3,5 @@
   "name": "公認会計士試験",
   "description": "公認会計士試験の全科目を網羅した論点マップ",
   "emoji": "📊",
-  "color": "indigo",
-  "isPublic": true
+  "color": "indigo"
 }

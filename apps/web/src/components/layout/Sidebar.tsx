@@ -45,9 +45,10 @@ export const Sidebar = () => {
       {/* ナビゲーションリスト */}
       <ul className="space-y-1">
         {navItems.map((item) => {
-          const isActive =
-            item.to === "/"
-              ? location.pathname === "/"
+          const isActive = item.to === "/"
+            ? location.pathname === "/"
+            : item.to === "/subjects"
+              ? location.pathname.startsWith("/subjects") || location.pathname.startsWith("/domains")
               : location.pathname.startsWith(item.to)
 
           return (
@@ -90,8 +91,9 @@ export const Sidebar = () => {
             {recentTopics.slice(0, 5).map((topic) => (
               <li key={topic.topicId}>
                 <Link
-                  to="/subjects/$subjectId/$categoryId/$topicId"
+                  to="/domains/$domainId/subjects/$subjectId/$categoryId/$topicId"
                   params={{
+                    domainId: topic.domainId,
                     subjectId: topic.subjectId,
                     categoryId: topic.categoryId,
                     topicId: topic.topicId,

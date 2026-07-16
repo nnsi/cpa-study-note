@@ -49,7 +49,7 @@ export const createTestEnv = (): Env => ({
   GOOGLE_CLIENT_ID: "test-google-client-id",
   GOOGLE_CLIENT_SECRET: "test-google-client-secret",
   API_BASE_URL: "http://localhost:8787",
-  WEB_BASE_URL: "http://localhost:5173",
+  WEB_BASE_URL: "http://localhost:5174",
   DEV_USER_ID: "test-user-1",
   DB: {} as D1Database,
   R2: createMockR2Bucket(),

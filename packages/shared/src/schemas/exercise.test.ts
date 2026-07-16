@@ -28,6 +28,9 @@ describe("suggestedTopicSchema", () => {
     const result = suggestedTopicSchema.safeParse({
       topicId: "topic-1",
       topicName: "論点名",
+      studyDomainId: "domain-1",
+      subjectId: "subject-1",
+      categoryId: "category-1",
       subjectName: "科目名",
       confidence: "high",
       reason: "理由テキスト",
@@ -146,6 +149,9 @@ describe("analyzeExerciseResponseSchema", () => {
         {
           topicId: "topic-1",
           topicName: "論点名",
+          studyDomainId: "domain-1",
+          subjectId: "subject-1",
+          categoryId: "category-1",
           subjectName: "科目名",
           confidence: "medium",
           reason: "理由",

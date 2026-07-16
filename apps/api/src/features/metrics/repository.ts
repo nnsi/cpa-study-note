@@ -6,6 +6,7 @@ import {
   chatMessages,
   topicCheckHistory,
 } from "@cpa-study/db/schema"
+import { traced, type Tracer } from "@/shared/lib/tracer"
 
 export type MetricSnapshot = {
   id: string
@@ -154,6 +155,15 @@ const calculateCheckedCount = (
   }
   return checkedCount
 }
+
+export const tracedMetricsRepo = (repo: MetricsRepository, tracer: Tracer): MetricsRepository => ({
+  findByDateRange: traced(tracer, "d1.findByDateRange", repo.findByDateRange),
+  findByDate: traced(tracer, "d1.findByDate", repo.findByDate),
+  upsert: traced(tracer, "d1.upsert", repo.upsert),
+  aggregateForDate: traced(tracer, "d1.aggregateForDate", repo.aggregateForDate),
+  aggregateToday: traced(tracer, "d1.aggregateToday", repo.aggregateToday),
+  aggregateDateRange: traced(tracer, "d1.aggregateDateRange", repo.aggregateDateRange),
+})
 
 export const createMetricsRepository = (db: Db): MetricsRepository => ({
   findByDateRange: async (userId, from, to) => {

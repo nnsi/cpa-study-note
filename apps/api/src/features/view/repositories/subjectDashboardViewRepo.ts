@@ -1,5 +1,6 @@
 import { eq, and, isNull, sql, desc } from "drizzle-orm"
 import type { Db } from "@cpa-study/db"
+import { traced, type Tracer } from "@/shared/lib/tracer"
 import {
   subjects,
   studyDomains,
@@ -31,6 +32,10 @@ export type SubjectDashboardData = {
 export type SubjectDashboardViewRepository = {
   getSubjectDashboard: (subjectId: string, userId: string) => Promise<SubjectDashboardData | null>
 }
+
+export const tracedSubjectDashboardViewRepo = (repo: SubjectDashboardViewRepository, tracer: Tracer): SubjectDashboardViewRepository => ({
+  getSubjectDashboard: traced(tracer, "d1.getSubjectDashboard", repo.getSubjectDashboard),
+})
 
 export const createSubjectDashboardViewRepository = (db: Db): SubjectDashboardViewRepository => ({
   getSubjectDashboard: async (subjectId, userId) => {
