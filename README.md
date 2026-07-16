@@ -168,7 +168,7 @@ pnpm dev
 
 # 個別起動
 pnpm dev:api  # APIサーバー (port 8787)
-pnpm dev:web  # Webアプリ (port 5173)
+pnpm dev:web  # Webアプリ (port 5174)
 ```
 
 ### ローカル環境の認証・AI
@@ -196,7 +196,8 @@ pnpm test:e2e:headed   # E2Eテスト（ブラウザ表示）
 # DBマイグレーション
 pnpm db:generate       # マイグレーション生成
 pnpm db:migrate        # マイグレーション適用
-pnpm db:seed           # シードデータ投入
+pnpm --silent db:seed > seed.sql   # シードSQL生成（stdoutに出力）
+cd apps/api && npx wrangler d1 execute cpa-study-db --local --file=../../seed.sql  # ローカルD1へ投入
 
 # ビルド・デプロイ
 pnpm build

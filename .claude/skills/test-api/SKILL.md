@@ -128,7 +128,7 @@ curl -N -X POST http://localhost:8787/api/sessions/{sessionId}/messages/stream \
 // Playwright MCPを使用してブラウザ操作
 
 // 1. ページを開く
-await mcp__playwright__browser_navigate({ url: "http://localhost:5173" })
+await mcp__playwright__browser_navigate({ url: "http://localhost:5174" })
 
 // 2. スナップショットで現在の状態を確認
 await mcp__playwright__browser_snapshot({})
