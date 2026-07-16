@@ -110,6 +110,7 @@ const createMockAIConfig = (): AIConfig => ({
   ocr: { model: "test-model", temperature: 0, maxTokens: 2000 },
   speechCorrection: { model: "test-model", temperature: 0, maxTokens: 500 },
   topicGenerator: { model: "test-model", temperature: 0.5, maxTokens: 3000 },
+  tocImport: { model: "test-model", temperature: 0, maxTokens: 8000 },
   planAssistant: { model: "test-model", temperature: 0.5, maxTokens: 3000 },
   quickChatSuggest: { model: "test-model", temperature: 0, maxTokens: 500 },
 })

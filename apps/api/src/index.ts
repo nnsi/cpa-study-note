@@ -17,6 +17,7 @@ import { createExerciseFeature } from "./features/exercise"
 import { createTopicGeneratorFeature } from "./features/topic-generator"
 import { createStudyPlanFeature } from "./features/study-plan"
 import { createQuickChatFeature } from "./features/quick-chat"
+import { createTocImportFeature } from "./features/toc-import"
 import {
   createRateLimitStore,
   createRateLimiterFactory,
@@ -104,6 +105,7 @@ const createApp = (env: Env) => {
     .use("/api/exercises/analyze", limiter.moderate())
     .use("/api/notes", limiter.moderate())
     .use("/api/topic-generator/*", limiter.moderate())
+    .use("/api/toc-import/*", limiter.moderate())
     // その他は緩め（100 req/min）
     // rateLimitApplied フラグにより、上記で適用済みの場合はスキップされる
     .use("/api/*", limiter.lenient())
@@ -119,6 +121,7 @@ const createApp = (env: Env) => {
     .route("/api/view", createViewFeature(env, db))
     .route("/api/exercises", createExerciseFeature(env, db))
     .route("/api/topic-generator", createTopicGeneratorFeature(env, db))
+    .route("/api/toc-import", createTocImportFeature(env, db))
     .use("/api/quick-chat/*", limiter.moderate())
     .use("/api/study-plans/*/suggest", limiter.moderate())
     .route("/api/quick-chat", createQuickChatFeature(env, db))

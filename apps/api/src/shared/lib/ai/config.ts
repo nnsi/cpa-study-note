@@ -19,6 +19,7 @@ export type AIConfig = {
   ocr: AIModelConfig
   speechCorrection: AIModelConfig
   topicGenerator: AIModelConfig
+  tocImport: AIModelConfig
   planAssistant: AIModelConfig
   quickChatSuggest: AIModelConfig
 }
@@ -54,6 +55,11 @@ const localAIConfig: AIConfig = {
     model: "google/gemini-2.5-flash",
     temperature: 0.5,
     maxTokens: 3000,
+  },
+  tocImport: {
+    model: "google/gemini-2.5-flash",
+    temperature: 0,
+    maxTokens: 8000,
   },
   planAssistant: {
     model: "google/gemini-2.5-flash",
@@ -98,6 +104,11 @@ const productionAIConfig: AIConfig = {
     model: "google/gemini-2.5-flash",
     temperature: 0.5,
     maxTokens: 3000,
+  },
+  tocImport: {
+    model: "google/gemini-2.5-flash",
+    temperature: 0,
+    maxTokens: 8000,
   },
   planAssistant: {
     model: "google/gemini-2.5-flash",

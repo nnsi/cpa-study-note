@@ -7,6 +7,7 @@ import { getSubject } from "@/features/subject/api"
 import { getStudyDomain } from "@/features/study-domain/api"
 import { TreeEditor } from "@/features/subject/components"
 import { TopicGeneratorModal } from "@/features/topic-generator"
+import { TocImportModal } from "@/features/toc-import"
 
 export const Route = createFileRoute("/domains/$domainId/subjects/$subjectId/edit")({
   beforeLoad: requireAuth,
@@ -16,6 +17,7 @@ export const Route = createFileRoute("/domains/$domainId/subjects/$subjectId/edi
 function SubjectEditPage() {
   const { domainId, subjectId } = Route.useParams()
   const [showGenerator, setShowGenerator] = useState(false)
+  const [showTocImport, setShowTocImport] = useState(false)
   const queryClient = useQueryClient()
 
   // Fetch domain info
@@ -71,6 +73,16 @@ function SubjectEditPage() {
                 </svg>
                 AIで論点を追加
               </button>
+              <button
+                type="button"
+                onClick={() => setShowTocImport(true)}
+                className="btn-secondary text-sm"
+              >
+                <svg className="size-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3.75h10.5a2.25 2.25 0 0 1 2.25 2.25v12a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 18V6a2.25 2.25 0 0 1 2.25-2.25Zm1.5 4.5h7.5m-7.5 3.75h7.5m-7.5 3.75h4.5" />
+                </svg>
+                目次から取り込み
+              </button>
               <Link
                 to="/domains/$domainId/subjects/$subjectId"
                 params={{ domainId, subjectId }}
@@ -96,6 +108,16 @@ function SubjectEditPage() {
           onClose={() => setShowGenerator(false)}
           onComplete={() => {
             setShowGenerator(false)
+            queryClient.invalidateQueries({ queryKey: ["subjects", subjectId, "tree"] })
+          }}
+        />
+      )}
+      {showTocImport && (
+        <TocImportModal
+          subjectId={subjectId}
+          onClose={() => setShowTocImport(false)}
+          onComplete={() => {
+            setShowTocImport(false)
             queryClient.invalidateQueries({ queryKey: ["subjects", subjectId, "tree"] })
           }}
         />
