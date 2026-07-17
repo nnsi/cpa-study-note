@@ -536,6 +536,39 @@ describe("StudyPlanRepository", () => {
     })
   })
 
+  describe("deleteItemWithRevision", () => {
+    it("要素削除と変遷記録を原子的に実行する", async () => {
+      await repository.createPlan({
+        id: "plan-1",
+        userId: testData.userId,
+        title: "計画",
+        scope: "all",
+        now: new Date(),
+      })
+      await repository.createItem({
+        id: "item-1",
+        studyPlanId: "plan-1",
+        description: "削除対象",
+        orderIndex: 0,
+        now: new Date(),
+      })
+
+      await repository.deleteItemWithRevision("plan-1", "item-1", {
+        id: "revision-1",
+        summary: "「削除対象」を削除",
+        now: new Date(),
+      })
+
+      // 要素が削除されている
+      expect(await repository.findItemById("plan-1", "item-1")).toBeNull()
+      // 変遷が記録されている
+      const revisions = await repository.findRevisionsByPlan("plan-1")
+      expect(revisions).toHaveLength(1)
+      expect(revisions[0].id).toBe("revision-1")
+      expect(revisions[0].summary).toBe("「削除対象」を削除")
+    })
+  })
+
   describe("reorderItems", () => {
     it("要素を並べ替えできる", async () => {
       await repository.createPlan({

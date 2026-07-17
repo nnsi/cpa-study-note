@@ -515,6 +515,39 @@ describe("LearningRepository", () => {
     })
   })
 
+  describe("markTopicUnderstood", () => {
+    it("進捗が無い場合は理解済みで作成しチェック履歴を残す", async () => {
+      await repository.markTopicUnderstood(userId, topicId)
+
+      const progress = await repository.findProgress(userId, topicId)
+      expect(progress).not.toBeNull()
+      expect(progress?.understood).toBe(true)
+
+      const history = await repository.findCheckHistoryByTopic(userId, topicId)
+      expect(history).toHaveLength(1)
+      expect(history[0].action).toBe("checked")
+    })
+
+    it("既存進捗がある場合は理解済みに更新しチェック履歴を残す", async () => {
+      await repository.upsertProgress(userId, {
+        userId,
+        topicId,
+        incrementQuestionCount: true,
+      })
+
+      await repository.markTopicUnderstood(userId, topicId)
+
+      const progress = await repository.findProgress(userId, topicId)
+      expect(progress?.understood).toBe(true)
+      // 既存レコードのカウントは維持される（新規作成ではない）
+      expect(progress?.questionCount).toBe(1)
+
+      const history = await repository.findCheckHistoryByTopic(userId, topicId)
+      expect(history).toHaveLength(1)
+      expect(history[0].action).toBe("checked")
+    })
+  })
+
   describe("findCheckHistoryByTopic", () => {
     it("should return empty array when no history exists", async () => {
       const result = await repository.findCheckHistoryByTopic(userId, topicId)

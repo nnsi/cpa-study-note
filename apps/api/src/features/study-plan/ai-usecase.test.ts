@@ -50,6 +50,7 @@ const createMockRepo = (overrides: Partial<StudyPlanRepository> = {}): StudyPlan
   createItem: vi.fn(),
   updateItem: vi.fn(),
   deleteItem: vi.fn(),
+  deleteItemWithRevision: vi.fn(),
   reorderItems: vi.fn(),
   findItemById: vi.fn(),
   findRevisionsByPlan: vi.fn().mockResolvedValue([]),

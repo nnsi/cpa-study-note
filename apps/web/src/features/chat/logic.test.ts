@@ -235,6 +235,7 @@ describe("shouldShowEmptyState", () => {
       displayMessagesCount: 0,
       streamingText: "",
       isLoading: true,
+      isSessionsLoading: false,
     })
 
     expect(result).toBe(false)
@@ -247,6 +248,7 @@ describe("shouldShowEmptyState", () => {
       displayMessagesCount: 0,
       streamingText: "",
       isLoading: true,
+      isSessionsLoading: false,
     })
 
     expect(result).toBe(false)
@@ -257,6 +259,7 @@ describe("shouldShowEmptyState", () => {
       displayMessagesCount: 0,
       streamingText: "",
       isLoading: false,
+      isSessionsLoading: false,
     })
 
     expect(result).toBe(true)
@@ -267,6 +270,7 @@ describe("shouldShowEmptyState", () => {
       displayMessagesCount: 3,
       streamingText: "",
       isLoading: false,
+      isSessionsLoading: false,
     })
 
     expect(result).toBe(false)
@@ -277,6 +281,43 @@ describe("shouldShowEmptyState", () => {
       displayMessagesCount: 0,
       streamingText: "応答中のテキスト",
       isLoading: false,
+      isSessionsLoading: false,
+    })
+
+    expect(result).toBe(false)
+  })
+
+  it("セッション一覧読込中はメッセージ読込完了・0件でも空状態を表示しない（use-latest未確定によるフラッシュを防ぐ）", () => {
+    // currentSessionId が null のまま key="new" でマウントされている間、
+    // メッセージクエリは enabled:false で isLoading=false になるため、
+    // isSessionsLoading で空状態表示を抑止する必要がある
+    const result = shouldShowEmptyState({
+      displayMessagesCount: 0,
+      streamingText: "",
+      isLoading: false,
+      isSessionsLoading: true,
+    })
+
+    expect(result).toBe(false)
+  })
+
+  it("セッション一覧・メッセージ双方の読込が完了しメッセージ0件なら空状態を表示する", () => {
+    const result = shouldShowEmptyState({
+      displayMessagesCount: 0,
+      streamingText: "",
+      isLoading: false,
+      isSessionsLoading: false,
+    })
+
+    expect(result).toBe(true)
+  })
+
+  it("セッション一覧読込中でもメッセージが1件以上あれば空状態を表示しない", () => {
+    const result = shouldShowEmptyState({
+      displayMessagesCount: 2,
+      streamingText: "",
+      isLoading: false,
+      isSessionsLoading: true,
     })
 
     expect(result).toBe(false)

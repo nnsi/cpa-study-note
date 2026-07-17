@@ -48,8 +48,7 @@ const createConfirmDeps = (exerciseRepo: ExerciseRepository) => ({
   exerciseRepo,
   learningRepo: {
     verifyTopicExists: vi.fn().mockResolvedValue(true),
-    upsertProgress: vi.fn().mockResolvedValue({}),
-    createCheckHistory: vi.fn().mockResolvedValue({}),
+    markTopicUnderstood: vi.fn().mockResolvedValue(undefined),
   } as unknown as LearningRepository,
   logger: noopLogger,
   tracer: noopTracer,
@@ -109,16 +108,8 @@ describe("Exercise UseCase", () => {
       expect(result.ok).toBe(true)
       if (!result.ok) return
       expect(result.value.topicChecked).toBe(true)
-      expect(deps.learningRepo.upsertProgress).toHaveBeenCalledWith("user-1", {
-        userId: "user-1",
-        topicId: "topic-1",
-        understood: true,
-      })
-      expect(deps.learningRepo.createCheckHistory).toHaveBeenCalledWith("user-1", {
-        userId: "user-1",
-        topicId: "topic-1",
-        action: "checked",
-      })
+      // progress upsert と check history は原子的な複合メソッドで実行される
+      expect(deps.learningRepo.markTopicUnderstood).toHaveBeenCalledWith("user-1", "topic-1")
     })
 
     it("別ユーザーの論点への確定を拒否する", async () => {

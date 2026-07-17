@@ -77,6 +77,7 @@ const createMockRepo = (overrides: Partial<StudyPlanRepository> = {}): StudyPlan
   createItem: vi.fn().mockResolvedValue(createMockItem()),
   updateItem: vi.fn().mockResolvedValue(null),
   deleteItem: vi.fn().mockResolvedValue(false),
+  deleteItemWithRevision: vi.fn().mockResolvedValue(undefined),
   reorderItems: vi.fn().mockResolvedValue(undefined),
   findItemById: vi.fn().mockResolvedValue(null),
   findRevisionsByPlan: vi.fn().mockResolvedValue([]),
@@ -471,17 +472,17 @@ describe("StudyPlan UseCase", () => {
       const repo = createMockRepo({
         isPlanOwnedByUser: vi.fn().mockResolvedValue(true),
         findItemById: vi.fn().mockResolvedValue(item),
-        deleteItem: vi.fn().mockResolvedValue(true),
-        createRevision: vi.fn().mockResolvedValue(createMockRevision()),
+        deleteItemWithRevision: vi.fn().mockResolvedValue(undefined),
       })
 
       const result = await removeItem({ repo, logger: noopLogger }, "user-1", "plan-1", "item-1")
 
       expect(result.ok).toBe(true)
-      expect(repo.deleteItem).toHaveBeenCalledWith("plan-1", "item-1")
-      expect(repo.createRevision).toHaveBeenCalledWith(
+      // 削除と変遷記録は原子的な複合メソッドで実行される
+      expect(repo.deleteItemWithRevision).toHaveBeenCalledWith(
+        "plan-1",
+        "item-1",
         expect.objectContaining({
-          studyPlanId: "plan-1",
           summary: expect.stringContaining("有価証券の分類と評価"),
         })
       )

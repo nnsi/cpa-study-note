@@ -47,12 +47,19 @@ export const formatMessagesForDisplay = (
 // メッセージ読込中（isLoading）は、履歴があるセッションを開いた直後や
 // 新規セッションの初回送信完了後の再マウント直後に空状態が一瞬フラッシュ
 // 表示されるのを防ぐため、読込完了までは表示しない。
+// セッション一覧読込中（isSessionsLoading）は、「最新セッションを使うか
+// 新規セッションか」がまだ確定していない（currentSessionId が null のまま
+// key="new" でマウントされている）ため、履歴があるユーザーでも空状態が
+// 一瞬フラッシュ表示されるのを防ぐため、読込完了までは表示しない。
 export const shouldShowEmptyState = ({
   displayMessagesCount,
   streamingText,
   isLoading,
+  isSessionsLoading,
 }: {
   displayMessagesCount: number
   streamingText: string
   isLoading: boolean
-}): boolean => displayMessagesCount === 0 && !streamingText && !isLoading
+  isSessionsLoading: boolean
+}): boolean =>
+  displayMessagesCount === 0 && !streamingText && !isLoading && !isSessionsLoading

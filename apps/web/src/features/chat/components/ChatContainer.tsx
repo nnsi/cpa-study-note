@@ -11,9 +11,18 @@ type Props = {
   topicId: string
   onSessionCreated?: (sessionId: string) => void
   initialMessage?: string
+  // セッション一覧取得中かどうか。セッション概念を持たない呼び出し元では
+  // 省略可（false 扱い）。
+  isSessionsLoading?: boolean
 }
 
-export const ChatContainer = ({ sessionId, topicId, onSessionCreated, initialMessage }: Props) => {
+export const ChatContainer = ({
+  sessionId,
+  topicId,
+  onSessionCreated,
+  initialMessage,
+  isSessionsLoading = false,
+}: Props) => {
   const { messages, input } = useChat({ sessionId, topicId, onSessionCreated })
   const hasAutoSentRef = useRef(false)
 
@@ -62,6 +71,7 @@ export const ChatContainer = ({ sessionId, topicId, onSessionCreated, initialMes
           displayMessagesCount: messages.displayMessages.length,
           streamingText: input.streamingText,
           isLoading: messages.isLoading,
+          isSessionsLoading,
         }) && (
           <div className="flex flex-col items-center justify-center h-full py-12 animate-fade-in">
             <div className="size-16 rounded-2xl bg-gradient-to-br from-indigo-100 to-indigo-50 flex items-center justify-center mb-6">

@@ -2,6 +2,7 @@ import { eq, and, isNull, sql, desc, asc } from "drizzle-orm"
 import type { Db } from "@cpa-study/db"
 import { studyPlans, studyPlanItems, studyPlanRevisions, studyDomains, subjects, categories, topics } from "@cpa-study/db/schema"
 import type { StudyPlanScope } from "@cpa-study/db/schema"
+import { runBatch, type BatchStatement } from "@/shared/lib/transaction"
 
 export type StudyPlan = {
   id: string
@@ -49,6 +50,11 @@ export type StudyPlanRepository = {
   createItem: (data: { id: string; studyPlanId: string; topicId?: string; description: string; rationale?: string; orderIndex: number; now: Date }) => Promise<StudyPlanItem>
   updateItem: (planId: string, itemId: string, data: { description?: string; rationale?: string | null; topicId?: string | null; orderIndex?: number }) => Promise<StudyPlanItem | null>
   deleteItem: (planId: string, itemId: string) => Promise<boolean>
+  deleteItemWithRevision: (
+    planId: string,
+    itemId: string,
+    revision: { id: string; summary: string; reason?: string; now: Date }
+  ) => Promise<void>
   reorderItems: (planId: string, itemIds: string[]) => Promise<void>
   findItemById: (planId: string, itemId: string) => Promise<StudyPlanItem | null>
   findRevisionsByPlan: (planId: string) => Promise<StudyPlanRevision[]>
@@ -193,31 +199,37 @@ export const createStudyPlanRepository = (db: Db): StudyPlanRepository => ({
     if (source.length === 0) return null
 
     const now = new Date()
-    await db.insert(studyPlans).values({
-      id: newPlanId,
-      userId,
-      title: `${source[0].title}（複製）`,
-      intent: source[0].intent,
-      scope: source[0].scope as StudyPlanScope,
-      subjectId: source[0].subjectId,
-      createdAt: now,
-      updatedAt: now,
-      archivedAt: null,
-    })
 
-    // Duplicate items
+    // Duplicate items（IDはアプリ側生成のため、全INSERTを事前に組み立てられる）
     const sourceItems = await db.select().from(studyPlanItems).where(eq(studyPlanItems.studyPlanId, sourcePlanId)).orderBy(asc(studyPlanItems.orderIndex))
-    for (const item of sourceItems) {
-      await db.insert(studyPlanItems).values({
-        id: crypto.randomUUID(),
-        studyPlanId: newPlanId,
-        topicId: item.topicId,
-        description: item.description,
-        rationale: item.rationale,
-        orderIndex: item.orderIndex,
+
+    // plan INSERT と items INSERT を db.batch() で原子的に実行する。
+    // 途中失敗で要素が欠落した複製が残らないようにする。
+    const statements: BatchStatement[] = [
+      db.insert(studyPlans).values({
+        id: newPlanId,
+        userId,
+        title: `${source[0].title}（複製）`,
+        intent: source[0].intent,
+        scope: source[0].scope as StudyPlanScope,
+        subjectId: source[0].subjectId,
         createdAt: now,
-      })
-    }
+        updatedAt: now,
+        archivedAt: null,
+      }),
+      ...sourceItems.map((item) =>
+        db.insert(studyPlanItems).values({
+          id: crypto.randomUUID(),
+          studyPlanId: newPlanId,
+          topicId: item.topicId,
+          description: item.description,
+          rationale: item.rationale,
+          orderIndex: item.orderIndex,
+          createdAt: now,
+        })
+      ),
+    ]
+    await runBatch(db, statements)
 
     // Re-fetch with subject name
     const result = await db
@@ -326,6 +338,23 @@ export const createStudyPlanRepository = (db: Db): StudyPlanRepository => ({
     if (existing.length === 0) return false
     await db.delete(studyPlanItems).where(itemCondition)
     return true
+  },
+
+  // 要素削除と変遷記録を db.batch() で原子的に実行する。
+  // deleteItem 成功後に createRevision が失敗して変遷が永久欠落する問題を防ぐ。
+  // 存在チェックは呼び出し側（UseCase）が findItemById で済ませている前提。
+  deleteItemWithRevision: async (planId, itemId, revision) => {
+    const itemCondition = and(eq(studyPlanItems.id, itemId), eq(studyPlanItems.studyPlanId, planId))
+    await runBatch(db, [
+      db.delete(studyPlanItems).where(itemCondition),
+      db.insert(studyPlanRevisions).values({
+        id: revision.id,
+        studyPlanId: planId,
+        summary: revision.summary,
+        reason: revision.reason ?? null,
+        createdAt: revision.now,
+      }),
+    ])
   },
 
   reorderItems: async (planId, itemIds) => {
