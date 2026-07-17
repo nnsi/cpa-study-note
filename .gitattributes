@@ -1,0 +1,12 @@
+# 改行コードをLFに統一（CRLF/LF混在防止）
+* text=auto eol=lf
+
+# バイナリは変換しない
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
