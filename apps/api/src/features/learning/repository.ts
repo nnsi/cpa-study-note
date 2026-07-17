@@ -141,7 +141,22 @@ export const createLearningRepository = (db: Db): LearningRepository => ({
   },
 
   findProgressByUser: async (userId) => {
-    return db.select().from(userTopicProgress).where(eq(userTopicProgress.userId, userId))
+    const result = await db
+      .select({
+        id: userTopicProgress.id,
+        userId: userTopicProgress.userId,
+        topicId: userTopicProgress.topicId,
+        understood: userTopicProgress.understood,
+        lastAccessedAt: userTopicProgress.lastAccessedAt,
+        questionCount: userTopicProgress.questionCount,
+        goodQuestionCount: userTopicProgress.goodQuestionCount,
+        createdAt: userTopicProgress.createdAt,
+        updatedAt: userTopicProgress.updatedAt,
+      })
+      .from(userTopicProgress)
+      .innerJoin(topics, eq(userTopicProgress.topicId, topics.id))
+      .where(and(eq(userTopicProgress.userId, userId), isNull(topics.deletedAt)))
+    return result
   },
 
   findRecentTopics: async (userId, limit) => {

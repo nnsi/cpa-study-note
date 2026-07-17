@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { renderHook, act, waitFor } from "@testing-library/react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { createElement, type ReactNode } from "react"
-import { useSendMessage, useChatInput } from "./hooks"
+import { useSendMessage, useChatInput, useChatMessages } from "./hooks"
 
 // APIモジュールをモック
 vi.mock("./api", () => ({
@@ -377,6 +377,105 @@ describe("useChatInput", () => {
     await act(async () => {
       resolvePromise!()
       await firstSend!
+    })
+  })
+})
+
+describe("useChatMessages", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it("メッセージ取得中はisLoadingがtrueになり、完了するとfalseになる（履歴のある論点を開いた直後）", async () => {
+    let resolveMessages: (value: { messages: unknown[] }) => void
+    const promise = new Promise<{ messages: unknown[] }>((resolve) => {
+      resolveMessages = resolve
+    })
+    vi.mocked(api.getMessages).mockReturnValue(
+      promise as ReturnType<typeof api.getMessages>
+    )
+
+    const { result } = renderHook(() => useChatMessages("session-1"), {
+      wrapper: createWrapper(),
+    })
+
+    // 初期状態：読込中（この間、呼び出し側は空状態を表示すべきではない）
+    expect(result.current.isLoading).toBe(true)
+    expect(result.current.displayMessages).toEqual([])
+
+    await act(async () => {
+      resolveMessages({
+        messages: [
+          {
+            id: "1",
+            sessionId: "session-1",
+            role: "user",
+            content: "hi",
+            imageId: null,
+            ocrResult: null,
+            questionQuality: null,
+            createdAt: "2024-01-15T10:30:00.000Z",
+          },
+        ],
+      })
+      await promise
+    })
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false)
+    })
+    expect(result.current.displayMessages).toHaveLength(1)
+  })
+
+  it("セッションIDがnull（新規チャット）の場合はクエリが無効化され、isLoadingはfalseのまま", () => {
+    const { result } = renderHook(() => useChatMessages(null), {
+      wrapper: createWrapper(),
+    })
+
+    expect(result.current.isLoading).toBe(false)
+    expect(result.current.displayMessages).toEqual([])
+    expect(api.getMessages).not.toHaveBeenCalled()
+  })
+
+  it("新規セッション作成後、key変更による再マウント直後は新しいセッションIDの取得がisLoading=trueで始まる", async () => {
+    // ChatContainer は key={currentSessionId ?? "new"} を使うため、
+    // 新規セッションID判明時にコンポーネントが再マウントされる。
+    // 同一のQueryClientを使い、その再マウント挙動を模倣する。
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(QueryClientProvider, { client: queryClient }, children)
+
+    // 新規セッション（sessionId=null）でマウント：クエリは無効
+    const { unmount } = renderHook(() => useChatMessages(null), { wrapper })
+    unmount()
+
+    // メッセージ送信完了により実セッションIDが判明し、再マウントされる
+    let resolveMessages: (value: { messages: unknown[] }) => void
+    const promise = new Promise<{ messages: unknown[] }>((resolve) => {
+      resolveMessages = resolve
+    })
+    vi.mocked(api.getMessages).mockReturnValue(
+      promise as ReturnType<typeof api.getMessages>
+    )
+
+    const { result } = renderHook(() => useChatMessages("new-session-id"), {
+      wrapper,
+    })
+
+    // 再マウント直後は当該セッションのキャッシュがまだ無いためisLoading=true
+    // （このタイミングで空状態を表示すると一瞬フラッシュしてしまう）
+    expect(result.current.isLoading).toBe(true)
+    expect(result.current.displayMessages).toEqual([])
+
+    await act(async () => {
+      resolveMessages({ messages: [] })
+      await promise
+    })
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false)
     })
   })
 })

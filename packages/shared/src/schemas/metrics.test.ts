@@ -25,6 +25,20 @@ describe("dateStringSchema", () => {
   it("空文字でエラー", () => {
     expect(dateStringSchema.safeParse("").success).toBe(false)
   })
+
+  it("実在しない日付でエラー", () => {
+    // 形式は正しいが暦上存在しない日付
+    expect(dateStringSchema.safeParse("2026-13-01").success).toBe(false) // 13月
+    expect(dateStringSchema.safeParse("2026-00-10").success).toBe(false) // 0月
+    expect(dateStringSchema.safeParse("2026-02-30").success).toBe(false) // 2月30日
+    expect(dateStringSchema.safeParse("2026-04-31").success).toBe(false) // 4月31日
+    expect(dateStringSchema.safeParse("2026-01-32").success).toBe(false) // 32日
+  })
+
+  it("うるう年の2月29日は年によって判定が変わる", () => {
+    expect(dateStringSchema.safeParse("2024-02-29").success).toBe(true) // うるう年
+    expect(dateStringSchema.safeParse("2026-02-29").success).toBe(false) // 平年
+  })
 })
 
 describe("todayMetricsSchema", () => {
@@ -137,6 +151,35 @@ describe("getDailyMetricsRequestSchema", () => {
   it("必須フィールド欠落でエラー", () => {
     const result = getDailyMetricsRequestSchema.safeParse({ from: "2025-01-01" })
     expect(result.success).toBe(false)
+  })
+
+  it("最大366日（両端含む）の範囲は許可される", () => {
+    // 2024-01-01 〜 2024-12-31 は両端含めて366日（うるう年）
+    const result = getDailyMetricsRequestSchema.safeParse({
+      from: "2024-01-01",
+      to: "2024-12-31",
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it("366日を超える範囲はエラー", () => {
+    const result = getDailyMetricsRequestSchema.safeParse({
+      from: "2024-01-01",
+      to: "2025-01-01", // 367日
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues[0].message).toContain("日付範囲が広すぎます")
+    }
+  })
+
+  it("from > to の場合は範囲チェックを通過する（順序チェックは呼び出し側の責務）", () => {
+    // refineは範囲上限のみ検証し、from>toはスキーマでは弾かない
+    const result = getDailyMetricsRequestSchema.safeParse({
+      from: "2025-12-31",
+      to: "2025-01-01",
+    })
+    expect(result.success).toBe(true)
   })
 })
 

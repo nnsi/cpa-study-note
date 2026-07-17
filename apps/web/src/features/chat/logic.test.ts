@@ -3,6 +3,7 @@ import {
   filterMessagesByRole,
   countQuestionQuality,
   formatMessagesForDisplay,
+  shouldShowEmptyState,
   type ChatMessage,
 } from "./logic"
 
@@ -225,5 +226,59 @@ describe("formatMessagesForDisplay", () => {
       imageId: "img-1",
       ocrResult: "OCR text",
     })
+  })
+})
+
+describe("shouldShowEmptyState", () => {
+  it("メッセージ読込中は空状態を表示しない（履歴のある論点を開いた直後の一瞬フラッシュを防ぐ）", () => {
+    const result = shouldShowEmptyState({
+      displayMessagesCount: 0,
+      streamingText: "",
+      isLoading: true,
+    })
+
+    expect(result).toBe(false)
+  })
+
+  it("再マウント直後で読込中かつメッセージ0件でも空状態を表示しない（新規セッション初回送信完了後）", () => {
+    // key変更による再マウント直後は displayMessagesCount が 0 に戻り、
+    // 新しいセッションIDに対するメッセージ取得が isLoading=true で開始する
+    const result = shouldShowEmptyState({
+      displayMessagesCount: 0,
+      streamingText: "",
+      isLoading: true,
+    })
+
+    expect(result).toBe(false)
+  })
+
+  it("読込完了後にメッセージが0件なら空状態を表示する", () => {
+    const result = shouldShowEmptyState({
+      displayMessagesCount: 0,
+      streamingText: "",
+      isLoading: false,
+    })
+
+    expect(result).toBe(true)
+  })
+
+  it("読込完了後にメッセージが1件以上あれば空状態を表示しない", () => {
+    const result = shouldShowEmptyState({
+      displayMessagesCount: 3,
+      streamingText: "",
+      isLoading: false,
+    })
+
+    expect(result).toBe(false)
+  })
+
+  it("ストリーミング中は読込完了・メッセージ0件でも空状態を表示しない", () => {
+    const result = shouldShowEmptyState({
+      displayMessagesCount: 0,
+      streamingText: "応答中のテキスト",
+      isLoading: false,
+    })
+
+    expect(result).toBe(false)
   })
 })

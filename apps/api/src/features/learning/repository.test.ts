@@ -272,6 +272,27 @@ describe("LearningRepository", () => {
       expect(result).toHaveLength(1)
       expect(result[0].userId).toBe(userId)
     })
+
+    it("should exclude progress for soft-deleted topics", async () => {
+      const now = new Date()
+
+      // Create a deleted topic
+      db.insert(schema.topics)
+        .values({ id: "deleted-topic", userId, categoryId, name: "Deleted Topic", displayOrder: 1, createdAt: now, updatedAt: now, deletedAt: now })
+        .run()
+
+      db.insert(schema.userTopicProgress)
+        .values([
+          { id: "progress-1", userId, topicId, understood: true, questionCount: 0, goodQuestionCount: 0, createdAt: now, updatedAt: now },
+          { id: "progress-2", userId, topicId: "deleted-topic", understood: false, questionCount: 0, goodQuestionCount: 0, createdAt: now, updatedAt: now },
+        ])
+        .run()
+
+      const result = await repository.findProgressByUser(userId)
+
+      expect(result).toHaveLength(1)
+      expect(result[0].topicId).toBe(topicId)
+    })
   })
 
   describe("findRecentTopics", () => {

@@ -83,7 +83,7 @@ export const createStudyPlanRepository = (db: Db): StudyPlanRepository => ({
         archivedAt: studyPlans.archivedAt,
       })
       .from(studyPlans)
-      .leftJoin(subjects, eq(studyPlans.subjectId, subjects.id))
+      .leftJoin(subjects, and(eq(studyPlans.subjectId, subjects.id), isNull(subjects.deletedAt)))
       .where(and(...conditions))
       .orderBy(desc(studyPlans.updatedAt))
 
@@ -114,7 +114,7 @@ export const createStudyPlanRepository = (db: Db): StudyPlanRepository => ({
         archivedAt: studyPlans.archivedAt,
       })
       .from(studyPlans)
-      .leftJoin(subjects, eq(studyPlans.subjectId, subjects.id))
+      .leftJoin(subjects, and(eq(studyPlans.subjectId, subjects.id), isNull(subjects.deletedAt)))
       .where(eq(studyPlans.id, planId))
       .limit(1)
     const row = result[0]
@@ -142,7 +142,7 @@ export const createStudyPlanRepository = (db: Db): StudyPlanRepository => ({
         archivedAt: studyPlans.archivedAt,
       })
       .from(studyPlans)
-      .leftJoin(subjects, eq(studyPlans.subjectId, subjects.id))
+      .leftJoin(subjects, and(eq(studyPlans.subjectId, subjects.id), isNull(subjects.deletedAt)))
       .where(eq(studyPlans.id, id))
       .limit(1)
     return { ...result[0], subjectName: result[0].subjectName ?? null }
@@ -167,7 +167,7 @@ export const createStudyPlanRepository = (db: Db): StudyPlanRepository => ({
         archivedAt: studyPlans.archivedAt,
       })
       .from(studyPlans)
-      .leftJoin(subjects, eq(studyPlans.subjectId, subjects.id))
+      .leftJoin(subjects, and(eq(studyPlans.subjectId, subjects.id), isNull(subjects.deletedAt)))
       .where(eq(studyPlans.id, planId))
       .limit(1)
     const row = result[0]
@@ -228,7 +228,7 @@ export const createStudyPlanRepository = (db: Db): StudyPlanRepository => ({
         archivedAt: studyPlans.archivedAt,
       })
       .from(studyPlans)
-      .leftJoin(subjects, eq(studyPlans.subjectId, subjects.id))
+      .leftJoin(subjects, and(eq(studyPlans.subjectId, subjects.id), isNull(subjects.deletedAt)))
       .where(eq(studyPlans.id, newPlanId))
       .limit(1)
     const row = result[0]
@@ -248,7 +248,7 @@ export const createStudyPlanRepository = (db: Db): StudyPlanRepository => ({
         createdAt: studyPlanItems.createdAt,
       })
       .from(studyPlanItems)
-      .leftJoin(topics, eq(studyPlanItems.topicId, topics.id))
+      .leftJoin(topics, and(eq(studyPlanItems.topicId, topics.id), isNull(topics.deletedAt)))
       .where(eq(studyPlanItems.studyPlanId, planId))
       .orderBy(asc(studyPlanItems.orderIndex))
     return items.map((item) => ({
@@ -280,7 +280,7 @@ export const createStudyPlanRepository = (db: Db): StudyPlanRepository => ({
         createdAt: studyPlanItems.createdAt,
       })
       .from(studyPlanItems)
-      .leftJoin(topics, eq(studyPlanItems.topicId, topics.id))
+      .leftJoin(topics, and(eq(studyPlanItems.topicId, topics.id), isNull(topics.deletedAt)))
       .where(eq(studyPlanItems.id, id))
       .limit(1)
     return { ...items[0], topicName: items[0].topicName ?? null }
@@ -313,7 +313,7 @@ export const createStudyPlanRepository = (db: Db): StudyPlanRepository => ({
         createdAt: studyPlanItems.createdAt,
       })
       .from(studyPlanItems)
-      .leftJoin(topics, eq(studyPlanItems.topicId, topics.id))
+      .leftJoin(topics, and(eq(studyPlanItems.topicId, topics.id), isNull(topics.deletedAt)))
       .where(itemCondition)
       .limit(1)
     const row = items[0]
@@ -350,7 +350,7 @@ export const createStudyPlanRepository = (db: Db): StudyPlanRepository => ({
         createdAt: studyPlanItems.createdAt,
       })
       .from(studyPlanItems)
-      .leftJoin(topics, eq(studyPlanItems.topicId, topics.id))
+      .leftJoin(topics, and(eq(studyPlanItems.topicId, topics.id), isNull(topics.deletedAt)))
       .where(and(eq(studyPlanItems.id, itemId), eq(studyPlanItems.studyPlanId, planId)))
       .limit(1)
     const row = items[0]

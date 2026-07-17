@@ -1,5 +1,7 @@
 /// <reference types="@cloudflare/workers-types" />
 import { describe, it, expect, beforeEach } from "vitest"
+import { eq } from "drizzle-orm"
+import * as schema from "@cpa-study/db/schema"
 import { createTestDatabase, seedTestData, type TestDatabase } from "../../test/mocks/db"
 import { createChatRepository, type ChatRepository } from "./repository"
 import { createLearningRepository, type LearningRepository } from "../learning/repository"
@@ -467,6 +469,76 @@ describe("Chat UseCase", () => {
       expect(chunks).toEqual([{ type: "error", error: "Image not found" }])
       expect(await chatRepo.findMessagesBySession(session.id)).toEqual([])
     })
+
+    it("should stop on error chunk without saving assistant message or incrementing progress", async () => {
+      // アダプタがthrowせず errorチャンクをyieldするケース（vercel-aiアダプタの挙動）
+      const errorChunkAdapter = createMockAIAdapter({
+        streamChunks: ["partial ", "text"],
+        emitErrorChunk: true,
+        errorMessage: "upstream failure",
+      })
+
+      const session = await chatRepo.createSession({
+        userId: testData.userId,
+        topicId: testData.topicId,
+      })
+
+      const chunks: StreamChunk[] = []
+      for await (const chunk of sendMessage(
+        { chatRepo, learningRepo, aiAdapter: errorChunkAdapter, aiConfig: defaultAIConfig, logger: noopLogger, tracer: noopTracer },
+        {
+          sessionId: session.id,
+          userId: testData.userId,
+          content: "Question",
+        }
+      )) {
+        chunks.push(chunk)
+      }
+
+      // errorチャンクがyieldされ、doneは流れない
+      const errorChunk = chunks.find((c) => c.type === "error")
+      expect(errorChunk).toBeDefined()
+      expect(errorChunk?.error).toBe("upstream failure")
+      expect(chunks.find((c) => c.type === "done")).toBeUndefined()
+
+      // 途中テキストはassistantメッセージとして保存されない（userメッセージのみ）
+      const messages = await chatRepo.findMessagesBySession(session.id)
+      expect(messages).toHaveLength(1)
+      expect(messages[0].role).toBe("user")
+
+      // 進捗（questionCount）も加算されない
+      const progress = await learningRepo.findProgress(testData.userId, testData.topicId)
+      expect(progress).toBeNull()
+    })
+
+    it("should reject and not persist an orphan user message for a deleted topic", async () => {
+      const session = await chatRepo.createSession({
+        userId: testData.userId,
+        topicId: testData.topicId,
+      })
+
+      // 論点を論理削除する
+      db.update(schema.topics)
+        .set({ deletedAt: new Date() })
+        .where(eq(schema.topics.id, testData.topicId))
+        .run()
+
+      const chunks: StreamChunk[] = []
+      for await (const chunk of sendMessage(
+        { chatRepo, learningRepo, aiAdapter, aiConfig: defaultAIConfig, logger: noopLogger, tracer: noopTracer },
+        {
+          sessionId: session.id,
+          userId: testData.userId,
+          content: "Question on deleted topic",
+        }
+      )) {
+        chunks.push(chunk)
+      }
+
+      expect(chunks).toEqual([{ type: "error", error: "Topic not found" }])
+      // 孤立したユーザーメッセージが残っていないこと
+      expect(await chatRepo.findMessagesBySession(session.id)).toEqual([])
+    })
   })
 
   describe("sendMessageWithNewSession", () => {
@@ -552,6 +624,43 @@ describe("Chat UseCase", () => {
         testData.topicId
       )
       expect(progress?.questionCount).toBe(1)
+    })
+
+    it("should stop on error chunk without saving assistant message or incrementing progress", async () => {
+      const errorChunkAdapter = createMockAIAdapter({
+        streamChunks: ["partial ", "text"],
+        emitErrorChunk: true,
+        errorMessage: "upstream failure",
+      })
+
+      const chunks: (StreamChunk & { sessionId?: string })[] = []
+      for await (const chunk of sendMessageWithNewSession(
+        { chatRepo, learningRepo, aiAdapter: errorChunkAdapter, aiConfig: defaultAIConfig, logger: noopLogger, tracer: noopTracer },
+        {
+          topicId: testData.topicId,
+          userId: testData.userId,
+          content: "Question",
+        }
+      )) {
+        chunks.push(chunk)
+      }
+
+      const sessionId = chunks.find((c) => c.type === "session_created")?.sessionId
+      expect(sessionId).toBeDefined()
+
+      const errorChunk = chunks.find((c) => c.type === "error")
+      expect(errorChunk).toBeDefined()
+      expect(errorChunk?.error).toBe("upstream failure")
+      expect(chunks.find((c) => c.type === "done")).toBeUndefined()
+
+      // assistantメッセージは保存されない（userメッセージのみ）
+      const messages = await chatRepo.findMessagesBySession(sessionId!)
+      expect(messages).toHaveLength(1)
+      expect(messages[0].role).toBe("user")
+
+      // 進捗も加算されない
+      const progress = await learningRepo.findProgress(testData.userId, testData.topicId)
+      expect(progress).toBeNull()
     })
   })
 

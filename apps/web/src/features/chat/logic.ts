@@ -42,3 +42,17 @@ export const formatMessagesForDisplay = (
     }),
     isUser: m.role === "user",
   }))
+
+// チャットの「空の状態」UIを表示すべきか判定する。
+// メッセージ読込中（isLoading）は、履歴があるセッションを開いた直後や
+// 新規セッションの初回送信完了後の再マウント直後に空状態が一瞬フラッシュ
+// 表示されるのを防ぐため、読込完了までは表示しない。
+export const shouldShowEmptyState = ({
+  displayMessagesCount,
+  streamingText,
+  isLoading,
+}: {
+  displayMessagesCount: number
+  streamingText: string
+  isLoading: boolean
+}): boolean => displayMessagesCount === 0 && !streamingText && !isLoading

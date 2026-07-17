@@ -3,7 +3,9 @@ import { z } from "zod"
 export const difficultySchema = z.enum(["basic", "intermediate", "advanced"])
 export type Difficulty = z.infer<typeof difficultySchema>
 
-export const topicTypeSchema = z.enum(["theory", "calculation", "mixed"])
+// 論点種別。編集UIでは「計算」「理論」「事例」等の自由記述（日本語）を保存するため、
+// enumではなく自由文字列として扱う。最大長は tree.ts の topicType と揃える（50文字）。
+export const topicTypeSchema = z.string().max(50, "論点種別は50文字以内で入力してください")
 export type TopicType = z.infer<typeof topicTypeSchema>
 
 export const subjectSchema = z.object({

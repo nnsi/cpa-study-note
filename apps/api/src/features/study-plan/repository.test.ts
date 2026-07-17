@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach } from "vitest"
+import { eq } from "drizzle-orm"
 import { createTestDatabase, seedTestData, type TestDatabase } from "../../test/mocks/db"
 import { createStudyPlanRepository, type StudyPlanRepository } from "./repository"
+import * as schema from "@cpa-study/db/schema"
 
 describe("StudyPlanRepository", () => {
   let repository: StudyPlanRepository
@@ -74,6 +76,28 @@ describe("StudyPlanRepository", () => {
       const found = await repository.findPlanById("non-existent")
 
       expect(found).toBeNull()
+    })
+
+    it("科目が論理削除されていても計画は残りsubjectNameはnullになる", async () => {
+      await repository.createPlan({
+        id: "plan-1",
+        userId: testData.userId,
+        title: "テスト計画",
+        scope: "subject",
+        subjectId: testData.subjectId,
+        now: new Date(),
+      })
+
+      db.update(schema.subjects)
+        .set({ deletedAt: new Date() })
+        .where(eq(schema.subjects.id, testData.subjectId))
+        .run()
+
+      const found = await repository.findPlanById("plan-1")
+
+      expect(found).not.toBeNull()
+      expect(found?.id).toBe("plan-1")
+      expect(found?.subjectName).toBeNull()
     })
   })
 
@@ -160,6 +184,27 @@ describe("StudyPlanRepository", () => {
       const plans = await repository.findPlansByUser("user-with-no-plans")
 
       expect(plans).toHaveLength(0)
+    })
+
+    it("科目が論理削除されていても計画は残りsubjectNameはnullになる", async () => {
+      await repository.createPlan({
+        id: "plan-1",
+        userId: testData.userId,
+        title: "計画1",
+        scope: "subject",
+        subjectId: testData.subjectId,
+        now: new Date(),
+      })
+
+      db.update(schema.subjects)
+        .set({ deletedAt: new Date() })
+        .where(eq(schema.subjects.id, testData.subjectId))
+        .run()
+
+      const plans = await repository.findPlansByUser(testData.userId)
+
+      expect(plans).toHaveLength(1)
+      expect(plans[0].subjectName).toBeNull()
     })
   })
 
@@ -370,6 +415,37 @@ describe("StudyPlanRepository", () => {
       const found = await repository.findItemById("plan-1", "non-existent")
 
       expect(found).toBeNull()
+    })
+
+    it("論点が論理削除されていても要素は残りtopicNameはnullになる", async () => {
+      await repository.createPlan({
+        id: "plan-1",
+        userId: testData.userId,
+        title: "計画",
+        scope: "all",
+        now: new Date(),
+      })
+      await repository.createItem({
+        id: "item-1",
+        studyPlanId: "plan-1",
+        topicId: testData.topicId,
+        description: "有価証券の学習",
+        orderIndex: 0,
+        now: new Date(),
+      })
+
+      db.update(schema.topics)
+        .set({ deletedAt: new Date() })
+        .where(eq(schema.topics.id, testData.topicId))
+        .run()
+
+      const foundItem = await repository.findItemById("plan-1", "item-1")
+      const items = await repository.findItemsByPlan("plan-1")
+
+      expect(foundItem).not.toBeNull()
+      expect(foundItem?.topicName).toBeNull()
+      expect(items).toHaveLength(1)
+      expect(items[0].topicName).toBeNull()
     })
   })
 

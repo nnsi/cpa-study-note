@@ -1,6 +1,7 @@
 import { useRef, useEffect, useCallback, useState } from "react"
 import { Link } from "@tanstack/react-router"
 import { useChat, useSpeechRecognition } from "../hooks"
+import { shouldShowEmptyState } from "../logic"
 import { ChatMessageView } from "./ChatMessage"
 import { ChatInputView } from "./ChatInput"
 import { useCreateNote, useNoteBySession } from "@/features/note"
@@ -56,8 +57,12 @@ export const ChatContainer = ({ sessionId, topicId, onSessionCreated, initialMes
     <div className="flex flex-col flex-1 min-h-0 min-w-0">
       {/* メッセージエリア */}
       <div className="flex-1 min-h-0 overflow-y-auto p-4 lg:p-6 space-y-4">
-        {/* 空の状態 */}
-        {messages.displayMessages.length === 0 && !input.streamingText && (
+        {/* 空の状態（メッセージ読込中は表示しない。読込中に一瞬フラッシュするのを防ぐ） */}
+        {shouldShowEmptyState({
+          displayMessagesCount: messages.displayMessages.length,
+          streamingText: input.streamingText,
+          isLoading: messages.isLoading,
+        }) && (
           <div className="flex flex-col items-center justify-center h-full py-12 animate-fade-in">
             <div className="size-16 rounded-2xl bg-gradient-to-br from-indigo-100 to-indigo-50 flex items-center justify-center mb-6">
               <svg className="size-8 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>

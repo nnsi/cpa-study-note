@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest"
+import { eq } from "drizzle-orm"
 import { createTestDatabase, seedTestData } from "../../test/mocks/db"
 import { createNoteRepository, type NoteRepository } from "./repository"
 import { createChatRepository } from "../chat/repository"
@@ -159,6 +160,69 @@ describe("NoteRepository", () => {
 
       expect(found).toBeNull()
     })
+
+    it("should return null when topic is soft-deleted", async () => {
+      const created = await repository.create({
+        userId: testData.userId,
+        topicId: testData.topicId,
+        sessionId: null,
+        aiSummary: "Topic deleted",
+        userMemo: null,
+        keyPoints: [],
+        stumbledPoints: [],
+      })
+
+      db.update(schema.topics)
+        .set({ deletedAt: new Date() })
+        .where(eq(schema.topics.id, testData.topicId))
+        .run()
+
+      const found = await repository.findByIdWithTopic(created.id)
+
+      expect(found).toBeNull()
+    })
+
+    it("should return null when category is soft-deleted", async () => {
+      const created = await repository.create({
+        userId: testData.userId,
+        topicId: testData.topicId,
+        sessionId: null,
+        aiSummary: "Category deleted",
+        userMemo: null,
+        keyPoints: [],
+        stumbledPoints: [],
+      })
+
+      db.update(schema.categories)
+        .set({ deletedAt: new Date() })
+        .where(eq(schema.categories.id, testData.categoryId))
+        .run()
+
+      const found = await repository.findByIdWithTopic(created.id)
+
+      expect(found).toBeNull()
+    })
+
+    it("should return null when subject is soft-deleted", async () => {
+      const created = await repository.create({
+        userId: testData.userId,
+        topicId: testData.topicId,
+        sessionId: null,
+        aiSummary: "Subject deleted",
+        userMemo: null,
+        keyPoints: [],
+        stumbledPoints: [],
+      })
+
+      db.update(schema.subjects)
+        .set({ deletedAt: new Date() })
+        .where(eq(schema.subjects.id, testData.subjectId))
+        .run()
+
+      const found = await repository.findByIdWithTopic(created.id)
+
+      expect(found).toBeNull()
+    })
   })
 
   describe("findByTopic", () => {
@@ -289,6 +353,48 @@ describe("NoteRepository", () => {
 
     it("should return empty array when user has no notes", async () => {
       const notes = await repository.findByUser("user-with-no-notes")
+
+      expect(notes).toHaveLength(0)
+    })
+
+    it("should exclude notes whose topic is soft-deleted", async () => {
+      await repository.create({
+        userId: testData.userId,
+        topicId: testData.topicId,
+        sessionId: null,
+        aiSummary: "Topic deleted note",
+        userMemo: null,
+        keyPoints: [],
+        stumbledPoints: [],
+      })
+
+      db.update(schema.topics)
+        .set({ deletedAt: new Date() })
+        .where(eq(schema.topics.id, testData.topicId))
+        .run()
+
+      const notes = await repository.findByUser(testData.userId)
+
+      expect(notes).toHaveLength(0)
+    })
+
+    it("should exclude notes whose subject is soft-deleted", async () => {
+      await repository.create({
+        userId: testData.userId,
+        topicId: testData.topicId,
+        sessionId: null,
+        aiSummary: "Subject deleted note",
+        userMemo: null,
+        keyPoints: [],
+        stumbledPoints: [],
+      })
+
+      db.update(schema.subjects)
+        .set({ deletedAt: new Date() })
+        .where(eq(schema.subjects.id, testData.subjectId))
+        .run()
+
+      const notes = await repository.findByUser(testData.userId)
 
       expect(notes).toHaveLength(0)
     })

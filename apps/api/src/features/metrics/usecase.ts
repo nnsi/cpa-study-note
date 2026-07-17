@@ -3,6 +3,10 @@ import type {
   MetricSnapshot as MetricSnapshotResponse,
   DailyMetric as DailyMetricResponse,
 } from "@cpa-study/shared/schemas"
+import {
+  MAX_DAILY_METRICS_RANGE_DAYS,
+  isDailyMetricsRangeWithinLimit,
+} from "@cpa-study/shared/schemas"
 import { ok, err, type Result } from "@/shared/lib/result"
 import { badRequest, type AppError } from "@/shared/lib/errors"
 import type { Logger } from "@/shared/lib/logger"
@@ -48,36 +52,48 @@ export const getDailyMetrics = async (
     return err(badRequest("日付範囲が不正です。'from'は'to'以前の日付を指定してください"))
   }
 
+  // 範囲が広すぎるとaggregateDateRangeが日単位ループで暴走する（DoS）ため上限を設ける
+  if (!isDailyMetricsRangeWithinLimit(from, to)) {
+    return err(
+      badRequest(`日付範囲が広すぎます。最大${MAX_DAILY_METRICS_RANGE_DAYS}日までにしてください`)
+    )
+  }
+
   // オンザフライで集計（タイムゾーン考慮）
   const metrics = await metricsRepo.aggregateDateRange(userId, from, to, timezone)
 
   return ok(metrics.map(toDailyMetricResponse))
 }
 
-// 今日の日付を取得（YYYY-MM-DD形式）
-const getTodayDateString = (): string => {
+// 今日の日付を取得（YYYY-MM-DD形式、ユーザーのタイムゾーン基準）
+// aggregateForDate/aggregateToday と同じタイムゾーン基準で「今日」を決定する
+const getTodayDateString = (timezone: string): string => {
   const now = new Date()
-  const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, "0")
-  const day = String(now.getDate()).padStart(2, "0")
-  return `${year}-${month}-${day}`
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  })
+  return formatter.format(now) // "YYYY-MM-DD"
 }
 
 // スナップショット作成（指定日、デフォルトは当日）
 export const createSnapshot = async (
   deps: MetricsDeps,
   userId: string,
+  timezone: string,
   date?: string
 ): Promise<Result<MetricSnapshotResponse, AppError>> => {
   const { metricsRepo, logger } = deps
-  const targetDate = date ?? getTodayDateString()
+  const targetDate = date ?? getTodayDateString(timezone)
 
   if (!isValidDateFormat(targetDate)) {
     return err(badRequest("日付形式が不正です。YYYY-MM-DD形式で指定してください"))
   }
 
-  // 集計を実行
-  const aggregation = await metricsRepo.aggregateForDate(userId, targetDate)
+  // 集計を実行（タイムゾーン考慮、aggregateDateRange と整合）
+  const aggregation = await metricsRepo.aggregateForDate(userId, targetDate, timezone)
 
   // upsert で保存
   const snapshot = await metricsRepo.upsert(userId, targetDate, aggregation)
