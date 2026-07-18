@@ -305,11 +305,10 @@ describe("Metrics Routes", () => {
     })
 
     it("should aggregate metrics correctly", async () => {
-      // Create some test data
-      // getTodayDateString()はローカル日付を返し、aggregateForDate()はそれをUTC日付境界として解釈する
-      // ローカル日付のUTC正午にデータを作成して、UTC日付範囲内に収まるようにする
-      const today = new Date()
-      const todayNoonUTC = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate(), 12, 0, 0, 0))
+      // createSnapshotはユーザーのタイムゾーン基準の「今日」を対象にし、
+      // aggregateForDateも同じタイムゾーンの日境界で集計する。
+      // 現在時刻(now)は必ずその「今日」の範囲内に入るため、nowにデータを作成する。
+      const now = new Date()
       const sessionId = crypto.randomUUID()
 
       // チェック済み論点（topicCheckHistoryを使用）
@@ -319,7 +318,7 @@ describe("Metrics Routes", () => {
           userId: testData.userId,
           topicId: testData.topicId,
           action: "checked",
-          checkedAt: todayNoonUTC,
+          checkedAt: now,
         })
         .run()
 
@@ -329,8 +328,8 @@ describe("Metrics Routes", () => {
           id: sessionId,
           userId: testData.userId,
           topicId: testData.topicId,
-          createdAt: todayNoonUTC,
-          updatedAt: todayNoonUTC,
+          createdAt: now,
+          updatedAt: now,
         })
         .run()
 
@@ -341,7 +340,7 @@ describe("Metrics Routes", () => {
           role: "user",
           content: "Test question",
           questionQuality: "good",
-          createdAt: todayNoonUTC,
+          createdAt: now,
         })
         .run()
 
@@ -352,7 +351,19 @@ describe("Metrics Routes", () => {
           role: "user",
           content: "Another question",
           questionQuality: "surface",
-          createdAt: todayNoonUTC,
+          createdAt: now,
+        })
+        .run()
+
+      // assistantメッセージにgoodが付いていてもgoodQuestionCountには含めない
+      db.insert(schema.chatMessages)
+        .values({
+          id: crypto.randomUUID(),
+          sessionId,
+          role: "assistant",
+          content: "Assistant reply",
+          questionQuality: "good",
+          createdAt: now,
         })
         .run()
 

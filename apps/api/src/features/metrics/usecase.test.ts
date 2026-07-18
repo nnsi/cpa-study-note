@@ -177,6 +177,46 @@ describe("Metrics UseCase", () => {
       expect(metricsRepo.aggregateDateRange).not.toHaveBeenCalled()
     })
 
+    it("should return error when date range exceeds the limit", async () => {
+      const metricsRepo = createMockRepository()
+      const deps = { metricsRepo, logger: noopLogger }
+
+      // 2024-01-01 〜 2025-12-31 は 366日を超える範囲
+      const result = await getDailyMetrics(
+        deps,
+        "user-1",
+        "2024-01-01",
+        "2025-12-31",
+        "Asia/Tokyo"
+      )
+
+      expect(result.ok).toBe(false)
+      if (result.ok) return
+
+      expect(result.error.code).toBe("BAD_REQUEST")
+      expect(result.error.message).toContain("日付範囲が広すぎます")
+      expect(metricsRepo.aggregateDateRange).not.toHaveBeenCalled()
+    })
+
+    it("should accept a range at the maximum allowed size (366 days)", async () => {
+      const metricsRepo = createMockRepository({
+        aggregateDateRange: vi.fn().mockResolvedValue([]),
+      })
+      const deps = { metricsRepo, logger: noopLogger }
+
+      // 2024-01-01 〜 2024-12-31 は両端含めて366日（うるう年）
+      const result = await getDailyMetrics(
+        deps,
+        "user-1",
+        "2024-01-01",
+        "2024-12-31",
+        "Asia/Tokyo"
+      )
+
+      expect(result.ok).toBe(true)
+      expect(metricsRepo.aggregateDateRange).toHaveBeenCalledOnce()
+    })
+
     it("should accept same date for from and to", async () => {
       const singleDayMetric: DailyMetric[] = [
         {
@@ -218,15 +258,16 @@ describe("Metrics UseCase", () => {
       const metricsRepo = createMockRepository()
       const deps = { metricsRepo, logger: noopLogger }
 
-      const result = await createSnapshot(deps, "user-1")
+      const result = await createSnapshot(deps, "user-1", "Asia/Tokyo")
 
       expect(result.ok).toBe(true)
       if (!result.ok) return
 
-      // Should call aggregateForDate with some date (today)
+      // Should call aggregateForDate with some date (today) and the timezone
       expect(metricsRepo.aggregateForDate).toHaveBeenCalledWith(
         "user-1",
-        expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/)
+        expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+        "Asia/Tokyo"
       )
       expect(metricsRepo.upsert).toHaveBeenCalled()
       expect(result.value.id).toBe("snapshot-1")
@@ -243,14 +284,15 @@ describe("Metrics UseCase", () => {
       })
       const deps = { metricsRepo, logger: noopLogger }
 
-      const result = await createSnapshot(deps, "user-1", "2024-01-10")
+      const result = await createSnapshot(deps, "user-1", "Asia/Tokyo", "2024-01-10")
 
       expect(result.ok).toBe(true)
       if (!result.ok) return
 
       expect(metricsRepo.aggregateForDate).toHaveBeenCalledWith(
         "user-1",
-        "2024-01-10"
+        "2024-01-10",
+        "Asia/Tokyo"
       )
       expect(metricsRepo.upsert).toHaveBeenCalledWith(
         "user-1",
@@ -264,7 +306,7 @@ describe("Metrics UseCase", () => {
       const metricsRepo = createMockRepository()
       const deps = { metricsRepo, logger: noopLogger }
 
-      const result = await createSnapshot(deps, "user-1", "2024/01/15")
+      const result = await createSnapshot(deps, "user-1", "Asia/Tokyo", "2024/01/15")
 
       expect(result.ok).toBe(false)
       if (result.ok) return
@@ -279,7 +321,7 @@ describe("Metrics UseCase", () => {
       const metricsRepo = createMockRepository()
       const deps = { metricsRepo, logger: noopLogger }
 
-      const result = await createSnapshot(deps, "user-1", "2024-1-15")
+      const result = await createSnapshot(deps, "user-1", "Asia/Tokyo", "2024-1-15")
 
       expect(result.ok).toBe(false)
       if (result.ok) return
@@ -292,7 +334,7 @@ describe("Metrics UseCase", () => {
       const metricsRepo = createMockRepository()
       const deps = { metricsRepo, logger: noopLogger }
 
-      const result = await createSnapshot(deps, "user-1", "2024-01-15")
+      const result = await createSnapshot(deps, "user-1", "Asia/Tokyo", "2024-01-15")
 
       expect(result.ok).toBe(true)
       if (!result.ok) return
@@ -312,7 +354,7 @@ describe("Metrics UseCase", () => {
       })
       const deps = { metricsRepo, logger: noopLogger }
 
-      await createSnapshot(deps, "user-1", "2024-01-15")
+      await createSnapshot(deps, "user-1", "Asia/Tokyo", "2024-01-15")
 
       expect(metricsRepo.upsert).toHaveBeenCalledWith(
         "user-1",

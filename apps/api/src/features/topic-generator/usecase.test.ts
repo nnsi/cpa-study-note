@@ -123,6 +123,31 @@ describe("suggestTopics", () => {
     expect(errorChunk?.error).toContain("AI応答中にエラーが発生しました")
   })
 
+  it("errorチャンクを受信した場合はerrorをyieldして中断する（doneを流さない）", async () => {
+    // アダプタがthrowせず errorチャンクをyieldするケース（vercel-aiアダプタの挙動）
+    const deps = createTestDeps({
+      aiAdapter: createMockAIAdapter({
+        streamChunks: ["途中まで"],
+        emitErrorChunk: true,
+        errorMessage: "upstream failure",
+      }),
+    })
+
+    const chunks = await collectStream(
+      suggestTopics(deps, {
+        subjectId: "subject-1",
+        userId: "test-user",
+        prompt: "棚卸資産について",
+      })
+    )
+
+    const errorChunk = chunks.find((c) => c.type === "error")
+    expect(errorChunk).toBeDefined()
+    expect(errorChunk?.error).toBe("upstream failure")
+    // errorチャンク受信後は done を流さず中断する
+    expect(chunks.find((c) => c.type === "done")).toBeUndefined()
+  })
+
   it("テキストチャンクの内容がAIレスポンスと一致する", async () => {
     const streamChunks = ["カテゴリ1: ", "棚卸資産の定義"]
     const deps = createTestDeps({

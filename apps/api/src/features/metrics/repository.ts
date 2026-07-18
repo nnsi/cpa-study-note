@@ -1,4 +1,4 @@
-import { eq, and, gte, lte, count, countDistinct } from "drizzle-orm"
+import { eq, and, gte, lte, lt, count, countDistinct } from "drizzle-orm"
 import type { Db } from "@cpa-study/db"
 import {
   metricSnapshots,
@@ -54,7 +54,8 @@ export type MetricsRepository = {
   ) => Promise<MetricSnapshot>
   aggregateForDate: (
     userId: string,
-    date: string
+    date: string,
+    timezone: string
   ) => Promise<DailyAggregation>
   aggregateToday: (userId: string, timezone: string) => Promise<TodayMetrics>
   aggregateDateRange: (
@@ -117,13 +118,6 @@ const getLocalDayEndUtc = (dateStr: string, timezone: string): Date => {
 const parseDate = (dateStr: string): Date => {
   const [year, month, day] = dateStr.split("-").map(Number)
   return new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0))
-}
-
-// 日付文字列の翌日を取得
-const getNextDay = (dateStr: string): Date => {
-  const date = parseDate(dateStr)
-  date.setUTCDate(date.getUTCDate() + 1)
-  return date
 }
 
 // タイムスタンプからタイムゾーン考慮した日付文字列を取得
@@ -238,12 +232,15 @@ export const createMetricsRepository = (db: Db): MetricsRepository => ({
     }
   },
 
-  aggregateForDate: async (userId, date) => {
-    const dayStart = parseDate(date)
-    const dayEnd = getNextDay(date)
+  aggregateForDate: async (userId, date, timezone) => {
+    // aggregateDateRange と同じくタイムゾーン考慮の日境界を使う（UTC暦日固定にしない）。
+    // dayEnd は「翌日ローカル0時」のUTC時刻。イベント数の集計では lt(dayEnd) を使い、
+    // ちょうど翌日0時のレコードが当日・翌日に二重計上されるのを防ぐ。
+    const dayStart = getLocalDayStartUtc(date, timezone)
+    const dayEnd = getLocalDayEndUtc(date, timezone)
 
     // チェック済み論点数: その日の終わり時点でcheckedになっているトピック数
-    // 全履歴を取得してJSで最新状態を計算
+    // 累積状態のため境界は lte(dayEnd) のまま（aggregateDateRange と同一セマンティクス）
     const allHistory = await db
       .select({
         topicId: topicCheckHistory.topicId,
@@ -269,7 +266,7 @@ export const createMetricsRepository = (db: Db): MetricsRepository => ({
         and(
           eq(chatSessions.userId, userId),
           gte(chatSessions.createdAt, dayStart),
-          lte(chatSessions.createdAt, dayEnd)
+          lt(chatSessions.createdAt, dayEnd)
         )
       )
     const sessionCount = sessionCountResult[0]?.count ?? 0
@@ -284,12 +281,12 @@ export const createMetricsRepository = (db: Db): MetricsRepository => ({
           eq(chatSessions.userId, userId),
           eq(chatMessages.role, "user"),
           gte(chatMessages.createdAt, dayStart),
-          lte(chatMessages.createdAt, dayEnd)
+          lt(chatMessages.createdAt, dayEnd)
         )
       )
     const messageCount = messageCountResult[0]?.count ?? 0
 
-    // その日に評価された good 質問数
+    // その日に評価された good 質問数（ユーザーメッセージのみ）
     const goodQuestionCountResult = await db
       .select({ count: count() })
       .from(chatMessages)
@@ -297,9 +294,10 @@ export const createMetricsRepository = (db: Db): MetricsRepository => ({
       .where(
         and(
           eq(chatSessions.userId, userId),
+          eq(chatMessages.role, "user"),
           eq(chatMessages.questionQuality, "good"),
           gte(chatMessages.createdAt, dayStart),
-          lte(chatMessages.createdAt, dayEnd)
+          lt(chatMessages.createdAt, dayEnd)
         )
       )
     const goodQuestionCount = goodQuestionCountResult[0]?.count ?? 0
@@ -333,7 +331,7 @@ export const createMetricsRepository = (db: Db): MetricsRepository => ({
         and(
           eq(chatSessions.userId, userId),
           gte(chatSessions.createdAt, dayStart),
-          lte(chatSessions.createdAt, dayEnd)
+          lt(chatSessions.createdAt, dayEnd)
         )
       )
     const sessionCount = sessionCountResult[0]?.count ?? 0
@@ -348,7 +346,7 @@ export const createMetricsRepository = (db: Db): MetricsRepository => ({
           eq(chatSessions.userId, userId),
           eq(chatMessages.role, "user"),
           gte(chatMessages.createdAt, dayStart),
-          lte(chatMessages.createdAt, dayEnd)
+          lt(chatMessages.createdAt, dayEnd)
         )
       )
     const messageCount = messageCountResult[0]?.count ?? 0
@@ -362,7 +360,7 @@ export const createMetricsRepository = (db: Db): MetricsRepository => ({
           eq(topicCheckHistory.userId, userId),
           eq(topicCheckHistory.action, "checked"),
           gte(topicCheckHistory.checkedAt, dayStart),
-          lte(topicCheckHistory.checkedAt, dayEnd)
+          lt(topicCheckHistory.checkedAt, dayEnd)
         )
       )
     const checkedTopicCount = checkedCountResult[0]?.count ?? 0

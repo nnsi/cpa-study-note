@@ -1,4 +1,4 @@
-import { eq, and, desc, sql, inArray } from "drizzle-orm"
+import { eq, and, desc, sql, inArray, isNull } from "drizzle-orm"
 import type { Db } from "@cpa-study/db"
 import { traced, type Tracer } from "@/shared/lib/tracer"
 import {
@@ -268,7 +268,14 @@ export const createChatRepository = (db: Db): ChatRepository => ({
       .innerJoin(categories, eq(topics.categoryId, categories.id))
       .innerJoin(subjects, eq(categories.subjectId, subjects.id))
       .innerJoin(studyDomains, eq(subjects.studyDomainId, studyDomains.id))
-      .where(eq(topics.id, topicId))
+      .where(
+        and(
+          eq(topics.id, topicId),
+          isNull(topics.deletedAt),
+          isNull(categories.deletedAt),
+          isNull(subjects.deletedAt)
+        )
+      )
       .limit(1)
 
     const row = result[0]

@@ -223,17 +223,13 @@ export const removeItem = async (
   const ownershipCheck = await checkOwnership(deps, planId, userId)
   if (!ownershipCheck.ok) return ownershipCheck
 
-  // 削除前にアイテム情報を取得（変遷の summary 用）
+  // 削除前にアイテム情報を取得（変遷の summary 用、兼 存在チェック）
   const item = await deps.repo.findItemById(planId, itemId)
   if (!item) return err(notFound("計画要素が見つかりません"))
 
-  const success = await deps.repo.deleteItem(planId, itemId)
-  if (!success) return err(notFound("計画要素が見つかりません"))
-
-  // 変遷を自動記録
-  await deps.repo.createRevision({
+  // 要素削除と変遷記録を原子的に実行（途中失敗で変遷が永久欠落するのを防ぐ）
+  await deps.repo.deleteItemWithRevision(planId, itemId, {
     id: crypto.randomUUID(),
-    studyPlanId: planId,
     summary: `「${item.description}」を削除`,
     now: new Date(),
   })

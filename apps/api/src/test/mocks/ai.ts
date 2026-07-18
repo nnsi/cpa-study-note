@@ -9,6 +9,9 @@ export type MockAIOptions = {
   streamChunks?: string[]
   shouldError?: boolean
   errorMessage?: string
+  // trueの場合、streamTextはthrowせず errorチャンクをyieldする
+  // （vercel-aiアダプタが内部でcatchしてerrorチャンクを流すケースを再現）
+  emitErrorChunk?: boolean
 }
 
 export const createMockAIAdapter = (options: MockAIOptions = {}): AIAdapter => {
@@ -17,6 +20,7 @@ export const createMockAIAdapter = (options: MockAIOptions = {}): AIAdapter => {
     streamChunks = ["Mock ", "streaming ", "response"],
     shouldError = false,
     errorMessage = "Mock AI error",
+    emitErrorChunk = false,
   } = options
 
   return {
@@ -31,8 +35,13 @@ export const createMockAIAdapter = (options: MockAIOptions = {}): AIAdapter => {
       if (shouldError) {
         throw new Error(errorMessage)
       }
+      // 途中まではテキストを流し、その後 errorチャンクで中断する
       for (const chunk of streamChunks) {
         yield { type: "text", content: chunk }
+      }
+      if (emitErrorChunk) {
+        yield { type: "error", error: errorMessage }
+        return
       }
       yield { type: "done" }
     },

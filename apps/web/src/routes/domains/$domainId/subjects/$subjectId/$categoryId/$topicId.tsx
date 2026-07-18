@@ -58,7 +58,7 @@ function TopicDetailPage() {
   })
 
   // セッション一覧を取得
-  const { data: sessionsData } = useQuery({
+  const { data: sessionsData, isLoading: isSessionsQueryLoading } = useQuery({
     queryKey: ["chat", "sessions", topicId],
     queryFn: () => getSessionsByTopic(topicId),
   })
@@ -101,6 +101,12 @@ function TopicDetailPage() {
   const currentSessionId = selectedSessionId === "use-latest"
     ? (sessions[0]?.id ?? null)
     : selectedSessionId
+
+  // "use-latest"（最新セッションを使うか新規セッションかが未確定）の間に
+  // セッション一覧取得中の場合のみ、ChatContainer 側の空状態表示を保留する。
+  // 明示的に「新規チャット」を選んだ場合（selectedSessionId === null）は
+  // セッション一覧の読込状況によらず新規モードとして扱ってよい。
+  const isSessionsLoading = selectedSessionId === "use-latest" && isSessionsQueryLoading
 
   if (isLoading) {
     return (
@@ -236,6 +242,7 @@ function TopicDetailPage() {
             topicId={topicId}
             onSessionCreated={handleSessionCreated}
             initialMessage={quickChatQuestion}
+            isSessionsLoading={isSessionsLoading}
           />
         </main>
       </div>
@@ -279,6 +286,7 @@ function TopicDetailPage() {
               topicId={topicId}
               onSessionCreated={handleSessionCreated}
               initialMessage={quickChatQuestion}
+              isSessionsLoading={isSessionsLoading}
             />
           </div>
         )}

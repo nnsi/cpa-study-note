@@ -119,6 +119,12 @@ export async function* suggestPlanItems(
     })) {
       if (chunk.type === "text" && chunk.content) {
         yield chunk
+      } else if (chunk.type === "error") {
+        yield {
+          type: "error",
+          error: chunk.error ?? "AI応答中にエラーが発生しました。再度お試しください。",
+        }
+        return
       }
     }
   } catch (error) {

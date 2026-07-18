@@ -19,7 +19,7 @@ export const subcategoryNodeSchema = z.object({
   id: z.string().nullable(),
   name: z.string().min(1, "名前は必須です").max(200, "名前は200文字以内で入力してください"),
   displayOrder: z.number().int().min(0),
-  topics: z.array(topicNodeSchema),
+  topics: z.array(topicNodeSchema).max(500, "論点は1サブカテゴリあたり500件以内にしてください"),
 })
 
 export type SubcategoryNode = z.infer<typeof subcategoryNodeSchema>
@@ -29,14 +29,14 @@ export const categoryNodeSchema = z.object({
   id: z.string().nullable(),
   name: z.string().min(1, "名前は必須です").max(200, "名前は200文字以内で入力してください"),
   displayOrder: z.number().int().min(0),
-  subcategories: z.array(subcategoryNodeSchema),
+  subcategories: z.array(subcategoryNodeSchema).max(100, "サブカテゴリは1カテゴリあたり100件以内にしてください"),
 })
 
 export type CategoryNode = z.infer<typeof categoryNodeSchema>
 
 // Tree update request schema
 export const updateTreeRequestSchema = z.object({
-  categories: z.array(categoryNodeSchema),
+  categories: z.array(categoryNodeSchema).max(100, "カテゴリは100件以内にしてください"),
 })
 
 export type UpdateTreeRequest = z.infer<typeof updateTreeRequestSchema>

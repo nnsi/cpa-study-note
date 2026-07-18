@@ -50,6 +50,7 @@ const createMockRepo = (overrides: Partial<StudyPlanRepository> = {}): StudyPlan
   createItem: vi.fn(),
   updateItem: vi.fn(),
   deleteItem: vi.fn(),
+  deleteItemWithRevision: vi.fn(),
   reorderItems: vi.fn(),
   findItemById: vi.fn(),
   findRevisionsByPlan: vi.fn().mockResolvedValue([]),
@@ -234,6 +235,38 @@ describe("StudyPlan AI UseCase", () => {
 
       const errorChunks = chunks.filter((c) => c.type === "error")
       expect(errorChunks.length).toBeGreaterThan(0)
+    })
+
+    it("errorチャンクを受信した場合、errorをyieldして中断する（doneを流さない）", async () => {
+      // アダプタがthrowせず errorチャンクをyieldするケース（vercel-aiアダプタの挙動）
+      const plan = createMockPlan()
+      const repo = createMockRepo({
+        isPlanOwnedByUser: vi.fn().mockResolvedValue(true),
+        findPlanById: vi.fn().mockResolvedValue(plan),
+        findItemsByPlan: vi.fn().mockResolvedValue([]),
+      })
+      const subjectRepo = createMockSubjectRepo()
+      const aiAdapter: AIAdapter = {
+        generateText: vi.fn(),
+        streamText: vi.fn().mockImplementation(async function* (): AsyncIterable<StreamChunk> {
+          yield { type: "text", content: "途中まで" }
+          yield { type: "error", error: "upstream failure" }
+        }),
+      }
+      const aiConfig = createMockAIConfig()
+
+      const stream = suggestPlanItems(
+        { repo, subjectRepo, aiAdapter, aiConfig, logger: noopLogger },
+        { planId: "plan-1", userId: "user-1", prompt: "テスト" }
+      )
+
+      const chunks = await collectChunks(stream)
+
+      const errorChunk = chunks.find((c) => c.type === "error")
+      expect(errorChunk).toBeDefined()
+      expect(errorChunk?.error).toBe("upstream failure")
+      // errorチャンク受信後は done を流さず中断する
+      expect(chunks.find((c) => c.type === "done")).toBeUndefined()
     })
 
     it("既存要素がない状態でも提案を実行する", async () => {

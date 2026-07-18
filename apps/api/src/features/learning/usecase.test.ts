@@ -60,6 +60,7 @@ const createMockLearningRepository = (
   findProgressByUser: vi.fn().mockResolvedValue([mockProgress]),
   createCheckHistory: vi.fn().mockResolvedValue(mockCheckHistory),
   findCheckHistoryByTopic: vi.fn().mockResolvedValue([mockCheckHistory]),
+  markTopicUnderstood: vi.fn().mockResolvedValue(undefined),
   findRecentTopics: vi.fn().mockResolvedValue([mockRecentTopic]),
   ...overrides,
 })

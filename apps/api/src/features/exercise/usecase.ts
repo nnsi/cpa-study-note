@@ -263,18 +263,13 @@ export const confirmExercise = async (
 
 
   if (markAsUnderstood) {
-    await tracer.span("d1.markTopicUnderstood", async () => {
-      await learningRepo.upsertProgress(userId, {
-        userId,
-        topicId,
-        understood: true,
-      })
-      await learningRepo.createCheckHistory(userId, {
-        userId,
-        topicId,
-        action: "checked",
-      })
-    })
+    // progress upsert と check history を原子的に実行（片方だけ書き込まれる不整合を防ぐ）。
+    // なお confirm の UPDATE はテーブルを跨ぐ単一の原子的書き込みとして先行実行しており、
+    // confirm 成功後にここが失敗した場合の残余リスク（進捗が理解済みにならない）は
+    // 補償トランザクション未導入のため残る。詳細は報告参照。
+    await tracer.span("d1.markTopicUnderstood", () =>
+      learningRepo.markTopicUnderstood(userId, topicId)
+    )
   }
 
   return ok({

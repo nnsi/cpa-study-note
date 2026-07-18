@@ -125,7 +125,15 @@ export const createNoteRepository = (db: Db): NoteRepository => ({
       .innerJoin(topics, eq(notes.topicId, topics.id))
       .innerJoin(categories, eq(topics.categoryId, categories.id))
       .innerJoin(subjects, eq(categories.subjectId, subjects.id))
-      .where(and(eq(notes.id, id), isNull(notes.deletedAt)))
+      .where(
+        and(
+          eq(notes.id, id),
+          isNull(notes.deletedAt),
+          isNull(topics.deletedAt),
+          isNull(categories.deletedAt),
+          isNull(subjects.deletedAt)
+        )
+      )
       .limit(1)
 
     if (!result[0]) return null
@@ -171,7 +179,15 @@ export const createNoteRepository = (db: Db): NoteRepository => ({
       .innerJoin(topics, eq(notes.topicId, topics.id))
       .innerJoin(categories, eq(topics.categoryId, categories.id))
       .innerJoin(subjects, eq(categories.subjectId, subjects.id))
-      .where(and(eq(notes.userId, userId), isNull(notes.deletedAt)))
+      .where(
+        and(
+          eq(notes.userId, userId),
+          isNull(notes.deletedAt),
+          isNull(topics.deletedAt),
+          isNull(categories.deletedAt),
+          isNull(subjects.deletedAt)
+        )
+      )
       .orderBy(desc(notes.createdAt))
 
     return result.map((n) => ({

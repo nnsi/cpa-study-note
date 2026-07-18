@@ -1,6 +1,7 @@
 import { eq, and, isNull, desc, sql } from "drizzle-orm"
 import type { Db } from "@cpa-study/db"
 import { traced, type Tracer } from "@/shared/lib/tracer"
+import { runBatch, type BatchStatement } from "@/shared/lib/transaction"
 import {
   topics,
   categories,
@@ -67,6 +68,9 @@ export type LearningRepository = {
   createCheckHistory: (userId: string, history: CreateCheckHistoryInput) => Promise<CheckHistoryRecord>
   findCheckHistoryByTopic: (userId: string, topicId: string) => Promise<CheckHistoryRecord[]>
 
+  // 論点を理解済みにマークし、チェック履歴を残す（progress upsert + history insert を原子的に実行）
+  markTopicUnderstood: (userId: string, topicId: string) => Promise<void>
+
   // Validation methods
   verifyTopicExists: (userId: string, topicId: string) => Promise<boolean>
 }
@@ -79,6 +83,7 @@ export const tracedLearningRepo = (repo: LearningRepository, tracer: Tracer): Le
   touchTopic: traced(tracer, "d1.touchTopic", repo.touchTopic),
   createCheckHistory: traced(tracer, "d1.createCheckHistory", repo.createCheckHistory),
   findCheckHistoryByTopic: traced(tracer, "d1.findCheckHistoryByTopic", repo.findCheckHistoryByTopic),
+  markTopicUnderstood: traced(tracer, "d1.markTopicUnderstood", repo.markTopicUnderstood),
   verifyTopicExists: traced(tracer, "d1.verifyTopicExists", repo.verifyTopicExists),
 })
 
@@ -141,7 +146,22 @@ export const createLearningRepository = (db: Db): LearningRepository => ({
   },
 
   findProgressByUser: async (userId) => {
-    return db.select().from(userTopicProgress).where(eq(userTopicProgress.userId, userId))
+    const result = await db
+      .select({
+        id: userTopicProgress.id,
+        userId: userTopicProgress.userId,
+        topicId: userTopicProgress.topicId,
+        understood: userTopicProgress.understood,
+        lastAccessedAt: userTopicProgress.lastAccessedAt,
+        questionCount: userTopicProgress.questionCount,
+        goodQuestionCount: userTopicProgress.goodQuestionCount,
+        createdAt: userTopicProgress.createdAt,
+        updatedAt: userTopicProgress.updatedAt,
+      })
+      .from(userTopicProgress)
+      .innerJoin(topics, eq(userTopicProgress.topicId, topics.id))
+      .where(and(eq(userTopicProgress.userId, userId), isNull(topics.deletedAt)))
+    return result
   },
 
   findRecentTopics: async (userId, limit) => {
@@ -237,6 +257,45 @@ export const createLearningRepository = (db: Db): LearningRepository => ({
       action: history.action,
       checkedAt: now,
     }
+  },
+
+  markTopicUnderstood: async (userId, topicId) => {
+    const existing = await db
+      .select()
+      .from(userTopicProgress)
+      .where(and(eq(userTopicProgress.userId, userId), eq(userTopicProgress.topicId, topicId)))
+      .limit(1)
+
+    const now = new Date()
+
+    // userTopicProgress は (userId, topicId) の一意制約が無いため upsert は読み取り前提。
+    // 読み取り後は書き込みが確定するので、progress と check history を batch で原子化できる。
+    const progressStmt: BatchStatement = existing[0]
+      ? db
+          .update(userTopicProgress)
+          .set({ understood: true, updatedAt: now, lastAccessedAt: now })
+          .where(eq(userTopicProgress.id, existing[0].id))
+      : db.insert(userTopicProgress).values({
+          id: crypto.randomUUID(),
+          userId,
+          topicId,
+          understood: true,
+          lastAccessedAt: now,
+          questionCount: 0,
+          goodQuestionCount: 0,
+          createdAt: now,
+          updatedAt: now,
+        })
+
+    const historyStmt: BatchStatement = db.insert(topicCheckHistory).values({
+      id: crypto.randomUUID(),
+      topicId,
+      userId,
+      action: "checked",
+      checkedAt: now,
+    })
+
+    await runBatch(db, [progressStmt, historyStmt])
   },
 
   findCheckHistoryByTopic: async (userId, topicId) => {

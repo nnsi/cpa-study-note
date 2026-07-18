@@ -132,6 +132,16 @@ describe("MetricsRepository", () => {
   })
 
   describe("aggregateForDate", () => {
+    const tz = "Asia/Tokyo"
+    // now が属するタイムゾーン基準の日付文字列を返す（aggregateForDateと同じ基準）
+    const localDateStr = (date: Date, timezone: string) =>
+      new Intl.DateTimeFormat("en-CA", {
+        timeZone: timezone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(date)
+
     it("セッション・メッセージ数を集計する", async () => {
       const now = new Date()
       // 当日のセッションを作成
@@ -166,17 +176,93 @@ describe("MetricsRepository", () => {
         })
         .run()
 
-      // 日付文字列を生成
-      const dateStr = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-${String(now.getUTCDate()).padStart(2, "0")}`
+      // タイムゾーン基準の当日日付を生成（now は必ずこの日の範囲内）
+      const dateStr = localDateStr(now, tz)
 
-      const result = await repository.aggregateForDate(testData.userId, dateStr)
+      const result = await repository.aggregateForDate(testData.userId, dateStr, tz)
 
       expect(result.sessionCount).toBeGreaterThanOrEqual(1)
       expect(result.messageCount).toBeGreaterThanOrEqual(1) // userメッセージのみカウント
     })
 
+    it("good質問はユーザーメッセージのみを集計する（assistantのgoodは除外）", async () => {
+      const now = new Date()
+      const sessionId = "session-good-1"
+      db.insert(schema.chatSessions)
+        .values({
+          id: sessionId,
+          userId: testData.userId,
+          topicId: testData.topicId,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run()
+
+      // ユーザーのgood質問（カウント対象）
+      db.insert(schema.chatMessages)
+        .values({
+          id: "msg-good-user",
+          sessionId,
+          role: "user",
+          content: "良い質問",
+          questionQuality: "good",
+          createdAt: now,
+        })
+        .run()
+      // assistantメッセージにgoodが付いていてもカウントしない
+      db.insert(schema.chatMessages)
+        .values({
+          id: "msg-good-assistant",
+          sessionId,
+          role: "assistant",
+          content: "回答",
+          questionQuality: "good",
+          createdAt: now,
+        })
+        .run()
+
+      const dateStr = localDateStr(now, tz)
+      const result = await repository.aggregateForDate(testData.userId, dateStr, tz)
+
+      expect(result.goodQuestionCount).toBe(1)
+    })
+
+    it("翌日0時ちょうどのレコードは当日に計上しない（境界）", async () => {
+      // 対象日を固定（過去日）してタイムゾーン境界を明示的に検証する
+      const targetDate = "2026-03-10"
+      // Asia/Tokyo(+9) の翌日0時 = 2026-03-11T00:00+09:00 = 2026-03-10T15:00Z
+      const nextDayLocalMidnightUtc = new Date("2026-03-10T15:00:00.000Z")
+      const sessionId = "session-boundary-1"
+      db.insert(schema.chatSessions)
+        .values({
+          id: sessionId,
+          userId: testData.userId,
+          topicId: testData.topicId,
+          createdAt: nextDayLocalMidnightUtc,
+          updatedAt: nextDayLocalMidnightUtc,
+        })
+        .run()
+      db.insert(schema.chatMessages)
+        .values({
+          id: "msg-boundary-1",
+          sessionId,
+          role: "user",
+          content: "境界の質問",
+          questionQuality: "good",
+          createdAt: nextDayLocalMidnightUtc,
+        })
+        .run()
+
+      const result = await repository.aggregateForDate(testData.userId, targetDate, tz)
+
+      // 翌日0時ちょうどのレコードは当日には含まれない
+      expect(result.sessionCount).toBe(0)
+      expect(result.messageCount).toBe(0)
+      expect(result.goodQuestionCount).toBe(0)
+    })
+
     it("データがない日付はゼロを返す", async () => {
-      const result = await repository.aggregateForDate(testData.userId, "2099-01-01")
+      const result = await repository.aggregateForDate(testData.userId, "2099-01-01", tz)
 
       expect(result.checkedTopicCount).toBe(0)
       expect(result.sessionCount).toBe(0)

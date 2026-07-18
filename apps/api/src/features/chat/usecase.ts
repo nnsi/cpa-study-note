@@ -199,6 +199,13 @@ export async function* sendMessage(
     ])
   )
 
+  // 論点（およびその階層）が削除済み等で取得できない場合は、
+  // ユーザーメッセージを保存する前に中断して孤立メッセージを残さない
+  if (!hierarchy) {
+    yield { type: "error", error: "Topic not found" }
+    return
+  }
+
   // Phase 3: ユーザーメッセージを保存（履歴取得後に実行して二重送信を防ぐ）
   const userMessage = await tracer.span("d1.createMessage", () =>
     deps.chatRepo.createMessage({
@@ -210,11 +217,6 @@ export async function* sendMessage(
       questionQuality: null,
     })
   )
-
-  if (!hierarchy) {
-    yield { type: "error", error: "Topic not found" }
-    return
-  }
 
   // AI用メッセージを構築
   const messages: AIMessage[] = []
@@ -263,6 +265,15 @@ export async function* sendMessage(
         }
         responseChunks.push(chunk.content)
         yield chunk
+      } else if (chunk.type === "error") {
+        // アダプタがthrowせずerrorチャンクをyieldするケース。
+        // catch節（throw経路）と同様に途中テキストは保存せず、
+        // 進捗も加算せずに中断する
+        yield {
+          type: "error",
+          error: chunk.error ?? "AI応答中にエラーが発生しました。再度お試しください。",
+        }
+        return
       }
     }
   } catch (error) {
@@ -381,6 +392,15 @@ export async function* sendMessageWithNewSession(
       if (chunk.type === "text" && chunk.content) {
         responseChunks.push(chunk.content)
         yield chunk
+      } else if (chunk.type === "error") {
+        // アダプタがthrowせずerrorチャンクをyieldするケース。
+        // catch節（throw経路）と同様に途中テキストは保存せず、
+        // 進捗も加算せずに中断する
+        yield {
+          type: "error",
+          error: chunk.error ?? "AI応答中にエラーが発生しました。再度お試しください。",
+        }
+        return
       }
     }
   } catch (error) {

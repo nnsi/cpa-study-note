@@ -7,6 +7,7 @@ import type {
   TopicNodeResponse,
   CSVImportResponse,
 } from "@cpa-study/shared/schemas"
+import { difficultySchema } from "@cpa-study/shared/schemas"
 import type { SubjectRepository } from "./repository"
 import { parseCSV, parseCSV4Column, groupRowsBySubject, convertToTree, mergeTree } from "./csv-parser"
 import type { SimpleTransactionRunner } from "../../shared/lib/transaction"
@@ -22,6 +23,13 @@ export type TreeDeps = {
   txRunner?: SimpleTransactionRunner
   logger: Logger
   tracer: Tracer
+}
+
+// DBのdifficultyカラムは自由text（string | null）だが、レスポンス型はenum。
+// 型アサーション（as）ではなくZodで検証し、想定外の値は null に正規化する。
+const parseDifficulty = (value: string | null): TopicNodeResponse["difficulty"] => {
+  const result = difficultySchema.nullable().safeParse(value)
+  return result.success ? result.data : null
 }
 
 /**
@@ -59,7 +67,7 @@ export const getSubjectTree = async (
       id: topic.id,
       name: topic.name,
       description: topic.description,
-      difficulty: topic.difficulty as TopicNodeResponse["difficulty"],
+      difficulty: parseDifficulty(topic.difficulty),
       topicType: topic.topicType,
       aiSystemPrompt: topic.aiSystemPrompt,
       displayOrder: topic.displayOrder,

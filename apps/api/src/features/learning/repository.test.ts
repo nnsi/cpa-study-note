@@ -272,6 +272,27 @@ describe("LearningRepository", () => {
       expect(result).toHaveLength(1)
       expect(result[0].userId).toBe(userId)
     })
+
+    it("should exclude progress for soft-deleted topics", async () => {
+      const now = new Date()
+
+      // Create a deleted topic
+      db.insert(schema.topics)
+        .values({ id: "deleted-topic", userId, categoryId, name: "Deleted Topic", displayOrder: 1, createdAt: now, updatedAt: now, deletedAt: now })
+        .run()
+
+      db.insert(schema.userTopicProgress)
+        .values([
+          { id: "progress-1", userId, topicId, understood: true, questionCount: 0, goodQuestionCount: 0, createdAt: now, updatedAt: now },
+          { id: "progress-2", userId, topicId: "deleted-topic", understood: false, questionCount: 0, goodQuestionCount: 0, createdAt: now, updatedAt: now },
+        ])
+        .run()
+
+      const result = await repository.findProgressByUser(userId)
+
+      expect(result).toHaveLength(1)
+      expect(result[0].topicId).toBe(topicId)
+    })
   })
 
   describe("findRecentTopics", () => {
@@ -491,6 +512,39 @@ describe("LearningRepository", () => {
 
       expect(result.id).toBeDefined()
       expect(result.action).toBe("unchecked")
+    })
+  })
+
+  describe("markTopicUnderstood", () => {
+    it("進捗が無い場合は理解済みで作成しチェック履歴を残す", async () => {
+      await repository.markTopicUnderstood(userId, topicId)
+
+      const progress = await repository.findProgress(userId, topicId)
+      expect(progress).not.toBeNull()
+      expect(progress?.understood).toBe(true)
+
+      const history = await repository.findCheckHistoryByTopic(userId, topicId)
+      expect(history).toHaveLength(1)
+      expect(history[0].action).toBe("checked")
+    })
+
+    it("既存進捗がある場合は理解済みに更新しチェック履歴を残す", async () => {
+      await repository.upsertProgress(userId, {
+        userId,
+        topicId,
+        incrementQuestionCount: true,
+      })
+
+      await repository.markTopicUnderstood(userId, topicId)
+
+      const progress = await repository.findProgress(userId, topicId)
+      expect(progress?.understood).toBe(true)
+      // 既存レコードのカウントは維持される（新規作成ではない）
+      expect(progress?.questionCount).toBe(1)
+
+      const history = await repository.findCheckHistoryByTopic(userId, topicId)
+      expect(history).toHaveLength(1)
+      expect(history[0].action).toBe("checked")
     })
   })
 

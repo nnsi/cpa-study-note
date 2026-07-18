@@ -48,7 +48,7 @@ export const metricsRoutes = ({ db }: MetricsDeps) => {
       const logger = c.get("logger")
       const tracer = c.get("tracer")
 
-      const result = await createSnapshot({ metricsRepo: tracedMetricsRepo(metricsRepo, tracer), logger }, user.id)
+      const result = await createSnapshot({ metricsRepo: tracedMetricsRepo(metricsRepo, tracer), logger }, user.id, user.timezone)
       return handleResult(c, result, "snapshot", 201)
     })
 
@@ -63,7 +63,7 @@ export const metricsRoutes = ({ db }: MetricsDeps) => {
         const logger = c.get("logger")
         const tracer = c.get("tracer")
 
-        const result = await createSnapshot({ metricsRepo: tracedMetricsRepo(metricsRepo, tracer), logger }, user.id, date)
+        const result = await createSnapshot({ metricsRepo: tracedMetricsRepo(metricsRepo, tracer), logger }, user.id, user.timezone, date)
         return handleResult(c, result, "snapshot", 201)
       }
     )

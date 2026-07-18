@@ -45,10 +45,23 @@ export const useTocImages = () => {
   )
 
   const updateImage = useCallback(
-    (key: number, update: (image: TocImage) => TocImage) => {
-      setImages((current) =>
-        current.map((image) => (image.key === key ? update(image) : image))
-      )
+    (
+      key: number,
+      update: (image: TocImage) => TocImage,
+      onMissing?: () => void
+    ) => {
+      setImages((current) => {
+        let found = false
+        const next = current.map((image) => {
+          if (image.key !== key) return image
+          found = true
+          return update(image)
+        })
+        if (!found) {
+          onMissing?.()
+        }
+        return next
+      })
     },
     []
   )
@@ -64,10 +77,15 @@ export const useTocImages = () => {
 
         if (file !== sourceFile) {
           const previewUrl = URL.createObjectURL(file)
-          updateImage(key, (image) => {
-            URL.revokeObjectURL(image.previewUrl)
-            return { ...image, file, previewUrl }
-          })
+          updateImage(
+            key,
+            (image) => {
+              URL.revokeObjectURL(image.previewUrl)
+              return { ...image, file, previewUrl }
+            },
+            // 縮小完了前に画像が削除されていた場合、生成済みURLを解放する
+            () => URL.revokeObjectURL(previewUrl)
+          )
         }
 
         const { imageId } = await getUploadUrl(file.name, mimeType.data)
